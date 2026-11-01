@@ -1,0 +1,9 @@
+*.zip
+*.log
+.env
+*.key
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+.venv/

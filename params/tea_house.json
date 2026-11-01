@@ -1,0 +1,15 @@
+{
+  "param_version": "params-tea-house-2026.11",
+  "param_source": "用户经验：全天茶楼只喝茶吃点心、没有正餐；客单 50~110 元，常规翻台 2.5+，占座时间长",
+  "payback_months": 27,
+  "rent_ratio_healthy_max": 0.1,
+  "rent_ratio_warning_max": 0.15,
+  "kitchen_ratio": 0.32,
+  "seat_area_sqm": 3.2,
+  "normal_turnover": 2.5,
+  "turnover_cap": 3.5,
+  "table_size": 4,
+  "revenue_per_sqm_benchmark": 800,
+  "typical_ticket_min": 50,
+  "typical_ticket_max": 110
+}

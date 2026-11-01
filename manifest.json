@@ -1,0 +1,56 @@
+{
+    "name":  "site-selection",
+    "displayName":  "选址智能评估",
+    "version":  "2.5.1",
+    "description":  "连锁餐饮选址评估：城市网格扫描、竞品格局、截流两轴、财务双口径、行业基准对标。输出证据链报告，不做能否开店的判断。",
+    "author":  "YG",
+    "license":  "MIT",
+    "entry":  "SKILL.md",
+    "targets":  {
+                    "workbuddy":  {
+                                      "entry":  "SKILL.md",
+                                      "runtime": "python>=3.9",
+                                      "core":  "scripts/site_core.py"
+                                  },
+                    "dsh":  {
+                                "entry":  "SKILL.md",
+                                "plugin":  "dsh/site-tools.ts",
+                                "mount":  "dsh/cordis.patch.yml",
+                                "tools":  6
+                            }
+                },
+    "dependencies":  {
+                         "python":  [
+                                        "openpyxl"
+                                    ],
+                         "env":  [
+                                     "AMAP_API_KEY"
+                                 ]
+                     },
+    "coreCommands":  [
+                         "finance",
+                         "crs",
+                         "veto",
+                         "dedupe",
+                         "geo",
+                         "benchmark",
+                         "selftest"
+                     ],
+    "scripts":  {
+                    "site_core":  "scripts/site_core.py",
+                    "grid-scan":  "scripts/grid-scan.py",
+                    "grid-registry":  "scripts/grid-registry.py",
+                    "demand-fetch":  "scripts/demand-fetch.py",
+                    "walk-matrix":  "scripts/walk-matrix.py",
+                    "import-benchmarks":  "scripts/import-benchmarks.py"
+                },
+    "params":  "params/",
+    "docs":  [
+                 "docs/FEATURES.md",
+                 "docs/GRID.md",
+                 "docs/COMPLIANCE-CHECKLIST.md",
+                 "docs/DECISIONS.md",
+                 "docs/LAUNCH.md"
+             ],
+    "prompt":  "PROMPT.md"
+}

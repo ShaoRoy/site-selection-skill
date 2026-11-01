@@ -1,0 +1,18 @@
+{
+  "param_version": "params-large-yuecai-2026.11",
+  "param_source": "用户经验：粤菜正餐，有菜有酒，客单 150~400 元，常规翻台 2.0，厨房占建筑面积 35%",
+  "payback_months": 36,
+  "rent_ratio_healthy_max": 0.1,
+  "rent_ratio_warning_max": 0.15,
+  "kitchen_ratio": 0.35,
+  "seat_area_sqm": 2.8,
+  "normal_turnover": 2.0,
+  "turnover_cap": 3.0,
+  "table_size": 4,
+  "revenue_per_sqm_benchmark": 700,
+  "typical_ticket_min": 150,
+  "typical_ticket_max": 400,
+  "rent_escalation_pct": 0.03,
+  "renovation_cycle_years": 5,
+  "renovation_cost_ratio": 0.25
+}

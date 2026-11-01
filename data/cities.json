@@ -1,0 +1,302 @@
+{
+ "meta": [
+  [
+   "数据时间",
+   "2025-2026年公开数据；门店数为最新披露口径"
+  ],
+  [
+   "城市分级",
+   "上海/广州/深圳=一线；佛山/重庆=新一线(二线代表)"
+  ],
+  [
+   "租金口径",
+   "上海数据来自戴德梁行2025Q3（728.7元/㎡/月购物中心首层，同比-4.2%）；其他城市按商铺挂牌数据估算"
+  ],
+  [
+   "投资系数",
+   "以广州为基准=1.00；上海1.15、深圳1.10、佛山0.65、重庆0.70"
+  ],
+  [
+   "租金系数",
+   "以广州为基准=1.00；上海1.30、深圳1.20、佛山0.55、重庆0.60"
+  ],
+  [
+   "客单价系数",
+   "以广州为基准=1.00；上海1.20、深圳1.15、佛山0.85、重庆0.90"
+  ],
+  [
+   "客流系数",
+   "以广州为基准=1.00；上海1.10、深圳1.05、佛山0.70、重庆0.85"
+  ],
+  [
+   "月营收公式",
+   "月营收 = 客单价 × 日均客流 × 30 / 10000（单位：万元）"
+  ],
+  [
+   "月净利公式",
+   "月净利 = 月营收 × 净利率"
+  ],
+  [
+   "回本周期公式",
+   "回本周期 = 初始投资 / 月净利（单位：月）"
+  ],
+  [
+   "健康回本红线",
+   "8-12月=黄金；12-18月=正常；18-24月=硬扛；24月+=给房东打工"
+  ],
+  [
+   "投资上限建议",
+   "档口≤15万/≤10月；社区正餐≤50万/≤18月；商场餐饮≤80万/≤24月"
+  ],
+  [
+   "关键风险",
+   "①高毛利≠高净利（烧烤毛利60%但净利5-10%）；②2025-2026中高端茶饮回本拉长30-50%；③平台扣点后外卖店净利率仅3-8%"
+  ],
+  [
+   "GIS使用建议",
+   "Sheet2可直接做城市×业态透视表；Sheet3门店密度可做热力图层；Sheet1为城市基准底图属性"
+  ],
+  [
+   "主要数据源",
+   "戴德梁行2025Q3零售物业报告；美团/大众点评2025；红餐网2025；36氪2025-2026；新华网重庆2026.10；澎湃新闻2025；顺德区政府五经普；雀巢专业餐饮2025小龙虾报告；瑞幸/库迪/霸王茶姬加盟招商口径"
+  ],
+  [
+   "注意",
+   "本表为行业估算区间，单店实际数据受点位、转让金、装修档次影响±30%；做GIS分析时建议把回本月数分箱：≤12 / 12-18 / 18-24 / 24-36 / 36+"
+  ],
+  [
+   "本轮扩充",
+   "Sheet1城市从5城扩到19城(沪/广/深/佛/渝+成都/杭州/武汉/苏州/西安/南京/长沙/天津/青岛/宁波/东莞/郑州/合肥/昆明)；Sheet2业态从34个扩到48个；新增经度/纬度列供GIS落图；新城市数据按城市系数缩放，需结合本地实际校准"
+  ]
+ ],
+ "cities": [
+  {
+   "city": "上海",
+   "city_level": "一线",
+   "population_wan": 2487.0,
+   "restaurant_count_raw": "约18-20万家",
+   "mall_gf_rent_per_sqm": 728.7,
+   "street_shop_rent_per_sqm_day": 15.0,
+   "avg_ticket": 33.2,
+   "growth_2025": "+1.7%(社零)",
+   "key_districts": "南京西路/徐家汇/陆家嘴/前滩",
+   "source": "戴德梁行2025Q3；红餐网2025.10；Numbeo 2026"
+  },
+  {
+   "city": "广州",
+   "city_level": "一线",
+   "population_wan": 1873.0,
+   "restaurant_count_raw": "约17.6万家(中式快餐8.1万+中式正餐3.5万)",
+   "mall_gf_rent_per_sqm": 550.0,
+   "street_shop_rent_per_sqm_day": 12.0,
+   "avg_ticket": 30.0,
+   "growth_2025": "持平微增",
+   "key_districts": "天河路/珠江新城/北京路/六运小区",
+   "source": "澎湃·广州餐饮消费2025Q2；36氪2025.7"
+  },
+  {
+   "city": "深圳",
+   "city_level": "一线",
+   "population_wan": 1766.0,
+   "restaurant_count_raw": "约15-17万家",
+   "mall_gf_rent_per_sqm": 600.0,
+   "street_shop_rent_per_sqm_day": 13.0,
+   "avg_ticket": 38.0,
+   "growth_2025": "微增",
+   "key_districts": "福田CBD/南山海岸城/华强北/罗湖",
+   "source": "深圳之窗2026.5；36氪2025.7"
+  },
+  {
+   "city": "佛山",
+   "city_level": "二线(新一线)",
+   "population_wan": 955.0,
+   "restaurant_count_raw": "顺德区餐饮企业超3万家(全市估8-10万家)",
+   "mall_gf_rent_per_sqm": 280.0,
+   "street_shop_rent_per_sqm_day": 5.0,
+   "avg_ticket": 45.0,
+   "growth_2025": "+3-5%",
+   "key_districts": "禅城祖庙/南海桂城/顺德大良/北滘",
+   "source": "顺德区政府2025.12；顺德五经普；58同城商铺数据"
+  },
+  {
+   "city": "重庆",
+   "city_level": "二线(新一线)",
+   "population_wan": 3191.0,
+   "restaurant_count_raw": "约12万家(其中火锅3.96万家)",
+   "mall_gf_rent_per_sqm": 320.0,
+   "street_shop_rent_per_sqm_day": 6.0,
+   "avg_ticket": 50.0,
+   "growth_2025": "+5%以上",
+   "key_districts": "解放碑/观音桥/南滨路/龙湖时代天街",
+   "source": "新华网重庆2026.10；重庆商务委2025"
+  },
+  {
+   "city": "成都",
+   "city_level": "新一线",
+   "population_wan": 2140.0,
+   "restaurant_count_raw": "约15万家(火锅/川菜密集)",
+   "mall_gf_rent_per_sqm": 380.0,
+   "street_shop_rent_per_sqm_day": 7.0,
+   "avg_ticket": 45.0,
+   "growth_2025": "+4%",
+   "key_districts": "春熙路/太古里/交子大道/玉林路",
+   "source": "美团2025；红餐网2025"
+  },
+  {
+   "city": "杭州",
+   "city_level": "新一线",
+   "population_wan": 1252.0,
+   "restaurant_count_raw": "约11万家",
+   "mall_gf_rent_per_sqm": 450.0,
+   "street_shop_rent_per_sqm_day": 9.0,
+   "avg_ticket": 55.0,
+   "growth_2025": "+3%",
+   "key_districts": "湖滨/武林/钱江新城/滨江",
+   "source": "戴德梁行杭州2025；美团2025"
+  },
+  {
+   "city": "武汉",
+   "city_level": "新一线",
+   "population_wan": 1377.0,
+   "restaurant_count_raw": "约13万家",
+   "mall_gf_rent_per_sqm": 350.0,
+   "street_shop_rent_per_sqm_day": 7.0,
+   "avg_ticket": 40.0,
+   "growth_2025": "+3%",
+   "key_districts": "江汉路/楚河汉街/光谷/武昌滨江",
+   "source": "美团2025；红餐网2025"
+  },
+  {
+   "city": "苏州",
+   "city_level": "新一线",
+   "population_wan": 1296.0,
+   "restaurant_count_raw": "约10万家",
+   "mall_gf_rent_per_sqm": 400.0,
+   "street_shop_rent_per_sqm_day": 8.0,
+   "avg_ticket": 50.0,
+   "growth_2025": "+3%",
+   "key_districts": "观前街/园区湖东/石路/李公堤",
+   "source": "戴德梁行苏州2025"
+  },
+  {
+   "city": "西安",
+   "city_level": "新一线",
+   "population_wan": 1308.0,
+   "restaurant_count_raw": "约12万家(面食密集)",
+   "mall_gf_rent_per_sqm": 320.0,
+   "street_shop_rent_per_sqm_day": 6.0,
+   "avg_ticket": 40.0,
+   "growth_2025": "+4%",
+   "key_districts": "大雁塔/小寨/钟楼/高新商圈",
+   "source": "美团2025；西安商务局"
+  },
+  {
+   "city": "南京",
+   "city_level": "新一线",
+   "population_wan": 954.0,
+   "restaurant_count_raw": "约8万家",
+   "mall_gf_rent_per_sqm": 420.0,
+   "street_shop_rent_per_sqm_day": 8.0,
+   "avg_ticket": 50.0,
+   "growth_2025": "+2%",
+   "key_districts": "新街口/夫子庙/河西/百家湖",
+   "source": "戴德梁行南京2025"
+  },
+  {
+   "city": "长沙",
+   "city_level": "新一线",
+   "population_wan": 1051.0,
+   "restaurant_count_raw": "约10万家(茶饮/夜宵密集)",
+   "mall_gf_rent_per_sqm": 330.0,
+   "street_shop_rent_per_sqm_day": 6.0,
+   "avg_ticket": 50.0,
+   "growth_2025": "+5%",
+   "key_districts": "五一广场/黄兴路步行街/文和友",
+   "source": "美团2025；红餐网2025"
+  },
+  {
+   "city": "天津",
+   "city_level": "新一线",
+   "population_wan": 1364.0,
+   "restaurant_count_raw": "约9万家",
+   "mall_gf_rent_per_sqm": 340.0,
+   "street_shop_rent_per_sqm_day": 6.0,
+   "avg_ticket": 45.0,
+   "growth_2025": "持平",
+   "key_districts": "和平路/滨江道/南开奥城",
+   "source": "美团2025"
+  },
+  {
+   "city": "青岛",
+   "city_level": "新一线",
+   "population_wan": 1037.0,
+   "restaurant_count_raw": "约7万家",
+   "mall_gf_rent_per_sqm": 360.0,
+   "street_shop_rent_per_sqm_day": 7.0,
+   "avg_ticket": 55.0,
+   "growth_2025": "+2%",
+   "key_districts": "市南万象城/台东/崂山金狮",
+   "source": "美团2025"
+  },
+  {
+   "city": "宁波",
+   "city_level": "新一线",
+   "population_wan": 969.0,
+   "restaurant_count_raw": "约6万家",
+   "mall_gf_rent_per_sqm": 370.0,
+   "street_shop_rent_per_sqm_day": 7.0,
+   "avg_ticket": 50.0,
+   "growth_2025": "+3%",
+   "key_districts": "天一广场/鄞州万达/东部新城",
+   "source": "美团2025"
+  },
+  {
+   "city": "东莞",
+   "city_level": "新一线",
+   "population_wan": 1047.0,
+   "restaurant_count_raw": "约8万家",
+   "mall_gf_rent_per_sqm": 300.0,
+   "street_shop_rent_per_sqm_day": 5.0,
+   "avg_ticket": 40.0,
+   "growth_2025": "+2%",
+   "key_districts": "南城汇一城/东城万达/国贸",
+   "source": "美团2025"
+  },
+  {
+   "city": "郑州",
+   "city_level": "新一线",
+   "population_wan": 1300.0,
+   "restaurant_count_raw": "约9万家",
+   "mall_gf_rent_per_sqm": 290.0,
+   "street_shop_rent_per_sqm_day": 5.0,
+   "avg_ticket": 40.0,
+   "growth_2025": "+3%",
+   "key_districts": "二七广场/郑东新区/国贸360",
+   "source": "美团2025"
+  },
+  {
+   "city": "合肥",
+   "city_level": "新一线",
+   "population_wan": 963.0,
+   "restaurant_count_raw": "约6万家",
+   "mall_gf_rent_per_sqm": 300.0,
+   "street_shop_rent_per_sqm_day": 5.0,
+   "avg_ticket": 40.0,
+   "growth_2025": "+4%",
+   "key_districts": "包河万达/政务区/1912街区",
+   "source": "美团2025"
+  },
+  {
+   "city": "昆明",
+   "city_level": "新一线",
+   "population_wan": 860.0,
+   "restaurant_count_raw": "约5万家(米线/鲜花餐)",
+   "mall_gf_rent_per_sqm": 260.0,
+   "street_shop_rent_per_sqm_day": 4.0,
+   "avg_ticket": 45.0,
+   "growth_2025": "+3%",
+   "key_districts": "南屏街/顺城公园/同德昆明广场",
+   "source": "美团2025"
+  }
+ ]
+}

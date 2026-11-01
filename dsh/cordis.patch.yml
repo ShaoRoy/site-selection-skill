@@ -1,0 +1,6 @@
+# DSH 挂载片段：把下面这段追加到
+#   %USERPROFILE%\.dsh\profiles\<profile>\cordis.patch.yml
+# 然后把 dsh/ 里的两个文件复制到任意固定位置，改下面的 name 路径
+- insert:
+    - id: site-tools
+      name: 'C:/path/to/site-selection/dsh/site-tools.ts'
