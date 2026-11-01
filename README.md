@@ -8,9 +8,9 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 ## 报告示例
 
-![选址报告 - 地图竞品分析](assets/report-sample-1.jpg)
-
 ![选址报告 - 商圈步行圈与竞品分布](assets/report-sample-2.jpg)
+
+![选址报告 - 地图竞品分析](assets/report-sample-1.jpg)
 
 ---
 
