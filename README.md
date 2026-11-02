@@ -50,15 +50,93 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 ## 安装
 
+### 前置依赖
+
+- **Python 3.9+**（脚本类功能需要；纯方法论模式可不用）
+- **高德开放平台 Web 服务 Key**（POI / 地理编码 / 步行路径必需；无 Key 时脚本会报缺凭证，但 Skill 方法论本身可读）
+
+### 方式 A：一键脚本（推荐，Windows）
+
 ```powershell
-# 1. 解压到 Agent 的 skills 目录
-# 2. 配置高德 Key：
-#    环境变量 AMAP_API_KEY，或写入 ~/.dsh/secrets/amap.key
-# 3. Python 依赖
+# 1. clone 或下载本仓库
+git clone https://github.com/ShaoRoy/site-selection-skill.git
+cd site-selection-skill
+
+# 2. 运行安装脚本（默认装到 ~/.dsh/skills/site-selection）
+pwsh -File install.ps1
+
+# 装到自定义目录：
+# pwsh -File install.ps1 -Target "D:\your\skills\site-selection"
+```
+
+脚本会自动做三件事：复制文件 → 检查 Python/openpyxl → 检查高德 Key。
+
+### 方式 B：手动安装
+
+```powershell
+# 1. clone 仓库
+git clone https://github.com/ShaoRoy/site-selection-skill.git "$env:USERPROFILE\.dsh\skills\site-selection"
+cd "$env:USERPROFILE\.dsh\skills\site-selection"
+
+# 2. 安装 Python 依赖（仅 import-benchmarks.py 需要 openpyxl）
 pip install openpyxl
-# 4. 自检（20 条断言）
+```
+
+### 配置高德 Key
+
+二选一：
+
+```powershell
+# 方式 1：环境变量（当前会话）
+$env:AMAP_API_KEY = "你的高德 Web 服务 Key"
+
+# 方式 1 持久化（用户级，重启终端生效）
+[Environment]::SetEnvironmentVariable("AMAP_API_KEY", "你的高德 Web 服务 Key", "User")
+
+# 方式 2：写入密钥文件（推荐，避免环境变量泄露到子进程）
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dsh\secrets" | Out-Null
+"你的高德 Web 服务 Key" | Out-File -FilePath "$env:USERPROFILE\.dsh\secrets\amap.key" -Encoding ascii -NoNewline
+```
+
+> 注意：高德控制台要选 **「Web 服务」** 类型的 Key，不要用 Android / iOS / Web端(JS API) 类型，否则接口会报 `INVALID_USER_KEY`。
+
+### 自检（必做）
+
+```powershell
+cd "$env:USERPROFILE\.dsh\skills\site-selection"
 python scripts/site_core.py selftest
 ```
+
+看到 `20 passed` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
+
+### DSH 原生插件挂载（可选）
+
+如果你用 DSH，除了 Python 脚本模式，还可以挂原生 TypeScript 工具：
+
+1. 打开 `dsh/cordis.patch.yml`，按里面注释把插件条目加到 DSH 的配置里
+2. 重启 DSH，让插件索引生效
+3. 重启后在对话里说"用 site-selection 评估一下 XXX 铺位"验证是否触发
+
+### 验证安装成功
+
+自检通过后，在你的 Agent 里发一句：
+
+```
+用 site-selection 帮我评估一下：广州天河珠江新城某商场 1 楼 80㎡ 奶茶铺，月租 1.8 万，投资 25 万，客单价 18 元。
+```
+
+Agent 应该会：读 `SKILL.md` → 调 `scripts/site_core.py` 算财务口径 → 输出带公式追溯的报告。如果它直接"凭感觉"给结论，说明 Skill 没被加载，回上面检查目录位置。
+
+### 常见坑
+
+| 现象 | 原因 / 解决 |
+|---|---|
+| `INVALID_USER_KEY` | 高德 Key 类型选错，去控制台换「Web 服务」类型 |
+| `python: command not found` | 没装 Python 或没加 PATH；脚本类功能不可用，但 SKILL.md 方法论仍可读 |
+| Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/site-selection/`（目录名要叫 `site-selection`，不是 `site-selection-skill`） |
+| `openpyxl` 导入失败 | `pip install openpyxl`；只有 `import-benchmarks.py` 需要 |
+| 路径含中文 / 空格 | 部分脚本对路径敏感，建议装在纯英文路径 |
+| 高德额度耗尽 | 个人开发者默认日额度 5000 次，网格扫描前先 `--dry-run` 看预计调用量 |
 
 ## 快速开始
 
