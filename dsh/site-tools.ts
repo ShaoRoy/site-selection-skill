@@ -70,6 +70,10 @@ export interface MissingField {
 /** `veto_check` 的规范返回值（与 output.schema 严格一致）。 */
 export interface VetoCheckResult {
   hard_vetoed: boolean
+  /** 定位声明：本工具只提醒，不裁决 */
+  positioning: 'advisory'
+  /** 是否阻断分析流程：恒为 false（硬伤不中断流程） */
+  blocks_pipeline: false
   hard_reasons: RuleHit[]
   major_risks: RuleHit[]
   missing_fields: MissingField[]
@@ -265,6 +269,10 @@ function evaluate(
   }
 
   return {
+    positioning: 'advisory' as const,
+    blocks_pipeline: false as const,
+    // 字段名沿用 hard_vetoed 是为了兼容旧调用方；
+    // 语义已明确：它表示「命中硬伤规则」，**不代表不能开、也不中断流程**
     hard_vetoed: hardReasons.length > 0,
     hard_reasons: hardReasons,
     major_risks: majorRisks,
@@ -320,7 +328,9 @@ const ruleHitSchema = {
 export const vetoCheckTool = defineTool({
   name: 'veto_check',
   description:
-    '对单个实体门店执行一票否决检查：按业态匹配规则表，返回硬性否决项、重大风险项与缺失字段，供选址初筛使用。',
+    '对单个实体门店执行硬性条件核查：按业态匹配规则表，返回硬性缺口、重大风险与缺失字段。'
+    + '**只提醒，不裁决**——本工具不判断「能不能开」，也不中断分析流程；'
+    + '证照与合规由承租方办理，硬伤只作为签约前必须补齐的清单。',
   parameters: {
     store_id: {
       type: 'string',
@@ -371,15 +381,23 @@ export const vetoCheckTool = defineTool({
       type: 'object',
       additionalProperties: false,
       properties: {
+        positioning: {
+          type: 'string', required: true, enum: ['advisory'],
+          description: '定位声明：advisory = 只提醒，不裁决',
+        },
+        blocks_pipeline: {
+          type: 'boolean', required: true, const: false,
+          description: '是否阻断分析流程；恒为 false',
+        },
         hard_vetoed: {
           type: 'boolean',
           required: true,
-          description: '是否存在硬性一票否决项',
+          description: '是否命中硬伤规则。注意：只表示「有硬伤要补」，不代表不能开，也不中断流程',
         },
         hard_reasons: {
           type: 'array',
           required: true,
-          description: '硬性否决明细',
+          description: '硬伤明细（签约前必须补齐的清单）',
           items: ruleHitSchema,
         },
         major_risks: {
