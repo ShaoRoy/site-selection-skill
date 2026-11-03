@@ -1,6 +1,10 @@
 ---
 name: site-selection
+display_name: 选址智能评估
+display_name_en: Site Selection Intelligence
 description: 连锁实体商业（尤其餐饮）选址评估。当用户要评估某个门店点位、判断商圈、核算租金是否合理、估算回本周期、批量筛选候选点位时使用。输出证据链报告，不做"能不能开"的判断。
+description_zh: 连锁实体商业选址评估：城市网格扫描、竞品去重与三级分层、截流两轴定级、财务双口径回本、极限租金反推、行业基准对标、人口栅格交叉校验。输出证据链报告，不判断能不能开。
+description_en: Site selection evaluation for chain restaurants and retail. Covers grid scanning, competitor deduplication and tiering, dual-axis interception grading, cash and accounting payback, rent-ceiling back-calculation, industry benchmark comparison, and population raster cross-validation. Produces an evidence-chain report without passing a go/no-go verdict.
 version: 2.7.0
 license: MIT
 author: RoyShao
