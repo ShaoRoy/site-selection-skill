@@ -32,9 +32,13 @@ if (!probePath) {
 const VW = Number(arg('w', '1000'))
 const VH = Number(arg('h', '720'))
 const outPath = arg('out', join(dirname(resolve(probePath)), 'map-static.svg'))
-// 默认放在 probe.json 同级目录的 ../tiles；也可用 --tiles 显式指定
-const tileDir = arg('tiles') !== undefined
-  ? resolve(String(arg('tiles')))
+// 默认放在 probe.json 同级目录的 ../tiles；也可用 --tiles 显式指定。
+// 注意：arg() 的默认值是 null（不是 undefined），
+// 用 `!== undefined` 判会永远成立，把默认路径变成 <cwd>/null，底图全丢。
+const tilesArg = arg('tiles')
+const hasTilesArg = tilesArg !== null && tilesArg !== undefined && String(tilesArg).trim() !== ''
+const tileDir = hasTilesArg
+  ? resolve(String(tilesArg))
   : resolve(join(dirname(resolve(probePath)), '..', 'tiles'))
 
 const probe = JSON.parse(readFileSync(probePath, 'utf8').replace(/^\uFEFF/, ''))

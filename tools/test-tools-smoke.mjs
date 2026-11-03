@@ -83,6 +83,47 @@ try {
   } catch { mapOk = false }
   check('render-map.mjs 接受相对路径并出图（L5）', mapOk)
 
+  // ── 5：默认瓦片路径（不传 --tiles 也要能找到 ../tiles）
+  //     历史 bug：arg() 默认 null，用 !== undefined 判会永远成立，
+  //     把默认路径变成 <cwd>/null，底图全丢且不报错。
+  {
+    const root = join(tmp, 'maptest')
+    const mb = join(root, 'out')
+    mkdirSync(mb, { recursive: true })
+    // 约定：tiles/ 与 probe.json 所在目录同级
+    //   probe = <root>/out/probe.json  →  tiles = <root>/tiles
+    const tileRoot = join(root, 'tiles')
+    // 1x1 透明 PNG
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    // 渲染器按圈层跨度自动选 zoom（可能 16/17/18），三层都铺瓦片
+    for (const z of [16, 17, 18]) {
+      const n = 2 ** z
+      const tx0 = Math.floor(((113.244246 + 180) / 360) * n)
+      const ty0 = Math.floor(
+        ((1 - Math.log(Math.tan((23.124734 * Math.PI) / 180) + 1 / Math.cos((23.124734 * Math.PI) / 180)) / Math.PI) / 2) * n,
+      )
+      for (let dx = -3; dx <= 3; dx += 1) {
+        for (let dy = -3; dy <= 3; dy += 1) {
+          const d = join(tileRoot, String(z), String(tx0 + dx))
+          mkdirSync(d, { recursive: true })
+          writeFileSync(join(d, `${ty0 + dy}.png`), png)
+        }
+      }
+    }
+    writeFileSync(join(mb, 'probe.json'), JSON.stringify(probe, null, 2), 'utf8')
+    let outText = ''
+    try {
+      outText = execFileSync(process.execPath, [join(HERE, 'render-static-map.mjs'), `--probe=${join(mb, 'probe.json')}`], {
+        cwd: tmp, encoding: 'utf8', timeout: 60000,
+      })
+    } catch (e) { outText = String(e.stdout ?? '') }
+    const hit = /(\d+) 张命中/.exec(outText)
+    check('render-static-map 默认能找到 ../tiles（回归 null≠undefined）', hit !== null && Number(hit[1]) > 0)
+  }
+
   // ── 4：绝不静默成功——缺场景字段时报错而非空白
   const brokenPath = join(tmp, 'broken.json')
   writeFileSync(brokenPath, JSON.stringify({ center: { lat: 23, lng: 113 } }), 'utf8')

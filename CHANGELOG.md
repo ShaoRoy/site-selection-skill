@@ -1,3 +1,33 @@
+## 2.9.6
+
+### 修正：默认瓦片路径失效，报告底图全丢（严重回归）
+
+v2.9.0 给 `render-static-map.mjs` 加 `--tiles` 时引入的 bug：
+
+`js
+const arg = (k, d = null) => ...        // 默认值是 null，不是 undefined
+const tileDir = arg('tiles') !== undefined   // null !== undefined 永远成立
+  ? resolve(String(arg('tiles')))            // → resolve(null) → <cwd>/null
+  : /* 默认路径永远走不到 */
+`
+
+结果：不传 `--tiles` 时，瓦片目录变成 `<cwd>/null`，**一张都找不到**，
+报告顶部出现「本报告不含地图底图」，且**不报错、不中断**。
+
+改为显式判 `null / undefined / 空串` 三者。
+
+### 新增：默认瓦片路径回归测试
+
+`test-tools-smoke.mjs` 增至 13 条，新增：在临时目录铺 z16/17/18 三层瓦片，
+跑不传 `--tiles` 的 render-static-map，断言「N 张命中」> 0。
+
+写这条测试时踩了两个坑，一并记录进 `docs/TEST-REGRESSION.md` 第八节：
+
+- `tiles/` 是 **probe 所在目录的兄弟**，不是 probe 的兄弟
+- 渲染器按圈层跨度自动选 zoom，缓存里没那一层等于没图
+
+---
+
 ## 2.9.5
 
 ### 文档：回归测试清单落盘
