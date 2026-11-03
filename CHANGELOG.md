@@ -1,3 +1,14 @@
+## 2.9.2
+
+### 仓库卫生
+
+- **.gitignore 同步进三个包**：原包内的忽略规则只有 13 行，缺 
+ode_modules/、
+  dist/、secrets/；与项目根的同名文件不一致。现统一为一份 27 行的规则，
+  实测验证：survey/、secrets/、dist/upload/ 被忽略，	ools/、scripts/、SKILL.md 正常入库。
+
+---
+
 ## 2.9.1
 
 按只读代码审计报告（`docs/AUDIT-REPORT-2026-11-04.md`）逐项修复，**除 M8（报告截图处置）外全部处理**。
