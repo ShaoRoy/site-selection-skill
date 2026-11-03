@@ -1,7 +1,7 @@
 {
   "name": "site-selection",
   "displayName": "选址智能评估",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "description": "连锁餐饮选址评估：城市网格扫描、竞品格局、截流两轴、财务双口径、行业基准对标。输出证据链报告，不做能否开店的判断。",
   "author": "RoyShao",
   "license": "MIT",

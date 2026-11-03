@@ -2,11 +2,9 @@
   "_说明": "参数模板。复制成 <业态>.json 后按需修改；删掉的键会沿用内置默认值。所有值必须是数字（比率用小数，如 0.35 表示 35%）。",
   "param_version": "params-<业态>-YYYY.MM",
   "param_source": "这组数是谁定的、依据是什么（例：老板口述 / 同行对标 / 2026-11 广州实测）",
-
   "payback_months": 24,
   "rent_ratio_healthy_max": 0.12,
   "rent_ratio_warning_max": 0.18,
-
   "kitchen_ratio": 0.3,
   "seat_area_sqm": 2.4,
   "normal_turnover": 2.5,
@@ -15,7 +13,6 @@
   "revenue_per_sqm_benchmark": 900,
   "typical_ticket_min": 40,
   "typical_ticket_max": 200,
-
   "_比值校验区间": "内部比值校验用。越界会给出反推值，是发现「人力估少 / 投入漏项」的主要手段",
   "gross_margin_min": 0.5,
   "gross_margin_max": 0.7,
@@ -23,13 +20,12 @@
   "labor_ratio_max": 0.28,
   "investment_per_sqm_min": 3000,
   "investment_per_sqm_max": 5000,
-
   "_口径参数": "税费与摊销是会计口径，缺省为政策默认值；有实际税负或折旧年限时填这里",
   "tax_rate": 0.045,
   "amortization_months": 60,
-
   "term_years": 5,
   "rent_escalation_pct": 0.03,
   "renovation_cycle_years": 5,
-  "renovation_cost_ratio": 0.25
+  "renovation_cost_ratio": 0.25,
+  "_编码要求": "调研表 CSV 必须存为 UTF-8（Excel：另存为 → CSV UTF-8）。GBK/UTF-16 会整表解析为空且不报错"
 }

@@ -8,7 +8,7 @@
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.9.3
+> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.9.4
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -18,8 +18,8 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.9.3.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.9.3.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.9.4.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.9.4.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1` | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -249,7 +249,7 @@ avatars/expert.png              ← 头像 512×512
 | 所选文件夹中未找到 SKILL.md | 传了专家包到「导入技能」 | 用**不带外层文件夹**的包 |
 | 未找到 .codebuddy-plugin/plugin.json | 传了技能包到「配置专家」 | 用**带一层文件夹**的包 |
 | 专家名称已被占用 | `plugin.json` 的 `name` 撞名 | 改 `name` 与 `plugin`（两处一起改） |
-| 没有 skill | SKILL.md 缺 `title` / `summary` | v2.9.3 起已具备 |
+| 没有 skill | SKILL.md 缺 `title` / `summary` | v2.9.4 起已具备 |
 
 ### 验证安装成功
 

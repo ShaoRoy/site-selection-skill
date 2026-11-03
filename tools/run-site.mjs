@@ -12,6 +12,7 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { buildReport } from './report.mjs'
 
 const toPath = (url) => decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1')
@@ -19,6 +20,25 @@ const toolPath = (name) => toPath(new URL(name, import.meta.url))
 const OUT = new URL('../out/', import.meta.url)
 // 输出文件名要清洗：地址里出现 / 或 .. 会写到目录外
 const mySlug = (s) => String(s).replace(/^(广州|深圳|上海|佛山|重庆|成都|杭州|武汉|苏州|西安|南京|长沙|天津|青岛|宁波|东莞|郑州|合肥|昆明)(市)?/, '')
+// ── 环境自检：采集链依赖 DSH 插件的计算模块与本目录的等时圈模块。
+// 技能包里只有渲染器，缺这些依赖——先探一次，给能照做的提示，别抛堆栈。
+{
+  const selfDir = dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'))
+  const missing = []
+  if (!existsSync(join(selfDir, '..', 'src', 'site-tools.ts'))) missing.push('src/site-tools.ts（采集计算层）')
+  if (!existsSync(join(selfDir, 'isochrone.mjs'))) missing.push('tools/isochrone.mjs（等时圈）')
+  if (!existsSync(join(selfDir, 'guangzhou-probe.mjs'))) missing.push('tools/guangzhou-probe.mjs（采集入口）')
+  if (missing.length > 0) {
+    console.error('\n❌ 当前目录只能渲染报告，不能跑采集。缺少：')
+    for (const m of missing) console.error(`   · ${m}`)
+    console.error('')
+    console.error('   技能包内请这样用（只渲染）：')
+    console.error('     node tools/report.mjs --in=<路径>/probe.json')
+    console.error('   需要采集时，在完整源码工作区（含 scratch-plugin/）运行本脚本。')
+    process.exit(2)
+  }
+}
+
 const PROFILES = new URL('../profiles/', import.meta.url)
 
 // 业态码 → 基准库业态名（TS 的 benchmarkCheck 只认库内正式名）
@@ -378,16 +398,26 @@ async function runOne(address, surveyPath) {
           }
         }
         if (Object.keys(survey.params).length > 0) {
-          // 单店级参数：.dsh/skills/site-report/params/<store_id>.json 优先于业态级
-          const storeParamFile = new URL(`../../.dsh/skills/site-report/params/${storeId}.json`, import.meta.url)
+          // 单店级参数：按候选顺序找，第一个存在的即用。
+          //  ① 包内布局  <pkg>/tools/  →  ../params/
+          //  ② dev 布局  scratch-plugin/tools/  →  ../../.dsh/skills/site-report/params/
+          //  ③ 同目录    tools/ 旁的 params/
+          const paramCandidates = [
+            new URL(`../params/${storeId}.json`, import.meta.url),
+            new URL(`../../.dsh/skills/site-report/params/${storeId}.json`, import.meta.url),
+            new URL(`../.dsh/skills/site-report/params/${storeId}.json`, import.meta.url),
+          ]
           let overrides
-          if (existsSync(toPath(storeParamFile))) {
+          const hitParam = paramCandidates.find((u) => existsSync(toPath(u)))
+          if (hitParam) {
             try {
-              overrides = JSON.parse(readFileSync(toPath(storeParamFile), 'utf8'))
-              console.log(`单店参数：已载入 params/${storeId}.json（${Object.keys(overrides).length} 个键）`)
+              overrides = JSON.parse(readFileSync(toPath(hitParam), 'utf8'))
+              console.log(`单店参数：已载入 ${toPath(hitParam).split(/[\\/]params[\\/]/).pop()}（${Object.keys(overrides).length} 个键）`)
             } catch (error) {
               console.warn(`⚠️ 单店参数解析失败：${error.message}（已忽略）`)
             }
+          } else if (storeId !== '') {
+            console.log(`单店参数：未找到 params/${storeId}.json（按业态默认值测算，这不是错误）`)
           }
           // 面积、客单、租期：从调研表字段里取，缺省就不传（财务会自己披露缺省项）
           const numField = (key) => {

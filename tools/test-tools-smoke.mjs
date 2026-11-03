@@ -1,0 +1,105 @@
+/**
+ * test-tools-smoke.mjs —— tools/ 渲染链冒烟测试（E2 补充）
+ *
+ * 覆盖此前完全没有自动化测试的路径：
+ *   1. report.mjs 独立运行（Windows 下 invokedDirectly 路径比较）
+ *   2. 缺 _staticMapSvg 时自动调 render-static-map 补图
+ *   3. render-map.mjs 相对路径解析（L5 回归）
+ *   4. 产出 HTML 的自包含性与关键部件
+ *
+ * 不碰网络：全部用本地 fixture。
+ */
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const HERE = dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'))
+const checks = []
+const check = (label, ok) => checks.push([label, Boolean(ok)])
+
+const tmp = mkdtempSync(join(tmpdir(), 'tools-smoke-'))
+try {
+  // ── 最小 probe.json（无 _staticMapSvg，用来触发自动补图逻辑）
+  const probe = {
+    center: { lat: 23.124734, lng: 113.244246 },
+    address: '测试地址',
+    scene: { label: '测试业态', pattern: '餐饮' },
+    dedupe: { raw: 10, effective: 8, dropped: 1, merged: 1, same_type_count: 3, other_type_count: 5 },
+    coverage: { amap: 90, tencent: 100 },
+    transit: { nearest_metro_name: '测试站', nearest_metro_m: 250 },
+    // render-map 强依赖 pois 数组；缺了会抛「数据里没有 POI」
+    pois: [
+      { name: '甲饭店', lat: 23.1255, lng: 113.2455, same_type: true, category: '餐饮服务;中餐厅' },
+      { name: '乙便利店', lat: 23.1235, lng: 113.2425, same_type: false, category: '购物服务;便利店' },
+    ],
+    rings: [{
+      label: '内圈·步行10分',
+      inside: 8,
+      top: [
+        { name: '甲饭店', share_pct: 12.5 },
+        { name: '乙饭店', share_pct: 9.0 },
+        { name: '丙饭店', share_pct: 9.0 },
+      ],
+      nearest: [{ name: '甲饭店', distance_m: 80 }],
+      distance_bands: [],
+    }],
+  }
+  const probePath = join(tmp, 'probe.json')
+  writeFileSync(probePath, JSON.stringify(probe, null, 2), 'utf8')
+
+  // ── 1+2：独立运行 report.mjs，相对路径传入
+  let ran = false
+  try {
+    execFileSync(process.execPath, [join(HERE, 'report.mjs'), `--in=${probePath}`], {
+      cwd: tmp, stdio: 'ignore', timeout: 60000,
+    })
+    ran = true
+  } catch { ran = false }
+
+  check('report.mjs 独立运行退出码为 0', ran)
+  check('产出 probe.md', existsSync(join(tmp, 'probe.md')))
+  check('产出 probe.html', existsSync(join(tmp, 'probe.html')))
+
+  const md = existsSync(join(tmp, 'probe.md')) ? readFileSync(join(tmp, 'probe.md'), 'utf8') : ''
+  const html = existsSync(join(tmp, 'probe.html')) ? readFileSync(join(tmp, 'probe.html'), 'utf8') : ''
+
+  check('md 含结论段', md.includes('## 0. 结论'))
+  check('md 含竞品分布', md.includes('竞品分布'))
+  check('md 含势力份额榜', md.includes('势力份额'))
+  check('html 非空且 > 10KB', html.length > 10240)
+  check('html 无未渲染模板占位', !html.includes('${') && !html.includes('undefined'))
+  check('html 无外链资源（自包含）', !/(?:src|href)="https?:\/\//.test(html))
+  check('html 含工具栏', html.includes('__saveHtml'))
+
+  // ── 3：render-map 相对路径（L5 回归）
+  let mapOk = false
+  try {
+    execFileSync(process.execPath, [join(HERE, 'render-map.mjs'), 'probe.json'], {
+      cwd: tmp, stdio: 'ignore', timeout: 60000,
+    })
+    mapOk = existsSync(join(tmp, 'probe-map.html'))
+  } catch { mapOk = false }
+  check('render-map.mjs 接受相对路径并出图（L5）', mapOk)
+
+  // ── 4：绝不静默成功——缺场景字段时报错而非空白
+  const brokenPath = join(tmp, 'broken.json')
+  writeFileSync(brokenPath, JSON.stringify({ center: { lat: 23, lng: 113 } }), 'utf8')
+  let brokenThrew = false
+  try {
+    execFileSync(process.execPath, [join(HERE, 'render-map.mjs'), brokenPath], {
+      cwd: tmp, stdio: 'ignore', timeout: 30000,
+    })
+  } catch { brokenThrew = true }
+  check('缺 POI 数据时 render-map 报错退出（不静默）', brokenThrew)
+} finally {
+  rmSync(tmp, { recursive: true, force: true })
+}
+
+const pass = checks.filter(([, ok]) => ok).length
+const fail = checks.length - pass
+console.log(`\n=== tools 冒烟测试 ===`)
+for (const [label, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`)
+console.log(`\n${pass}/${checks.length} 通过`)
+if (fail > 0) process.exit(1)

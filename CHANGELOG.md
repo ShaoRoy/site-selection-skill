@@ -1,3 +1,53 @@
+## 2.9.4
+
+### 修正：单店参数路径不可移植（B1）
+
+`run-site.mjs` 原先写死 `../../.dsh/skills/site-report/params/<id>.json`，只在
+`scratch-plugin/tools/` 这个位置成立。改为多候选依次尝试：
+
+1. `../params/<id>.json`（包内布局 `<pkg>/tools/` → `<pkg>/params/`）
+2. `../../.dsh/skills/site-report/params/<id>.json`（dev 布局）
+3. `../.dsh/skills/site-report/params/<id>.json`
+
+两种场景都实测通过；找不到时打印「按业态默认值测算，这不是错误」，不再静默。
+
+### 修正：包内跑采集给出人话报错
+
+采集链依赖 `src/site-tools.ts` 与 `tools/isochrone.mjs`，技能包里没有。
+原先直接抛 `MODULE_NOT_FOUND` 堆栈；现在 `run-site.mjs` 入口先自检，
+缺依赖时明确告知：
+
+`
+❌ 当前目录只能渲染报告，不能跑采集。缺少：
+   · src/site-tools.ts（采集计算层）
+   · tools/isochrone.mjs（等时圈）
+   技能包内请这样用（只渲染）：
+     node tools/report.mjs --in=<路径>/probe.json
+`
+
+### 新增：tools 渲染链冒烟测试（12 条）
+
+此前 `report.mjs` / `render-map.mjs` 完全没有自动化测试。新增
+`tools/test-tools-smoke.mjs`，覆盖：
+
+- Windows 下 `report.mjs` 独立运行（`invokedDirectly` 路径比较回归）
+- 缺 `_staticMapSvg` 时自动补图
+- `render-map.mjs` 相对路径解析（L5 回归）
+- HTML 自包含性（无外链、无未渲染占位）
+- 缺 POI 时**报错退出而非静默**
+
+已挂进 `pnpm test`。
+
+### 文档：调研表编码要求（A2）
+
+`tools/README.md`、`SKILL.md`、`params/_template.json` 三处补充：
+CSV **必须存为 UTF-8**；GBK/UTF-16 会整表解析为空**且不报错**，报告照出但财务段全回落默认值。
+另注明千分位数字需加引号。
+
+不引入 iconv 依赖。
+
+---
+
 ## 2.9.3
 
 ### 修正：否决检查的「定位」自相矛盾（模块清单里的「隐患二」）
