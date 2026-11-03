@@ -1,3 +1,62 @@
+## 2.9.1
+
+按只读代码审计报告（`docs/AUDIT-REPORT-2026-11-04.md`）逐项修复，**除 M8（报告截图处置）外全部处理**。
+
+### 高
+
+- **H1 发布物落后源码**：`dist/` 三包内的 `dsh/site-tools.ts` 与 `benchmark-data.ts` 已同步到当前
+  源码（此前缺 8 处修复，含门槛翻台率财务口径 bug）；`data/formats.json` 三包统一为 10 条
+  （02 专家包原只有 4 条）。
+
+### 中
+
+- **M1 租期回本口径矛盾**：翻新支出原先在 12 个月循环结束后才扣，判定回本月时尚未扣除，
+  导致「第 51 个月已回本」与「期末累计 −26 万、收不回投资」同时出现。改为年末先扣再判，
+  并新增 `paybackOvertaken` 区分「中途过零但期末转负」。
+- **M2 CSV 空 value 静默变 0**：`Number('') === 0` 让留空的 `daily_revenue` 变成营业额 0，
+  整份报告变全亏。空单元格现在跳过，走业态默认值。
+- **M3 随包 tea_house 参数**：4 份 `params/tea_house.json` 客单区间 50~110 同步为代码值 60~130。
+- **M4 锚点负值渲染**：「需降 −64755 元/月」改为按符号分支——正数写「需降 X」，
+  非正数写「无需降，尚有余量 |X|」；锚点不可达时写「不可达」。
+- **M5 密钥路径硬编码**：`demand-fetch.py` / `grid-scan.py` / `walk-matrix.py` 的
+  `C:\Users\Administrator\...` 改为 `os.path.expanduser("~")`，跨机器可用。
+- **M6 demand 模板脱节**：`survey/demand/_template.json` 原为已废弃的人工普查 schema，
+  与实际自动产物零重叠；改为按实际产物结构生成，并标注「不要手填」。
+- **M7 .gitignore 未覆盖发布物**：新增 `dist/upload/` 与 `dist/**/*.zip`，实测 `git check-ignore` 命中。
+
+### 低
+
+- **L1 翻台两处精度**：`turnover_per_day` 统一 3 位小数，报告与告警同源，不再出现两个值。
+- **L2 千分位被切碎**：`150,000` 会被 CSV 解析成 `value=150 / source=000`；
+  现在识别「数字,三位」为千分位而非分隔符。
+- **L3 `--profile` 未校验**：加 `^[\w\u4e00-\u9fa5-]+$` 白名单，挡住 `../` 输入。
+- **L4 地址 slug 未清洗**：注释与调用处明确该值用于文件名，需过滤路径分隔符。
+- **L5 render-map 相对路径**：`new URL('file:///...')` 改为 `pathToFileURL(resolve(...))`，
+  相对路径按 cwd 正确解析。
+- **L6 index-dashboard 链接未转义**：`encodeURI` + 括号转义，避免路径含 `)` 截断 markdown。
+- **L7 tile-cache 无超时**：加 `AbortSignal.timeout(15000)` 与 512KB 大小上限。
+- **L8 grid-scan 文件名**：`--city`/`--district` 先清洗再拼缓存路径。
+- **L9 barriers 模板列头**：与自动产物列名对齐（原模板列头漂移，人工填报无据可依）。
+- **L10 基准库空数组 min/max**：`Math.min(...[])` = Infinity 会写进 JSON；先判空返回 -1。
+
+### 提示
+
+- **P1「未舍入值」标注**：原只在红档分支出现，现四档统一。
+- **P2 初始投入=0 的 payback**：由 `0` 改为 `-1`（哨兵），避免读成「当月回本」。
+- **P3 profiles 缺 archetype**：5 份档案补齐 `archetype` 字段，调研表漏写 `format_code`
+  时不再退化到 `'store'` 兜底。
+- **P5 负营业额**：`turnover` 对非正客流返回哨兵 -1，不再把负数留在 JSON。
+- **P6 city_level 丢失**：由硬编码 `null` 改为按城市名回查 `CITY_BASELINES`。
+- **P7 重复常量**：`DEFAULT_TARGET_PAYBACK_MONTHS_FALLBACK` 改为引用主常量，不再各维护一个 24。
+- **P9 import-benchmarks 直接覆盖源码**：新增 `--check` dry-run，只统计不写入。
+
+### 未处理
+
+- **M8 报告截图处置**：属商业决策（白鹅潭点位是否在保密期），由用户拍板。
+- **P4 CSV 编码探测**、**P8 density.json 底稿缺失**：前者需引入依赖，后者受底稿限制。
+
+---
+
 ## 2.9.0
 
 ### 新增：报告渲染器打进球包（`tools/`）

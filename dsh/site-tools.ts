@@ -560,6 +560,10 @@ interface ScenarioResult {
   payback_static_months: number
   /** 会计口径回本周期（月）= 初始投入 ÷ 会计净利；与行业基准表可比 */
   accounting_payback_months: number
+  /** 回本判读（按行业实操标尺）：对会计口径回本贴标签 */
+  payback_verdict: { level: PaybackLevel; label: string; note: string }
+  /** 回本判读（现金流口径） */
+  payback_verdict_cash: { level: PaybackLevel; label: string; note: string }
   /** 极限租金（现金净流 = 0 时的租金上限，元/月）；负值表示即便零租金也亏损 */
   max_rent_breakeven: number
   /** 极限租金（现金回本周期恰好等于目标月数时的租金上限，元/月） */
@@ -594,6 +598,12 @@ export interface RentRecommendation {
   ceiling_rent: number
   /** 当前租金 − 锚点；正数 = 需要下调的幅度 */
   gap_to_target: number
+  /** 租金安全余量（元/月）= 锚点 − 当前租金；负数表示需下调。**这才是「余量」的绝对值** */
+  rent_headroom: number
+  /** 安全余量占锚点的比例（0–1）：当前租金比承受上限低多少个百分点 */
+  rent_headroom_pct: number
+  /** 当前租金占锚点的比例（0–1） */
+  rent_vs_anchor_pct: number
   /** 当前租金 − 红线；正数 = 已越过保本线 */
   gap_to_ceiling: number
   /** 锚点取自哪个情景（最保守的那个） */
@@ -811,7 +821,11 @@ function computeScenario(
   const breakevenRevenue = contributionRate > 0 ? fixedCost / contributionRate : 0
   const breakevenDaily = breakevenRevenue / 30
 
-  const payback = cashFlow > 0 ? params.initial_investment / cashFlow : -1
+  // 初始投入 ≤ 0 属于参数缺失，返回 -1（哨兵）而不是 0——
+  // 0 在报告里会被读成「当月就回本」
+  const payback = cashFlow > 0 && params.initial_investment > 0
+    ? params.initial_investment / cashFlow
+    : -1
   const accountingPayback = netProfit > 0 ? params.initial_investment / netProfit : -1
   const roi = params.initial_investment > 0 ? (netProfit * 12) / params.initial_investment : 0
 
@@ -831,6 +845,8 @@ function computeScenario(
     breakeven_revenue_daily: roundTo(breakevenDaily, 2),
     payback_static_months: roundTo(payback, 1),
     accounting_payback_months: roundTo(accountingPayback, 1),
+    payback_verdict: gradePayback(accountingPayback),
+    payback_verdict_cash: gradePayback(payback),
     max_rent_breakeven: roundTo(maxRentBreakeven, 2),
     max_rent_target: roundTo(maxRentTarget, 2),
     max_rent_ratio: roundTo(maxRentRatio, 4),
@@ -924,7 +940,9 @@ export const PAYBACK_BY_FORMAT: ReadonlyArray<{ match: RegExp; months: number; l
 ]
 
 /** 未匹配到业态时的兜底目标回本周期（月）。 */
-export const DEFAULT_TARGET_PAYBACK_MONTHS_FALLBACK = 24
+/** 未匹配业态时的兜底回本目标：与 DEFAULT_TARGET_PAYBACK_MONTHS 同值，
+ *  保留独立导出是为了让调用方语义清楚，但不再各自维护一个数字 */
+export const DEFAULT_TARGET_PAYBACK_MONTHS_FALLBACK = DEFAULT_TARGET_PAYBACK_MONTHS
 
 /** 按业态推荐目标回本周期（月）。 */
 export function suggestTargetPayback(formatCode: string): { months: number; label: string; matched: boolean } {
@@ -1080,9 +1098,11 @@ function simulateLease(
 
     for (let month = 1; month <= 12; month += 1) {
       cumulative += netMonthly
+      // 翻新在年末（第 12 个月）支出，必须**先扣再判**，
+      // 否则会出现「本月刚过零记为已回本，年末翻新又砸回负值」的自相矛盾
+      if (month === 12) cumulative -= renovation
       if (paybackMonth < 0 && cumulative >= 0) paybackMonth = (year - 1) * 12 + month
     }
-    cumulative -= renovation
 
     totalNet += yearNet
     totalRent += rentMonthly * 12
@@ -1100,6 +1120,9 @@ function simulateLease(
 
   const months = termYears * 12
   const covers = cumulative >= 0
+  // 中途过零但期末转负：翻新把利润吃回去了。
+  // 这种情况不能说「已回本」，也不能简单说「未回本」——两件事都要讲清楚。
+  const paybackOvertaken = paybackMonth > 0 && !covers
   const ratio = paybackMonth > 0 ? paybackMonth / months : 1
   const verdict: LeaseModel['verdict'] = !covers ? 'fail' : ratio > 0.6 ? 'tight' : 'healthy'
   const { advice, minYears } = termAdviceFor(area)
@@ -1161,6 +1184,101 @@ function simulateLease(
  *
  * 业态缺省系数仅为经验起点，必须由客户实际业态校准。
  */
+/**
+ * 业态翻台风险阈值（业务口径）。
+ * red   = 现实可行性低，**禁止**作为基准情景，财务结果只能当压力测算；
+ * yellow= 偏低，报告须标注；
+ * green = 合理区间；
+ * high  = 只有节假日高峰才可能出现，不宜按全年稳态测算。
+ */
+/**
+ * 餐饮行业民间实操标尺 —— 重资产大店（装修投入几百万级）。
+ *
+ *   24–36 个月（2–3 年）：优秀门店
+ *   ≤ 48 个月（4 年）   ：可勉强接受的上限
+ *   49–60 个月（>4 年）  ：风险偏高，需要非常硬的非财务理由
+ *   61–84 个月（5–7 年） ：风险极高，多数老板不该投
+ *   > 84 个月（7–8 年）  ：基本没有投资价值
+ *
+ * 这是经验标尺，不是公式。报告里只用来给算出来的回本月数贴标签，
+ * 不反过来影响测算结果。
+ */
+const PAYBACK_SCALE: ReadonlyArray<{
+  max: number
+  level: 'too_good' | 'excellent' | 'acceptable' | 'risky' | 'very_risky' | 'no_value'
+  label: string
+  note: string
+}> = [
+  {
+    max: 18, level: 'too_good', label: '快得不真实，先核参数',
+    note: '低于 18 个月通常不是好生意，而是营业额估高了、投入漏项了，或把一次性收入当成了常态',
+  },
+  { max: 36, level: 'excellent', label: '优秀', note: '2–3 年回本，餐饮实操里的好店' },
+  { max: 48, level: 'acceptable', label: '可接受上限', note: '接近 4 年，行业勉强能接受的上限' },
+  { max: 60, level: 'risky', label: '风险偏高', note: '超过 4 年，要有很硬的理由才投' },
+  { max: 84, level: 'very_risky', label: '风险极高', note: '5 年以上，多数老板不该投' },
+  { max: Infinity, level: 'no_value', label: '基本没有投资价值', note: '7–8 年回本，除非有非财务目的' },
+]
+
+/** 按行业标尺给回本月数贴标签。无法回本（-1）单列。 */
+type PaybackLevel = 'too_good' | 'excellent' | 'acceptable' | 'risky' | 'very_risky' | 'no_value' | 'never'
+
+function gradePayback(months: number): { level: PaybackLevel; label: string; note: string } {
+  if (!Number.isFinite(months) || months <= 0) {
+    return { level: 'never', label: '按此情景无法回本', note: '现金流或净利为负，回本周期不存在' }
+  }
+  const band = PAYBACK_SCALE.find((b) => months <= b.max)
+  return band === undefined
+    ? { level: 'no_value', label: '基本没有投资价值', note: '回本周期过长' }
+    : { level: band.level, label: band.label, note: band.note }
+}
+
+const TURNOVER_RISK_BANDS: Readonly<Record<string, { red: number; greenLow: number; greenHigh: number; label: string }>> = {
+  large_yuecai: { red: 1.5, greenLow: 2.0, greenHigh: 2.5, label: '粤菜正餐（午晚市）' },
+  large_dining: { red: 1.5, greenLow: 2.0, greenHigh: 2.5, label: '粤菜正餐（午晚市）' },
+  tea_house: { red: 1.4, greenLow: 2.0, greenHigh: 2.8, label: '24h 茶市茶楼' },
+}
+
+/** 按业态判定翻台风险。未配置的业态返回 unknown，不臆造结论。 */
+function gradeTurnoverRisk(
+  formatCode: string,
+  turnover: number | undefined,
+): { risk: 'red' | 'yellow' | 'green' | 'high' | 'unknown'; note: string } {
+  if (turnover === undefined || !Number.isFinite(turnover) || turnover <= 0) {
+    return { risk: 'unknown', note: '翻台率无法计算' }
+  }
+  const key = Object.keys(TURNOVER_RISK_BANDS).find((k) => formatCode.includes(k))
+  const band = key === undefined ? undefined : TURNOVER_RISK_BANDS[key]
+  if (band === undefined) return { risk: 'unknown', note: '该业态未配置翻台阈值' }
+  // 四个分支统一用「未舍入值」口径，否则 yellow/green 分支显示值与判定值会有末位差
+  const t = turnover.toFixed(3)
+  const nearLine = Math.abs(turnover - band.red) < 0.01
+  const nearTip = nearLine
+    ? `（贴线：与下限只差 ${Math.abs(turnover - band.red).toFixed(4)}，营收或客流稍微一改就会翻档）`
+    : ''
+  if (turnover < band.red) {
+    return {
+      risk: 'red',
+      note: `翻台 ${t} 次/日（未舍入值）低于 ${band.label} 下限 ${band.red}：`
+        + '这个参数组合现实可行性低，财务结果只能做压力测算，不代表正常经营预期' + nearTip,
+    }
+  }
+  if (turnover < band.greenLow) {
+    return {
+      risk: 'yellow',
+      note: `翻台 ${t} 次/日（未舍入值）偏低（${band.label} 合理区间 ${band.greenLow.toFixed(2)}–${band.greenHigh.toFixed(2)}）：`
+        + '需核实是位置问题，还是营收/客流参数估低了',
+    }
+  }
+  if (turnover <= band.greenHigh) {
+    return { risk: 'green', note: `翻台 ${t} 次/日（未舍入值）落在 ${band.label} 合理区间 ${band.greenLow.toFixed(2)}–${band.greenHigh.toFixed(2)}` }
+  }
+  return {
+    risk: 'high',
+    note: `翻台 ${t} 次/日（未舍入值）高于 ${band.label} 常见上限 ${band.greenHigh}：通常只在节假日高峰出现，不宜按全年稳态测算`,
+  }
+}
+
 const SPACE_DEFAULTS_BY_FORMAT: ReadonlyArray<{
   match: RegExp
   kitchenRatio: number
@@ -1178,7 +1296,7 @@ const SPACE_DEFAULTS_BY_FORMAT: ReadonlyArray<{
   { match: /convenience|便利店/, kitchenRatio: 0.1, seatAreaSqm: 0, normalTurnover: 0, turnoverCap: 0, revenuePerSqmBenchmark: 3000, ticketMin: 5, ticketMax: 25 },
   { match: /fast_food|fastfood|快餐|粉面|小吃/, kitchenRatio: 0.25, seatAreaSqm: 1.5, normalTurnover: 4, turnoverCap: 6, revenuePerSqmBenchmark: 1500, ticketMin: 15, ticketMax: 45 },
   // 全天茶楼：只喝茶吃点心，没有正餐 → 客单低、翻台高、占座时间长
-  { match: /tea_house|yumcha|早茶|茶楼|茶居|点心/, kitchenRatio: 0.32, seatAreaSqm: 3.2, normalTurnover: 2.5, turnoverCap: 3.5, revenuePerSqmBenchmark: 800, ticketMin: 50, ticketMax: 110 },
+  { match: /tea_house|yumcha|早茶|茶楼|茶居|点心/, kitchenRatio: 0.32, seatAreaSqm: 3.2, normalTurnover: 2.5, turnoverCap: 3.5, revenuePerSqmBenchmark: 800, ticketMin: 60, ticketMax: 130 },
   // 大型正餐/粤菜酒楼：有正餐，客单高、翻台低
   { match: /large_dining|large_yuecai|large_|酒楼|正餐大店|宴会/, kitchenRatio: 0.35, seatAreaSqm: 2.8, normalTurnover: 2, turnoverCap: 3, revenuePerSqmBenchmark: 700, ticketMin: 150, ticketMax: 400 },
   { match: /mid_dining|dinner|正餐|餐厅/, kitchenRatio: 0.3, seatAreaSqm: 2.2, normalTurnover: 2.5, turnoverCap: 3.5, revenuePerSqmBenchmark: 900, ticketMin: 60, ticketMax: 150 },
@@ -1252,8 +1370,22 @@ export interface SpaceModel {
   ticket_note: string
   /** 座位容量上限下的日客流 */
   capacity_customers_per_day: number
-  /** 容量利用率（%）；无法计算时为 -1 */
+  /** 容量利用率（%）：客流 ÷ (座位数 × 业态翻台上限)。**不是翻台率**，报告须写全名 */
   utilization_pct: number
+  /** 容量利用率的分母口径，供报告原样展示 */
+  utilization_basis: string
+  /** 原始客流（未乘点位截流系数） */
+  daily_customers_raw: number
+  /** 计算客流时使用的点数截流乘数（1 = 未调整） */
+  catchment_multiplier: number
+  /** 目标回本日营业额（现金流口径，不含摊销） */
+  target_daily_revenue_cash: number
+  /** 目标回本所需翻台（现金流口径）；-1 表示无法计算 */
+  target_turnover_cash_per_day: number
+  /** 业态翻台风险分级：red 该组合现实可行性低 ｜ yellow 偏低 ｜ green 合理 ｜ high 偏高 */
+  turnover_risk: 'red' | 'yellow' | 'green' | 'high' | 'unknown'
+  /** 翻台风险的人话说明 */
+  turnover_risk_note: string
   /** 坪效（元/㎡/月，按建筑面积计） */
   revenue_per_sqm_month: number
   /** 该业态坪效经验基准（元/㎡/月） */
@@ -1280,6 +1412,7 @@ function buildSpaceModel(
   breakevenDaily: number,
   targetPaybackMonths: number,
   overridesRaw: Record<string, unknown> | undefined,
+  catchmentCode?: string,
 ): SpaceModel {
   const readNum = (key: string): number | undefined => {
     const entry = spaceRaw?.[key]
@@ -1320,6 +1453,13 @@ function buildSpaceModel(
     ticket_note: '',
     capacity_customers_per_day: 0,
     utilization_pct: -1,
+    utilization_basis: '',
+    daily_customers_raw: -1,
+    catchment_multiplier: 1,
+    target_daily_revenue_cash: -1,
+    target_turnover_cash_per_day: -1,
+    turnover_risk: 'unknown',
+    turnover_risk_note: '',
     revenue_per_sqm_month: 0,
     revenue_per_sqm_benchmark: 0,
     breakeven_revenue_monthly: roundTo(breakevenDaily * 30, 2),
@@ -1380,35 +1520,62 @@ function buildSpaceModel(
   const avgTicket = readNum('avg_ticket')
   const monthlyRevenue = values.daily_revenue * 30
   const customersInput = readNum('daily_customers')
-  let dailyCustomers = customersInput
-  if (dailyCustomers === undefined && avgTicket !== undefined && avgTicket > 0) {
-    dailyCustomers = values.daily_revenue / avgTicket
+  // 原始客流（未乘截流系数）：来自 日营业额 ÷ 客单价
+  let dailyCustomersRaw = customersInput
+  if (dailyCustomersRaw === undefined && avgTicket !== undefined && avgTicket > 0) {
+    dailyCustomersRaw = values.daily_revenue / avgTicket
   }
+  // 截流修正后客流：财务模型已按点位截流力把营收 ×1.1 等，这里同步还原，
+  // 否则「原始 240 人」与「空间模块 264 人」会对不上，读者以为算错
+  const catchmentMult = catchmentOf(catchmentCode)?.multiplier ?? 1
+  const dailyCustomers = dailyCustomersRaw !== undefined ? dailyCustomersRaw * catchmentMult : undefined
 
   const seatsValue = seats ?? -1
   const seatsKnown = seatsValue > 0
-  const turnover = seatsKnown && dailyCustomers !== undefined ? dailyCustomers / seatsValue : undefined
+  const turnover = seatsKnown && dailyCustomers !== undefined && dailyCustomers > 0
+    ? dailyCustomers / seatsValue
+    : undefined
+  // 容量利用率：分母是「座位数 × 业态翻台上限」，不是「座位数 × 常规翻台」，
+  // 所以它与翻台率不是一回事，报告里必须写全名，不能简称「利用率」并排放在翻台率旁
   const capacityCustomers = seatsKnown ? seatsValue * preset.turnoverCap : 0
   const utilization = capacityCustomers > 0 && dailyCustomers !== undefined
     ? (dailyCustomers / capacityCustomers) * 100
     : undefined
+  const utilizationBasis = `座位数 ${seatsValue} × 业态翻台上限 ${preset.turnoverCap}`
 
   const revenuePerSqm = monthlyRevenue / area
   const investmentPerSqm = values.initial_investment / area
 
-  // 门槛翻台率：保本线 与 目标回本线（把「日保本营业额÷座位」再除以客单价）
+  // ── 门槛翻台率：三个口径必须同税后贡献率，否则「目标翻台」会比「保本翻台」更宽松，两列不可比 ──
+  // 贡献率 = 毛利率 − 税率（保本公式 revenue ×(gm − tax) = fixed 的同一条线）
   const monthlyFixed = values.monthly_rent + values.monthly_labor + values.monthly_other_fixed
-  const requiredMonthlyRevenue =
-    values.gross_margin > 0
-      ? (values.initial_investment / (targetPaybackMonths > 0 ? targetPaybackMonths : 24) + monthlyFixed) / values.gross_margin
-      : 0
-  const targetDailyRevenue = requiredMonthlyRevenue / 30
+  const contribRate = values.gross_margin - values.tax_rate
+  const paybackMonths = targetPaybackMonths > 0 ? targetPaybackMonths : 24
+  const amortMonthly = values.amortization_months > 0
+    ? values.initial_investment / values.amortization_months
+    : 0
+  const investSlice = values.initial_investment / paybackMonths
+
+  // 现金流口径：营收×贡献率 − 固定 = 投资/回本月
+  const requiredMonthlyRevenueCash =
+    contribRate > 0 ? (investSlice + monthlyFixed) / contribRate : 0
+  // 会计口径：再扣月摊销（即「月净利 = 投资/回本月」）
+  // 业务口语说的「X 个月回本」通常指会计口径 —— 主结论用这条
+  const requiredMonthlyRevenueAcct =
+    contribRate > 0 ? (investSlice + monthlyFixed + amortMonthly) / contribRate : 0
+
+  const targetDailyRevenue = requiredMonthlyRevenueAcct / 30
+  const targetDailyRevenueCash = requiredMonthlyRevenueCash / 30
   const ticketUsable = avgTicket !== undefined && avgTicket > 0
   const breakevenTurnover =
     seatsKnown && ticketUsable ? breakevenDaily / avgTicket! / seatsValue : undefined
   const targetTurnover =
     seatsKnown && ticketUsable && targetDailyRevenue > 0
       ? targetDailyRevenue / avgTicket! / seatsValue
+      : undefined
+  const targetTurnoverCash =
+    seatsKnown && ticketUsable && targetDailyRevenueCash > 0
+      ? targetDailyRevenueCash / avgTicket! / seatsValue
       : undefined
   const targetWithinCapacity = targetTurnover !== undefined ? targetTurnover <= preset.turnoverCap : false
 
@@ -1458,7 +1625,7 @@ function buildSpaceModel(
   } else if (consistency === 'revenue_too_low') {
     warnings.push(
       `营收假设 ${Math.round(values.daily_revenue)} 元/日，仅为该面积常规产能（${Math.round(impliedDailyNormal)} 元/日）的 `
-      + `${(revenueVsNormal * 100).toFixed(0)}%：**面积与营收严重不匹配**——要么营收估低了，要么面积选大了，先核这一个再谈别的`,
+      + `${(revenueVsNormal * 100).toFixed(1)}%：**面积与营收严重不匹配**——要么营收估低了，要么面积选大了，先核这一个再谈别的`,
     )
   } else if (turnover !== undefined && preset.normalTurnover > 0 && turnover < preset.normalTurnover * 0.6) {
     warnings.push(`翻台率 ${turnover.toFixed(2)} 次/日，低于该业态常规 ${preset.normalTurnover}：营收偏保守或面积偏大`)
@@ -1485,7 +1652,7 @@ function buildSpaceModel(
     seat_area_sqm: seatAreaSqm !== undefined && seatAreaSqm > 0 ? roundTo(seatAreaSqm, 2) : -1,
     avg_ticket: avgTicket !== undefined ? roundTo(avgTicket, 2) : -1,
     daily_customers: dailyCustomers !== undefined ? roundTo(dailyCustomers, 1) : -1,
-    turnover_per_day: turnover !== undefined ? roundTo(turnover, 2) : -1,
+    turnover_per_day: turnover !== undefined ? roundTo(turnover, 3) : -1,
     breakeven_turnover_per_day: breakevenTurnover !== undefined ? roundTo(breakevenTurnover, 2) : -1,
     target_turnover_per_day: targetTurnover !== undefined ? roundTo(targetTurnover, 2) : -1,
     target_daily_revenue: targetDailyRevenue > 0 ? roundTo(targetDailyRevenue, 2) : -1,
@@ -1505,6 +1672,13 @@ function buildSpaceModel(
     ticket_note: ticketNote,
     capacity_customers_per_day: roundTo(capacityCustomers, 1),
     utilization_pct: utilization !== undefined ? roundTo(utilization, 1) : -1,
+    utilization_basis: utilizationBasis,
+    daily_customers_raw: dailyCustomersRaw !== undefined ? roundTo(dailyCustomersRaw, 1) : -1,
+    catchment_multiplier: catchmentMult,
+    target_daily_revenue_cash: targetDailyRevenueCash > 0 ? roundTo(targetDailyRevenueCash, 2) : -1,
+    target_turnover_cash_per_day: targetTurnoverCash !== undefined ? roundTo(targetTurnoverCash, 2) : -1,
+    turnover_risk: gradeTurnoverRisk(formatCode, turnover).risk,
+    turnover_risk_note: gradeTurnoverRisk(formatCode, turnover).note,
     revenue_per_sqm_month: roundTo(revenuePerSqm, 2),
     revenue_per_sqm_benchmark: preset.revenuePerSqmBenchmark,
     breakeven_revenue_monthly: roundTo(breakevenDaily * 30, 2),
@@ -1590,13 +1764,17 @@ const RATIO_BENCHMARKS_FALLBACK = {
 }
 
 /** 一条比值校验结果。 */
-export interface RatioCheck {
+export type RatioStatus = RatioCheck['status']
+
+interface RatioCheck {
   item: string
   value: number
   unit: string
   healthy_min: number
   healthy_max: number
-  status: 'ok' | 'low' | 'high'
+  /** 仅租售比使用：警戒线上限；健康线以内 ok，健康线~警戒线 watch，超警戒线 breach */
+  warning_max?: number
+  status: 'ok' | 'low' | 'high' | 'watch' | 'breach'
   note: string
 }
 
@@ -1659,15 +1837,24 @@ function buildRatioChecks(
 
   const rentLine = rentRatioLineFor(formatCode)
   const rentRatio = monthlyRevenue > 0 ? values.monthly_rent / monthlyRevenue : 0
-  const rrOk = rentRatio <= rentLine.warningMax
+  // 三档：健康线以内 ok；健康线~警戒线 watch（偏高）；超警戒线 breach（破线）
+  // 必须与 recommendation.rent_ratio_verdict 口径一致，否则报告里同一指标两个结论
+  const rrStatus: RatioStatus = rentRatio <= rentLine.healthyMax
+    ? 'ok'
+    : rentRatio <= rentLine.warningMax ? 'watch' : 'breach'
   checks.push({
     item: '租售比',
     value: roundTo(rentRatio * 100, 1),
     unit: '%',
     healthy_min: 0,
-    healthy_max: roundTo(rentLine.warningMax * 100, 1),
-    status: rrOk ? 'ok' : 'high',
-    note: rrOk ? '未超警戒线' : `超警戒线 ${roundTo(rentLine.warningMax * 100, 1)}%`,
+    healthy_max: roundTo(rentLine.healthyMax * 100, 1),
+    warning_max: roundTo(rentLine.warningMax * 100, 1),
+    status: rrStatus,
+    note: rrStatus === 'ok'
+      ? `未超健康线 ${roundTo(rentLine.healthyMax * 100, 1)}%`
+      : rrStatus === 'watch'
+        ? `超健康线 ${roundTo(rentLine.healthyMax * 100, 1)}%，未破警戒线 ${roundTo(rentLine.warningMax * 100, 1)}%`
+        : `已破警戒线 ${roundTo(rentLine.warningMax * 100, 1)}%`,
   })
 
   if (areaSqm !== undefined && areaSqm > 0) {
@@ -1831,6 +2018,15 @@ function runFinancials(
     target_rent: anchorScenario.result.max_rent_target,
     ceiling_rent: ceilingScenarioWorst.result.max_rent_breakeven,
     gap_to_target: roundTo(values.monthly_rent - anchorScenario.result.max_rent_target, 2),
+    // 租金安全余量（元/月）= 锚点 − 当前租金；正数=还有空间，负数=需下调
+    rent_headroom: roundTo(anchorScenario.result.max_rent_target - values.monthly_rent, 2),
+    // 余量占锚点比例：当前 12 万、锚点 23.08 万 → 余量 11.08 万、占锚点 48%
+    rent_headroom_pct: anchorScenario.result.max_rent_target > 0
+      ? roundTo((anchorScenario.result.max_rent_target - values.monthly_rent) / anchorScenario.result.max_rent_target, 4)
+      : 0,
+    rent_vs_anchor_pct: anchorScenario.result.max_rent_target > 0
+      ? roundTo(values.monthly_rent / anchorScenario.result.max_rent_target, 4)
+      : 0,
     gap_to_ceiling: roundTo(values.monthly_rent - ceilingScenarioWorst.result.max_rent_breakeven, 2),
     based_on_scenario: anchorScenario.key,
     current_rent_ratio: roundTo(currentRentRatio, 4),
@@ -1864,6 +2060,7 @@ function runFinancials(
     perScenario.base?.breakeven_revenue_daily ?? computed[0]!.result.breakeven_revenue_daily,
     target,
     overridesRaw,
+    catchmentLevel,
   )
 
   const appliedOverrides = overridesRaw === undefined
@@ -2034,7 +2231,11 @@ function runFinancials(
   // 而不是只看到结果却不知道它怎么来的。
   const n2 = (n: number): string => String(roundTo(n, 2))
   const pc = (n: number): string => `${roundTo(n * 100, 1)}%`
-  const monthlyRevenueV = values.daily_revenue * 30
+  // 台账必须与「财务测算·基准档」用同一个营业额口径。
+  // 基准档 = 原始日营业额 × 截流系数 × 情景系数(1.0)，若这里用 values.daily_revenue × 30，
+  // 台账会显示 108 万而财务表显示 118.8 万，同一份报告出现两个「月营业额」。
+  const monthlyRevenueV = perScenario.base?.revenue
+    ?? values.daily_revenue * 30 * (catchmentOf(catchmentLevel)?.multiplier ?? 1)
   const grossProfitV = monthlyRevenueV * values.gross_margin
   const fixedCostV = values.monthly_rent + values.monthly_labor + values.monthly_other_fixed
   const taxV = monthlyRevenueV * values.tax_rate
@@ -2042,7 +2243,7 @@ function runFinancials(
   const costF = SCENARIO_FACTORS.base.cost
   const baseScene = perScenario.base ?? computed[0]!.result
   const formulaTrace: FormulaRow[] = [
-    { group: '财务', metric: '月营业额', formula: '日营业额 × 30', substituted: `${n2(values.daily_revenue)} × 30`, result: n2(monthlyRevenueV) },
+    { group: '财务', metric: '月营业额（基准档）', formula: '日营业额 × 截流系数 × 30', substituted: `${n2(values.daily_revenue)} × ${catchmentOf(catchmentLevel)?.multiplier ?? 1} × 30`, result: n2(monthlyRevenueV) },
     { group: '财务', metric: '月毛利', formula: '月营业额 × 毛利率', substituted: `${n2(monthlyRevenueV)} × ${values.gross_margin}`, result: n2(grossProfitV) },
     { group: '财务', metric: '月税费', formula: '月营业额 × 税费率（增值税及附加）', substituted: `${n2(monthlyRevenueV)} × ${values.tax_rate}`, result: n2(taxV) },
     { group: '财务', metric: '月摊销', formula: '初始投入 ÷ 摊销月数（装修与设备按年限摊，非现金）', substituted: `${n2(values.initial_investment)} ÷ ${values.amortization_months}`, result: n2(amortV) },
@@ -2160,9 +2361,13 @@ function formatFinancialReport(header: FinancialHeader, result: FinancialCalcRes
     + `｜目标回本上限 ${fmt(ceiling.rent_ceiling_at_target)} 元/月`
     + `｜当前租金 ${fmt(ceiling.current_rent)} 元/月`,
   )
+  // 负值不能拼进「需降 X 元」——读者会以为要往下砍，实际是还有余量。
+  const gapWord = (v: number): string => (v > 0
+    ? `需降 ${fmt(v)} 元/月`
+    : `无需降，尚有余量 ${fmt(Math.abs(v))} 元/月`)
   lines.push(
-    `压价空间：按目标回本口径需降 ${fmt(ceiling.above_ceiling_at_target)} 元/月`
-    + `（按保本口径需降 ${fmt(ceiling.above_ceiling_at_breakeven)} 元/月；负数表示当前租金仍有余量）`,
+    `压价空间：按目标回本口径 ${gapWord(ceiling.above_ceiling_at_target)}`
+    + `｜按保本口径 ${gapWord(ceiling.above_ceiling_at_breakeven)}`,
   )
 
   const rec = result.recommendation
@@ -2181,7 +2386,10 @@ function formatFinancialReport(header: FinancialHeader, result: FinancialCalcRes
   lines.push(
     `租售比：当前 ${(rec.current_rent_ratio * 100).toFixed(1)}%（健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，`
     + `警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）`
-    + `→ ${verdictLabel[rec.rent_ratio_verdict]}｜距谈判锚点还需下调 ${fmt(rec.gap_to_target)} 元/月`,
+    + `→ ${verdictLabel[rec.rent_ratio_verdict]}｜距谈判锚点 `
+    + (rec.anchor_unreachable
+      ? '不可达（零租金也达不到目标回本）'
+      : gapWord(rec.gap_to_target)),
   )
   lines.push(`租售比判读：${rec.rent_ratio_hint}`)
 
@@ -2354,6 +2562,28 @@ const scenarioResultSchema = {
       required: true,
       description: '会计口径回本周期（月）= 初始投入 ÷ 含摊销的净利；与行业基准表可比',
     },
+    payback_verdict: {
+      type: 'object',
+      required: true,
+      description: '回本判读（行业实操标尺）：24–36 月优秀／≤48 月可接受上限／>48 风险偏高／>60 极高／>84 无投资价值',
+      additionalProperties: false,
+      properties: {
+        level: { type: 'string', required: true, enum: ['too_good', 'excellent', 'acceptable', 'risky', 'very_risky', 'no_value', 'never'] },
+        label: { type: 'string', required: true },
+        note: { type: 'string', required: true },
+      },
+    },
+    payback_verdict_cash: {
+      type: 'object',
+      required: true,
+      description: '回本判读（现金流口径）',
+      additionalProperties: false,
+      properties: {
+        level: { type: 'string', required: true, enum: ['too_good', 'excellent', 'acceptable', 'risky', 'very_risky', 'no_value', 'never'] },
+        label: { type: 'string', required: true },
+        note: { type: 'string', required: true },
+      },
+    },
     max_rent_breakeven: {
       type: 'number',
       required: true,
@@ -2517,6 +2747,9 @@ export const financialCalcTool = defineTool({
             target_rent: { type: 'number', required: true, description: '谈判锚点（元/月）' },
             ceiling_rent: { type: 'number', required: true, description: '保本红线（元/月）' },
             gap_to_target: { type: 'number', required: true, description: '当前租金 − 锚点；正数=需下调' },
+            rent_headroom: { type: 'number', required: true, description: '租金安全余量（元/月）= 锚点 − 当前租金' },
+            rent_headroom_pct: { type: 'number', required: true, description: '安全余量占锚点比例（0–1）' },
+            rent_vs_anchor_pct: { type: 'number', required: true, description: '当前租金占锚点比例（0–1）' },
             gap_to_ceiling: { type: 'number', required: true, description: '当前租金 − 红线；正数=已越线' },
             based_on_scenario: { type: 'string', required: true, description: '锚点取自哪个情景' },
             current_rent_ratio: { type: 'number', required: true, description: '当前租售比（租金÷基准月营业额）' },
@@ -2736,6 +2969,17 @@ export const financialCalcTool = defineTool({
             },
             capacity_customers_per_day: { type: 'number', required: true, description: '座位容量上限下的日客流' },
             utilization_pct: { type: 'number', required: true, description: '容量利用率（%）；无法计算时为 -1' },
+            utilization_basis: { type: 'string', required: true, description: '容量利用率的分母口径' },
+            daily_customers_raw: { type: 'number', required: true, description: '原始客流（未乘截流系数）' },
+            catchment_multiplier: { type: 'number', required: true, description: '截流乘数' },
+            target_daily_revenue_cash: { type: 'number', required: true, description: '现金流口径目标日营业额' },
+            target_turnover_cash_per_day: { type: 'number', required: true, description: '现金流口径目标翻台' },
+            turnover_risk: {
+              type: 'string', required: true,
+              enum: ['red', 'yellow', 'green', 'high', 'unknown'],
+              description: '翻台风险：red 现实可行性低／yellow 偏低／green 合理／high 偏高',
+            },
+            turnover_risk_note: { type: 'string', required: true, description: '翻台风险说明' },
             revenue_per_sqm_month: { type: 'number', required: true, description: '坪效（元/㎡/月，按建筑面积计）' },
             revenue_per_sqm_benchmark: { type: 'number', required: true, description: '该业态坪效经验基准（元/㎡/月）' },
             breakeven_revenue_monthly: { type: 'number', required: true, description: '保本营业额（月，元）' },
@@ -2847,7 +3091,12 @@ export const financialCalcTool = defineTool({
               unit: { type: 'string', required: true },
               healthy_min: { type: 'number', required: true },
               healthy_max: { type: 'number', required: true },
-              status: { type: 'string', required: true, enum: ['ok', 'low', 'high'] },
+              warning_max: { type: 'number', description: '仅租售比：警戒线上限' },
+              status: {
+                type: 'string', required: true,
+                enum: ['ok', 'low', 'high', 'watch', 'breach'],
+                description: '租售比用三档（ok 健康／watch 偏高／breach 破线），其余比值用 ok/low/high',
+              },
               note: { type: 'string', required: true, description: '偏离方向的人话解释与反推值' },
             },
           },
@@ -2922,6 +3171,11 @@ interface DedupeConfig {
   segments: readonly DedupeSegment[]
   /** 客户自身所属分段；该段数量 = 直接竞品数 */
   selfSegment: string | undefined
+  /**
+   * 是否餐饮业态。仅当为 true 时才启用「非堂食零售」过滤——
+   * 便利店/超市业态里，这些名字本身就是竞品，不能剔。
+   */
+  diningOnly?: boolean
 }
 
 /** 默认只给几何阈值；类目/排除规则必须由用户在调用时声明。 */
@@ -3109,7 +3363,29 @@ function normalizePoi(entry: unknown): Poi | string {
 }
 
 /** 剔除判定；返回原因或 undefined。规则全部来自调用方，脚本不含业态假设。 */
+/** 停业状态特征：这类店不构成竞争，必须先剔除再统计竞品基数。 */
+const CLOSED_NAME_PATTERN = /暂停营业|歇业|停业|已关闭|关闭中|装修中|即将开业|未开业|空铺|招租/
+
+/**
+ * 非堂食餐饮：农贸肉档、生鲜、食品零售、干货、粮油、水产批发等。
+ * 它们出现在「餐饮」类目里，但不是「顾客坐下吃饭的对手」，混进来会把竞品数吹大。
+ */
+const NON_DINING_NAME_PATTERN = /肉档|猪肉|牛肉档|生鲜|蔬菜|水果店|水产|海鲜批发|冻品|干货|粮油|食品店|食品商行|副食|调料|农贸|菜市场|粮油店|烟酒|便利店|超市/
+
+/** 前置清洗：返回剔除原因，未命中返回 undefined。 */
+function preCleanRejectReason(poi: Poi): string | undefined {
+  if (CLOSED_NAME_PATTERN.test(poi.name)) return '停业/未开业状态（不构成竞争）'
+  if (NON_DINING_NAME_PATTERN.test(poi.name)) return '非堂食餐饮（农贸/生鲜/食品零售）'
+  return undefined
+}
+
 function dedupeRejectReason(poi: Poi, config: DedupeConfig): string | undefined {
+  // 停业状态永远剔（任何业态都不构成竞争）
+  if (CLOSED_NAME_PATTERN.test(poi.name)) return '停业/未开业状态（不构成竞争）'
+  // 非堂食零售只在餐饮业态里剔
+  if (config.diningOnly === true && NON_DINING_NAME_PATTERN.test(poi.name)) {
+    return '非堂食餐饮（农贸/生鲜/食品零售）'
+  }
   const excludeName = config.excludePattern
   if (excludeName !== undefined && excludeName.test(poi.name)) {
     return '命中名称排除规则'
@@ -3378,6 +3654,11 @@ export const poiDedupeTool = defineTool({
       },
     },
     self_segment: { type: 'string', description: '客户自身所属分段 key；该段数量＝直接竞品数' },
+        dining_only: {
+          type: 'boolean',
+          description: '是否餐饮业态：true 时剔除农贸/生鲜/食品零售等非堂食 POI；'
+            + '便利店/超市业态必须传 false，否则会把真竞品剔光',
+        },
     exclude_category_pattern: {
       type: 'string',
       description:
@@ -3511,6 +3792,7 @@ export const poiDedupeTool = defineTool({
         pattern: compilePattern(seg.match, `segments.${seg.key}`) as RegExp,
       })),
       selfSegment: args.self_segment === undefined || args.self_segment === '' ? undefined : args.self_segment,
+      diningOnly: args.dining_only ?? false,
     }
     return analyzePois(args.pois, config)
   },
@@ -4210,7 +4492,8 @@ function loadBenchmarks(): { rows: BenchmarkRow[]; cities: CityBaseline[] } {
   if (benchmarkCache !== null) return benchmarkCache
   const rows: BenchmarkRow[] = BENCH_ROWS.map((t) => ({
     city: BENCH_CITIES[t[0] ?? -1] ?? '',
-    city_level: null,
+    // 城市级别是城市属性，行里没有——从 CITY_BASELINES 按城市名回查
+    city_level: CITY_BASELINES.find((c) => c[0] === (BENCH_CITIES[t[0] ?? -1] ?? ''))?.[1] ?? null,
     category: BENCH_CATEGORIES[t[2] ?? -1] ?? null,
     format: BENCH_FORMATS[t[1] ?? -1] ?? null,
     area_sqm: t[3] ?? 0,
@@ -4440,8 +4723,10 @@ export function checkBenchmark(input: {
     category: sameCity.category ?? '',
     sample_size: all.length,
     payback_median: roundTo(median(paybacks), 1),
-    payback_min: roundTo(Math.min(...paybacks), 1),
-    payback_max: roundTo(Math.max(...paybacks), 1),
+    // 空数组时 Math.min(...[]) = Infinity、Math.max(...[]) = -Infinity，
+    // 会直接写进 JSON（JSON 不支持 Infinity → 序列化失败）。先判空。
+    payback_min: paybacks.length > 0 ? roundTo(Math.min(...paybacks), 1) : -1,
+    payback_max: paybacks.length > 0 ? roundTo(Math.max(...paybacks), 1) : -1,
     benchmark: {
       area_sqm: Math.max(0, sameCity.area_sqm ?? 0),
       investment_wan: Math.max(0, sameCity.investment_wan ?? 0),
