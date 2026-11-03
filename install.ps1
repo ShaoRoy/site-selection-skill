@@ -1,4 +1,4 @@
-# site-selection skill 安装脚本（WorkBuddy / DSH 通用）
+﻿# site-selection skill 安装脚本（WorkBuddy / DSH 通用）
 # 用法：pwsh -File install.ps1            → 装到 ~/.dsh/skills/site-selection
 #       pwsh -File install.ps1 -Target X   → 装到自定义目录
 

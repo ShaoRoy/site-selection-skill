@@ -1,0 +1,100 @@
+{
+  "version": "1.0",
+  "_doc": "自定义业态规则。pattern 是正则，对 --format 传入的业态代码或中文名做匹配；命中后覆盖内置默认值。",
+  "_priority": "本文件规则优先于内置表。多条命中时按数组顺序，先写先生效。",
+  "_usage": [
+    "python scripts/site_core.py formats                    # 预览当前生效规则",
+    "python scripts/site_core.py formats --formats <路径>    # 预览指定文件",
+    "python scripts/site_core.py benchmark --city 济南 --format 鲁菜 --area 800   # 验证别名是否生效"
+  ],
+  "formats": [
+    {
+      "_note": "山东：鲁菜/家常菜。benchmark_format 让「鲁菜」能对上基准库里的「中式正餐(川湘粤家常)」",
+      "pattern": "lu_cai|鲁菜|济南|胶东|家常菜",
+      "label": "鲁菜正餐",
+      "payback_months": 26,
+      "rent_ratio": [0.10, 0.16],
+      "benchmark_format": "中式正餐(川湘粤家常)",
+      "ratios": {
+        "gross_margin": [0.55, 0.66],
+        "labor_ratio": [0.20, 0.28],
+        "investment_per_sqm": [2800, 4200]
+      }
+    },
+    {
+      "_note": "上海：本帮菜。上海租金系数是广州的 1.30，回本目标要比广州同业态高一档",
+      "pattern": "benbang|本帮|上海菜",
+      "label": "本帮正餐",
+      "payback_months": 30,
+      "rent_ratio": [0.10, 0.16],
+      "benchmark_format": "中式正餐(川湘粤家常)",
+      "ratios": {
+        "gross_margin": [0.58, 0.68],
+        "labor_ratio": [0.22, 0.30],
+        "investment_per_sqm": [4000, 6500]
+      },
+      "space": {
+        "kitchen_ratio": 0.32,
+        "seat_area_sqm": 2.6,
+        "normal_turnover": 2.2,
+        "turnover_cap": 3.2,
+        "tmin": 80,
+        "tmax": 260
+      }
+    },
+    {
+      "_note": "通用：烧烤/火锅。无 benchmark_format，只覆盖回本目标与租售比",
+      "pattern": "bbq|hotpot|烧烤|烤肉|火锅",
+      "label": "烧烤/火锅",
+      "payback_months": 24,
+      "rent_ratio": [0.10, 0.16]
+    },
+    {
+      "_note": "面食类：回本快、租售比容忍度低",
+      "pattern": "noodle|dumpling|面馆|饺子|包子|米线",
+      "label": "面食/饺子",
+      "payback_months": 18,
+      "rent_ratio": [0.10, 0.15]
+    }
+  ],
+
+  "_copy_me": [
+    {
+      "_note": "复制这个结构到 formats 数组里，改成你自己的业态",
+      "pattern": "你的业态关键词|正则",
+      "label": "报告里显示的名字",
+      "payback_months": 24,
+      "rent_ratio": [0.10, 0.16],
+      "benchmark_format": "基准库里的业态名（可选，用于基准对标）",
+      "ratios": {
+        "gross_margin": [0.55, 0.65],
+        "labor_ratio": [0.20, 0.28],
+        "investment_per_sqm": [3000, 4500]
+      },
+      "space": {
+        "kitchen_ratio": 0.30,
+        "seat_area_sqm": 2.4,
+        "normal_turnover": 2.5,
+        "turnover_cap": 3.5,
+        "tmin": 40,
+        "tmax": 200
+      }
+    }
+  ],
+
+  "_field_meaning": {
+    "pattern": "正则表达式，对业态代码或中文名做匹配",
+    "label": "报告里显示的业态名称",
+    "payback_months": "目标回本月数，用于反推「极限租金·目标回本」与建议锚点",
+    "rent_ratio": "[下限, 上限]，月租金 ÷ 月营业额的健康区间",
+    "benchmark_format": "对应基准库里的业态名，让自定义业态也能做行业对标",
+    "ratios.gross_margin": "[下限, 上限] 毛利率，越界提示成本结构异常",
+    "ratios.labor_ratio": "[下限, 上限] 人力 ÷ 月营业额，偏低通常意味着人力估少了",
+    "ratios.investment_per_sqm": "[下限, 上限] 单方造价 元/㎡，偏低通常意味着投入漏项",
+    "space.kitchen_ratio": "厨房占建筑面积比例",
+    "space.seat_area_sqm": "每座占用营业面积（㎡）",
+    "space.normal_turnover": "常规翻台次数/日",
+    "space.turnover_cap": "翻台上限/日",
+    "space.tmin/tmax": "客单价常规区间（元）"
+  }
+}

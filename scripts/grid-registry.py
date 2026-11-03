@@ -86,7 +86,7 @@ def geohash(lat, lng, precision=6):
 def load():
     if not os.path.exists(REG_PATH):
         return {"version": 1, "updated_at": "", "grids": {}}
-    with open(REG_PATH, encoding="utf-8") as f:
+    with open(REG_PATH, encoding="utf-8-sig") as f:
         data = json.load(f)
     data.setdefault("grids", {})
     return data

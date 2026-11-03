@@ -49,11 +49,17 @@ PAYBACK_BY_FORMAT = [
     (r"large_|大型|酒楼|宴会", 36, "大型正餐"),
     (r"mid_|中型", 24, "中型正餐"),
     (r"convenience|便利店", 18, "便利店"),
+    (r"noodle|dumpling|面馆|饺子|包子|粉面|米线", 18, "面食/饺子"),
+    (r"bbq|hotpot|烧烤|烤肉|火锅", 24, "烧烤/火锅"),
+    (r"lu_cai|shandong|鲁菜|家常菜|东北菜|湘菜|川菜|徽菜|本帮菜", 24, "中式正餐"),
     (r"fast_food|快餐|粉面|小吃", 18, "快餐/粉面"),
 ]
 RENT_RATIO_BY_FORMAT = [
     (r"tea_drink|milk_tea|奶茶|茶饮|咖啡", 0.15, 0.20, "茶饮/咖啡"),
     (r"convenience|便利店", 0.12, 0.18, "便利店"),
+    (r"noodle|dumpling|面馆|饺子|包子|粉面|米线", 0.10, 0.15, "面食/饺子"),
+    (r"bbq|hotpot|烧烤|烤肉|火锅", 0.10, 0.16, "烧烤/火锅"),
+    (r"lu_cai|shandong|鲁菜|家常菜|东北菜|湘菜|川菜|徽菜|本帮菜", 0.11, 0.17, "中式正餐"),
     (r"fast_food|快餐|粉面|小吃", 0.12, 0.18, "快餐/粉面"),
     (r"tea_house|yumcha|早茶|茶楼|茶居|点心", 0.10, 0.15, "全天茶楼"),
     (r"large_|大型|酒楼|宴会", 0.10, 0.15, "大型正餐"),
@@ -80,6 +86,82 @@ SPACE_BY_FORMAT = [(r"large_|大型|酒楼", dict(kitchen=0.35, seat=2.8, turn=2
 SPACE_FALLBACK = dict(kitchen=0.30, seat=2.4, turn=2.5, cap=3.5, rps=900, tmin=40, tmax=200)
 LEASE_DEFAULTS = dict(term_years=5, rent_escalation_pct=0.03, renovation_cycle_years=5, renovation_cost_ratio=0.25)
 MIN_TERM_BY_AREA = [(1000, 7), (300, 5), (0, 2)]
+
+
+# ───────────────────────── 外部业态规则（可替换） ─────────────────────────
+FORMATS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "data", "formats.json")
+# 用户业态名 -> 基准库业态名（来自 data/formats.json 的 benchmark_format 字段）
+FORMAT_ALIASES = {}
+
+
+def resolve_alias(fmt):
+    """用户传「鲁菜」，若 formats.json 配了 benchmark_format，则映射到库里的业态名"""
+    import re as _re
+    for pat, target in FORMAT_ALIASES.items():
+        try:
+            if _re.search(pat, fmt or ""):
+                return target
+        except _re.error:
+            continue
+    return None
+
+
+def load_format_rules(path=None):
+    """读取 data/formats.json，用户自定义规则排在内置表之前（优先级更高）。
+    返回生效的外部规则条数。"""
+    global PAYBACK_BY_FORMAT, RENT_RATIO_BY_FORMAT, RATIO_BENCH, SPACE_BY_FORMAT
+    p = path or FORMATS_FILE
+    if not os.path.exists(p):
+        return 0
+    try:
+        with open(p, encoding="utf-8-sig") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return 0
+    pay, rent, ratio, space = [], [], [], []
+    global FORMAT_ALIASES
+    for f in d.get("formats") or []:
+        if f.get("pattern") and f.get("benchmark_format"):
+            FORMAT_ALIASES[f["pattern"]] = f["benchmark_format"]
+        pat = f.get("pattern")
+        if not pat:
+            continue
+        label = f.get("label") or pat
+        if f.get("payback_months") is not None:
+            pay.append((pat, int(f["payback_months"]), label))
+        rr = f.get("rent_ratio")
+        if isinstance(rr, (list, tuple)) and len(rr) == 2:
+            rent.append((pat, float(rr[0]), float(rr[1]), label))
+        rs = f.get("ratios") or {}
+        if rs:
+            gm = tuple(rs["gross_margin"]) if rs.get("gross_margin") else RATIO_FALLBACK[0]
+            lr = tuple(rs["labor_ratio"]) if rs.get("labor_ratio") else RATIO_FALLBACK[1]
+            ip = tuple(rs["investment_per_sqm"]) if rs.get("investment_per_sqm") else RATIO_FALLBACK[2]
+            ratio.append((pat, gm, lr, ip))
+        sp = f.get("space")
+        if sp:
+            space.append((pat, {**SPACE_FALLBACK, **sp}))
+    # 外部规则前置 = 优先命中
+    PAYBACK_BY_FORMAT = pay + PAYBACK_BY_FORMAT
+    RENT_RATIO_BY_FORMAT = rent + RENT_RATIO_BY_FORMAT
+    RATIO_BENCH = ratio + RATIO_BENCH
+    SPACE_BY_FORMAT = space + SPACE_BY_FORMAT
+    return len(d.get("formats") or [])
+
+
+FORMAT_RULE_COUNT = load_format_rules()
+
+
+def list_formats():
+    """列出当前生效的业态规则（外部 + 内置）"""
+    out = []
+    for pat, months, label in PAYBACK_BY_FORMAT:
+        h, w, _ = next(((a, b, c) for p2, a, b, c in RENT_RATIO_BY_FORMAT if p2 == pat),
+                       (None, None, None))
+        out.append({"pattern": pat, "label": label, "payback_months": months,
+                    "rent_ratio": [h, w] if h is not None else None})
+    return out
 
 
 def _match(table, code, default):
@@ -632,11 +714,14 @@ def geo_analyze(clat, clng, pois, mode="walk", minutes=10, grid=100):
 # ───────────────────────── 6. 行业基准 ─────────────────────────
 def benchmark(city, fmt, **kw):
     here = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(here, "..", "data", "benchmarks.json")
+    path = kw.get("benchmarks_path") or os.path.join(here, "..", "data", "benchmarks.json")
     if not os.path.exists(path):
         return {"matched": False, "note": "未找到 data/benchmarks.json，先跑 import-benchmarks.py 生成"}
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8-sig") as f:
         rows = json.load(f)["rows"]
+    _alias = resolve_alias(fmt)
+    if _alias:
+        fmt = _alias
     cands = {r["format"] for r in rows if r.get("format")}
     def score(f):
         if f == fmt:
@@ -650,11 +735,25 @@ def benchmark(city, fmt, **kw):
         return s
     best = max(cands, key=score, default=None)
     if not best or score(best) == 0:
-        return {"matched": False, "note": f"未匹配到业态「{fmt}」", "candidates": sorted(cands)[:5]}
+        avail = sorted(cands)
+        return {"matched": False,
+                "note": (f"未匹配到业态「{fmt}」。`--format` 要传基准库里的业态名，"
+                         f"或先在 data/formats.json 里给该业态配 benchmark_format 别名。"),
+                "available_formats": avail,
+                "available_count": len(avail),
+                "hint": "python -c \"import json;d=json.load(open('data/benchmarks.json',encoding='utf-8'));print(chr(10).join(sorted({r['format'] for r in d['rows']})))\""}
     allrows = [r for r in rows if r["format"] == best]
     pbs = sorted([r["payback_months"] for r in allrows if r.get("payback_months")])
     med = pbs[len(pbs) // 2] if pbs else 0
-    same = next((r for r in allrows if r["city"] == city), allrows[0])
+    same = next((r for r in allrows if r["city"] == city), None)
+    if same is None:
+        avail = sorted({r["city"] for r in allrows})
+        return {"matched": True, "city": city, "city_in_benchmark": False,
+                "matched_format": best, "sample_size": len(allrows),
+                "available_cities": avail,
+                "note": (f"基准库没有「{city}」的数据，已覆盖城市：{'、'.join(avail)}。"
+                         f"为避免误导，不自动套用其他城市——请补录该城市基准，"
+                         f"或改用邻近城市并在此处写明来源。")}
     compares = []
     def add(item, ours, bench, unit):
         if ours is None or not bench:
@@ -732,7 +831,7 @@ def selftest():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["finance", "crs", "veto", "dedupe", "geo", "benchmark", "selftest"])
+    ap.add_argument("cmd", choices=["finance", "crs", "veto", "dedupe", "geo", "benchmark", "formats", "selftest"])
     ap.add_argument("--params"); ap.add_argument("--area", type=float); ap.add_argument("--catchment")
     ap.add_argument("--target", type=int); ap.add_argument("--lease"); ap.add_argument("--space")
     ap.add_argument("--overrides"); ap.add_argument("--points"); ap.add_argument("--crs", default="gcj02")
@@ -743,8 +842,10 @@ def main():
     ap.add_argument("--ticket", type=float); ap.add_argument("--revenue-wan", type=float)
     ap.add_argument("--payback", type=float); ap.add_argument("--margin", type=float)
     ap.add_argument("--out")
+    ap.add_argument("--benchmarks", help="自定义基准库路径（默认 data/benchmarks.json）")
+    ap.add_argument("--formats", help="自定义业态规则路径（默认 data/formats.json）")
     a = ap.parse_args()
-    j = lambda p: json.load(open(p, encoding="utf-8")) if p and os.path.exists(p) else {}
+    j = lambda p: json.load(open(p, encoding="utf-8-sig")) if p and os.path.exists(p) else {}
 
     if a.cmd == "selftest":
         sys.exit(selftest())
@@ -761,8 +862,17 @@ def main():
     elif a.cmd == "geo":
         lat, lng = (float(x) for x in a.center.split(","))
         res = geo_analyze(lat, lng, j(a.pois), a.mode, a.minutes, a.grid)
+    elif a.cmd == "formats":
+        n_ext = load_format_rules(a.formats) if a.formats else FORMAT_RULE_COUNT
+        res = {"source": a.formats or FORMATS_FILE,
+               "external_rules": n_ext,
+               "total_rules": len(PAYBACK_BY_FORMAT),
+               "rules": list_formats()}
     else:
-        res = benchmark(a.city or "", a.format or "", area=a.area, investment_wan=a.investment_wan,
+        if a.formats:
+            load_format_rules(a.formats)
+        res = benchmark(a.city or "", a.format or "", benchmarks_path=a.benchmarks,
+                        area=a.area, investment_wan=a.investment_wan,
                         rent_wan=a.rent_wan, ticket=a.ticket, revenue_wan=a.revenue_wan,
                         payback=a.payback, margin=a.margin)
 

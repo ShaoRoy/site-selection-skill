@@ -53,7 +53,7 @@ QUOTA_FILE = os.path.join(
 def load_quota():
     today = datetime.now().strftime("%Y-%m-%d")
     try:
-        with open(QUOTA_FILE, encoding="utf-8") as f:
+        with open(QUOTA_FILE, encoding="utf-8-sig") as f:
             q = json.load(f)
         if q.get("date") != today:
             return {"date": today, "calls": 0}
@@ -90,7 +90,7 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
-    with open(AMAP_KEY_FILE, encoding="utf-8") as f:
+    with open(AMAP_KEY_FILE, encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
@@ -127,7 +127,10 @@ def api_get(path, params):
 
 
 def geocode(address, city):
-    data = api_get("geocode/geo", {"address": address, "city": city})
+    params = {"address": address}
+    if city:
+        params["city"] = city
+    data = api_get("geocode/geo", params)
     codes = data.get("geocodes") or []
     if not codes:
         raise SystemExit(f"地理编码无结果：{address}")
@@ -202,7 +205,8 @@ def score_block(metrics, weights):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("address")
-    ap.add_argument("--city", default="广州")
+    ap.add_argument("--city", default=None,
+                    help="城市名。地址里已含城市名时可省略；跨城市使用时建议显式指定")
     ap.add_argument("--radius", type=int, default=3000)
     ap.add_argument("--inner-radius", type=int, default=1000)
     ap.add_argument("--out", default=None)

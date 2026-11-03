@@ -57,7 +57,7 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
-    with open(KEY_FILE, encoding="utf-8") as f:
+    with open(KEY_FILE, encoding="utf-8-sig") as f:
         for line in f:
             if line.strip() and not line.startswith("#"):
                 return line.strip()
@@ -273,7 +273,7 @@ def main():
     if args.rescore:
         if not os.path.exists(cache_path):
             sys.exit(f"没有缓存 {cache_path}，先跑一次 --execute")
-        with open(cache_path, encoding="utf-8") as f:
+        with open(cache_path, encoding="utf-8-sig") as f:
             c = json.load(f)
         print(f"复用缓存：锚点 {len(c['anchors'])}｜底图 {sum(len(v) for v in c['pool'].values())} 条"
               f"｜竞品 {len(c['competitors'])} 家（0 次调用）")
