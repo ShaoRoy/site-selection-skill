@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 核心口径自检
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl
+
+      - name: 语法检查（9 个脚本）
+        run: python -m py_compile scripts/*.py
+
+      - name: 核心计算自检（20 条断言）
+        run: python scripts/site_core.py selftest
+
+      - name: 业态规则可加载
+        run: python scripts/site_core.py formats
+
+      - name: 基准库与参数文件为合法 JSON
+        run: |
+          python - <<'PY'
+          import json, glob, sys
+          files = ['manifest.json', '.codebuddy-plugin/plugin.json'] + \
+                  glob.glob('data/*.json') + glob.glob('params/*.json')
+          bad = []
+          for f in files:
+              try:
+                  json.load(open(f, encoding='utf-8-sig'))
+              except Exception as e:
+                  bad.append(f'{f}: {e}')
+          print(f'检查 {len(files)} 个 JSON 文件')
+          if bad:
+              print('\n'.join(bad)); sys.exit(1)
+          print('全部合法')
+          PY
+
+      - name: 财务口径回归（关键数字）
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, 'scripts')
+          import site_core as sc
+
+          p = {"daily_revenue": 30000, "gross_margin": 0.62, "monthly_rent": 120000,
+               "monthly_labor": 150000, "monthly_other_fixed": 40000,
+               "initial_investment": 3200000}
+          r = sc.finance(p, area=1200, space={"avg_ticket": 230},
+                         catchment="L2", code="large_yuecai")
+          b = r["per_scenario"]["base"]
+
+          checks = [
+              ("营收 990000", abs(b["revenue"] - 990000) < 1),
+              ("现金净流 259250", abs(b["monthly_cash_flow"] - 259250) < 1),
+              ("会计净利 205916.67", abs(b["net_profit"] - 205916.67) < 1),
+              ("现金回本 12.3 月", abs(b["payback_static_months"] - 12.3) < 0.05),
+              ("会计回本 15.5 月", abs(b["accounting_payback_months"] - 15.5) < 0.05),
+              ("极限租金保本 379250", abs(b["max_rent_breakeven"] - 379250) < 1),
+              ("锚点 186165.34", abs(r["recommendation"]["target_rent"] - 186165.34) < 1),
+              ("座位 278", r["space_model"]["seats"] == 278),
+          ]
+          fail = [n for n, ok in checks if not ok]
+          for n, ok in checks:
+              print(('PASS  ' if ok else 'FAIL  ') + n)
+          sys.exit(1 if fail else 0)
+          PY
+
+      - name: 多城市支持（无数据时不静默兜底）
+        run: |
+          python - <<'PY'
+          import sys, json
+          sys.path.insert(0, 'scripts')
+          import site_core as sc
+
+          # 有基准的城市
+          ok = sc.benchmark("上海", "本帮菜", area=600, rent_wan=9, ticket=120)
+          assert ok.get("matched") is True, "上海应能对标"
+          print("PASS  上海可对标")
+
+          # 无基准的城市：必须明确报错，不得套用其他城市
+          miss = sc.benchmark("济南", "鲁菜", area=800)
+          assert miss.get("city_in_benchmark") is False, "济南应报无基准"
+          assert miss.get("available_cities"), "应列出可用城市"
+          print("PASS  济南正确报无基准，未静默兜底")
+          PY
