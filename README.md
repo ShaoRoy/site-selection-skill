@@ -1,8 +1,28 @@
 # 选址智能评估 Skill
 
+<p>
+  <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
+  <a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>
+  <img alt="tests" src="https://img.shields.io/badge/tests-200%20passing-brightgreen?style=flat-square">
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
+</p>
+
 > 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.6.1
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
+
+---
+
+## ⬇️ 下载
+
+| 你要做什么 | 下这个 | 多大 |
+|---|---|---|
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.6.1.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.6.1.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1` | — |
+
+> ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
+> 传到 WorkBuddy「导入技能」会报「所选文件夹中未找到 SKILL.md」。用上面的 Release 附件。
 
 > 本文件是**精简入口**。完整计算口径（十节口径规范 + 22 条公式）见 [`docs/SKILL-FULL.md`](docs/SKILL-FULL.md)。
 
