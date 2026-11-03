@@ -1,3 +1,46 @@
+## 2.9.0
+
+### 新增：报告渲染器打进球包（`tools/`）
+
+此前 `report.mjs` 那套渲染器只在 DSH 插件侧，WorkBuddy 用户拿不到，报告只能是
+Markdown。现在把 6 个脚本打进包里，**零外部依赖（纯 Node 内建，不需要 npm install）**。
+
+| 文件 | 作用 |
+|---|---|
+| `tools/report.mjs` | probe.json → report.md / report.html |
+| `tools/render-static-map.mjs` | 静态 SVG 地图（瓦片 base64 内嵌） |
+| `tools/render-map.mjs` | 交互版 map.html |
+| `tools/tile-cache.mjs` | 高德瓦片缓存 |
+| `tools/import-survey.mjs` | 调研表 CSV → JSON |
+| `tools/profile-build.mjs` | 业态档案建档 / 校验 / 脚手架 |
+
+一条命令：
+
+```bash
+node tools/report.mjs --in=probe.json
+```
+
+产出单文件 `report.html`：地图内嵌、Top20 两栏榜、点门店高亮、一键存 PDF。
+没有 Node 的环境仍按 `SKILL.md` 的报告结构直接输出 Markdown。
+
+### 修正：三个只在独立运行时才暴露的 bug
+
+- **Windows 下直接运行静默失效**：`invokedDirectly` 用 `URL.pathname`（正斜杠）与
+  `process.argv[1]`（反斜杠）做字符串比较，永远不等，退出码却是 0。改为 `resolve()` 后比较。
+- **缺地图时不自动补**：`report.mjs` 只读 `probe.json` 里已内嵌的 `_staticMapSvg`（由
+  run-site 预注入）。独立运行会得到「未生成静态地图」占位。现在缺图时自动调
+  `render-static-map.mjs` 生成并注入。
+- **瓦片目录写死**：`tile-cache.mjs` 固定写 `cwd/out/tiles`；改为支持 `--out`。
+  `render-static-map.mjs` 新增 `--tiles` 显式指定。
+
+### 文档
+
+- 新增 `tools/README.md`：输入结构、命令、边界
+- `SKILL.md` 增「渲染器（可选，需要 Node 18+）」一节，说明什么场景跑渲染器、
+  什么场景手写 Markdown
+
+---
+
 ## 2.8.0
 
 ### 修正：目标翻台口径错误（最重要）

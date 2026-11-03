@@ -5,7 +5,7 @@ display_name_en: Site Selection Intelligence
 description: 连锁实体商业（尤其餐饮）选址评估。当用户要评估某个门店点位、判断商圈、核算租金是否合理、估算回本周期、批量筛选候选点位时使用。输出证据链报告，不做"能不能开"的判断。
 description_zh: 连锁实体商业选址评估：城市网格扫描、竞品去重与三级分层、截流两轴定级、财务双口径回本、极限租金反推、行业基准对标、人口栅格交叉校验。输出证据链报告，不判断能不能开。
 description_en: Site selection evaluation for chain restaurants and retail. Covers grid scanning, competitor deduplication and tiering, dual-axis interception grading, cash and accounting payback, rent-ceiling back-calculation, industry benchmark comparison, and population raster cross-validation. Produces an evidence-chain report without passing a go/no-go verdict.
-version: 2.8.0
+version: 2.9.0
 license: MIT
 author: RoyShao
 tags: [选址, GIS, 餐饮, 财务, 商圈分析]
@@ -26,6 +26,30 @@ read_when:
 所有确定性计算交给脚本，本 Skill 只负责：定口径、组织流程、把结果翻译成人能读的报告。**不得自己编数、估数、圆数。**
 
 ---
+
+## 渲染器（可选，需要 Node 18+）
+
+	ools/ 目录带一套零依赖渲染器，能把 probe.json 直接渲染成可交付的 HTML 报告
+（内嵌地图瓦片、Top20 两栏榜单、点击门店高亮、一键存 PDF）。
+
+`ash
+node tools/report.mjs --in=<probe.json 路径> [--profile=<业态档案>]
+`
+
+**没有 Node 也能用**：本节「报告结构」给的是 Markdown 骨架，模型可按它直接组织输出，
+只是没有地图和点击联动。
+
+什么时候跑渲染器、什么时候手写 Markdown：
+
+| 场景 | 做法 |
+|---|---|
+| 环境有 Node | 跑 
+eport.mjs，产出单文件 HTML（断网可看、可直接发人） |
+| 只有对话能力 | 按下面的报告结构手写 Markdown |
+| 要 PDF | 打开 HTML 点「存为 PDF」，页内已内嵌地图 |
+
+详见 	ools/README.md。
+
 
 ## 〇、两种运行方式
 
