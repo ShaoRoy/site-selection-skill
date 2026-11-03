@@ -13,12 +13,24 @@
       "pattern": "lu_cai|鲁菜|济南|胶东|家常菜",
       "label": "鲁菜正餐",
       "payback_months": 26,
-      "rent_ratio": [0.10, 0.16],
+      "rent_ratio": [
+        0.1,
+        0.16
+      ],
       "benchmark_format": "中式正餐(川湘粤家常)",
       "ratios": {
-        "gross_margin": [0.55, 0.66],
-        "labor_ratio": [0.20, 0.28],
-        "investment_per_sqm": [2800, 4200]
+        "gross_margin": [
+          0.55,
+          0.66
+        ],
+        "labor_ratio": [
+          0.2,
+          0.28
+        ],
+        "investment_per_sqm": [
+          2800,
+          4200
+        ]
       }
     },
     {
@@ -26,12 +38,24 @@
       "pattern": "benbang|本帮|上海菜",
       "label": "本帮正餐",
       "payback_months": 30,
-      "rent_ratio": [0.10, 0.16],
+      "rent_ratio": [
+        0.1,
+        0.16
+      ],
       "benchmark_format": "中式正餐(川湘粤家常)",
       "ratios": {
-        "gross_margin": [0.58, 0.68],
-        "labor_ratio": [0.22, 0.30],
-        "investment_per_sqm": [4000, 6500]
+        "gross_margin": [
+          0.58,
+          0.68
+        ],
+        "labor_ratio": [
+          0.22,
+          0.3
+        ],
+        "investment_per_sqm": [
+          4000,
+          6500
+        ]
       },
       "space": {
         "kitchen_ratio": 0.32,
@@ -47,32 +71,85 @@
       "pattern": "bbq|hotpot|烧烤|烤肉|火锅",
       "label": "烧烤/火锅",
       "payback_months": 24,
-      "rent_ratio": [0.10, 0.16]
+      "rent_ratio": [
+        0.1,
+        0.16
+      ]
     },
     {
       "_note": "面食类：回本快、租售比容忍度低",
       "pattern": "noodle|dumpling|面馆|饺子|包子|米线",
       "label": "面食/饺子",
       "payback_months": 18,
-      "rent_ratio": [0.10, 0.15]
+      "rent_ratio": [
+        0.1,
+        0.15
+      ]
+    },
+    {
+      "pattern": "^large_yuecai$",
+      "label": "large_yuecai",
+      "benchmark_format": "高端中餐酒楼",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
+    },
+    {
+      "pattern": "^tea_house$",
+      "label": "tea_house",
+      "benchmark_format": "粤式茶楼早茶",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
+    },
+    {
+      "pattern": "^mid_dining$",
+      "label": "mid_dining",
+      "benchmark_format": "中式正餐(川湘粤家常)",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
+    },
+    {
+      "pattern": "^fast_food$",
+      "label": "fast_food",
+      "benchmark_format": "中式快餐档口(黄焖鸡/沙县)",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
+    },
+    {
+      "pattern": "^tea_drink$",
+      "label": "tea_drink",
+      "benchmark_format": "新式茶饮(霸王茶姬/茶百道)",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
+    },
+    {
+      "pattern": "^convenience$",
+      "label": "convenience",
+      "benchmark_format": "早餐包子铺档口(15-30㎡)",
+      "_note": "内置业态码 → 基准库业态名，供 benchmark 对标使用"
     }
   ],
-
   "_copy_me": [
     {
       "_note": "复制这个结构到 formats 数组里，改成你自己的业态",
       "pattern": "你的业态关键词|正则",
       "label": "报告里显示的名字",
       "payback_months": 24,
-      "rent_ratio": [0.10, 0.16],
+      "rent_ratio": [
+        0.1,
+        0.16
+      ],
       "benchmark_format": "基准库里的业态名（可选，用于基准对标）",
       "ratios": {
-        "gross_margin": [0.55, 0.65],
-        "labor_ratio": [0.20, 0.28],
-        "investment_per_sqm": [3000, 4500]
+        "gross_margin": [
+          0.55,
+          0.65
+        ],
+        "labor_ratio": [
+          0.2,
+          0.28
+        ],
+        "investment_per_sqm": [
+          3000,
+          4500
+        ]
       },
       "space": {
-        "kitchen_ratio": 0.30,
+        "kitchen_ratio": 0.3,
         "seat_area_sqm": 2.4,
         "normal_turnover": 2.5,
         "turnover_cap": 3.5,
@@ -81,7 +158,6 @@
       }
     }
   ],
-
   "_field_meaning": {
     "pattern": "正则表达式，对业态代码或中文名做匹配",
     "label": "报告里显示的业态名称",

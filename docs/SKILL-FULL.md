@@ -728,6 +728,17 @@ https://apis.map.qq.com/ws/place/v1/search?boundary=nearby({lat},{lng},{radius})
 
 **执行第一步：先产出/确认业态档案**（存 `profiles/<名字>.json`，用 `--profile=<名字>` 调用）
 
+**动手前先选一种建档方式**（手写 JSON 最容易漏必填项）：
+
+| 方式 | 命令 | 适用 |
+|---|---|---|
+| **从现成档案复制**（推荐） | `node tools/profile-build.mjs --scaffold=large-yuecai` | 已有相近业态，只改半径/圈层 |
+| 命令行建档 | `node tools/profile-build.mjs --name="..." --archetype=large-dining --subtype="..."` | 有起点库可套 |
+| 手写 JSON | 照本节字段表逐个填 | 结构特殊 |
+| 校验 | `node tools/profile-build.mjs --check=<名字>` | 改完必跑 |
+
+**必填项只有两条**：`name`、`rings`。其余缺失会降级为警告并在报告里标出来，不会中止流程——包括 `category_pattern`（见 0.6.2 的「先留空跑一次」做法）。
+
 ```json
 {
   "name": "大型餐饮·粤菜（1000–2000㎡）",

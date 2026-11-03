@@ -1,3 +1,38 @@
+## 2.7.1
+
+### 修正：业态档案校验与文档自相矛盾
+
+SKILL-FULL.md 0.6.2 写着「不确定类目长什么样时，先把 category_pattern 留空跑一次，
+从 kept / dropped 里读出平台真实类目串」——但校验器把「留空」判为致命错误直接中止，
+**文档教的做法代码堵死了**。
+
+- **category_pattern 缺失降级为警告**：不再中止，正常跑完并提示「本次不做类目过滤，
+  effective 会虚高；跑完后从 kept/dropped 读出真实类目再定正则」
+- 必填项收敛为两条：
+ame、
+ings。其余缺失一律警告 + 报告标注
+
+### 新增：--scaffold 从现成档案复制
+
+手写 JSON 最容易漏 category_pattern / 
+ings / segments。
+
+`powershell
+node tools/profile-build.mjs --scaffold=large-yuecai   # 生成 新建-large-yuecai.json
+node tools/profile-build.mjs --scaffold                # 列出可复制的档案
+`
+
+生成后只改 4 项：
+ame / category_pattern / 
+ings / scan_radius，其余字段原样继承。
+
+### 改进：报错自带修法
+
+校验失败时，除逐条说明缺什么，末尾追加三条修法（scaffold / 命令行建档 / 照文档填），
+错误信息里附具体格式示例与参考档案路径。
+
+---
+
 ## 2.7.0
 
 ### 新增：报告内嵌地图（打印 / PDF 可保留）

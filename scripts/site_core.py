@@ -366,10 +366,16 @@ def build_ratio_checks(p, code, area, overrides):
                          if st == "low" else ("高于该业态常规：人效偏低或营收估高" if st == "high" else "在常规区间内"))})
     h, w, label = rent_line(code)
     rr = p["monthly_rent"] / rev if rev > 0 else 0
-    ok = rr <= w
-    out.append({"item": "租售比", "value": r2(rr * 100, 1), "unit": "%", "healthy_min": 0,
-                "healthy_max": r2(w * 100, 1), "status": "ok" if ok else "high",
-                "note": "未超警戒线" if ok else f"超警戒线 {r2(w*100,1)}%"})
+    # 三档：健康线 h 以内 ok；h~w 偏高；超 w 破线（与 recommendation 判定口径一致）
+    if rr <= h:
+        st_rent, note_rent = "ok", f"未超健康线 {r2(h*100,1)}%"
+    elif rr <= w:
+        st_rent, note_rent = "watch", f"超健康线 {r2(h*100,1)}%，未破警戒线 {r2(w*100,1)}%"
+    else:
+        st_rent, note_rent = "breach", f"已破警戒线 {r2(w*100,1)}%"
+    out.append({"item": "租售比", "value": r2(rr * 100, 1), "unit": "%",
+                "healthy_min": 0, "healthy_max": r2(h * 100, 1),
+                "warning_max": r2(w * 100, 1), "status": st_rent, "note": note_rent})
     if area and area > 0:
         ips = p["initial_investment"] / area
         st = j(ips, ip_lo, ip_hi)
