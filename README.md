@@ -190,21 +190,45 @@ python scripts/site_core.py selftest
 2. 重启 DSH，让插件索引生效
 3. 重启后在对话里说"用 site-selection 评估一下 XXX 铺位"验证是否触发
 
-### WorkBuddy 专家上传（可选）
+### WorkBuddy 上传：两个入口，两种结构
 
-本仓库根目录已包含 WorkBuddy 专家所需结构：
+WorkBuddy 有两个上传入口，**包结构要求不同，传错必定报错**：
 
-`
-.codebuddy-plugin/plugin.json   ← 专家配置
-agents/site-selection.md        ← Agent 人设
+| 入口 | 要求 | 怎么打包 |
+|---|---|---|
+| **导入技能** | zip 根目录直接有 `SKILL.md` | 把仓库**内容**打包，不带最外层文件夹 |
+| **配置专家** | zip 内有一层文件夹，且含 `<名>/.codebuddy-plugin/plugin.json` | 仓库根改名为 `site-selection-analyst/` 再打包 |
+
+> ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
+> `site-selection-skill-main/`，「导入技能」会报「所选文件夹中未找到 SKILL.md」。
+
+```bash
+git clone https://github.com/ShaoRoy/site-selection-skill.git
+
+# 导入技能：只打包内容
+cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
+
+# 配置专家：先改成一层文件夹
+cd .. && mv site-selection-skill site-selection-analyst
+zip -r ../02-expert.zip site-selection-analyst -x "*.git*"
+```
+
+本仓库根目录已含专家所需结构，可直接按上表打包：
+
+```
+.codebuddy-plugin/plugin.json   ← 专家配置（16 个必填字段）
+agents/site-selection.md        ← Agent 人设 + frontmatter
 avatars/expert.png              ← 头像 512×512
-`
+```
 
-上传方式：把仓库打包成 zip（**清单必须在 zip 根目录，不要套一层文件夹**），
-在 WorkBuddy「配置专家」页上传即可。
+### 上传报错对照
 
-> 若平台提示「专家名称已被占用」，改 plugin.json 里的 
-ame 与 plugin 两个字段（必须一致，小写字母+连字符）。
+| 报错 | 原因 | 解法 |
+|---|---|---|
+| 所选文件夹中未找到 SKILL.md | 传了专家包到「导入技能」 | 用**不带外层文件夹**的包 |
+| 未找到 .codebuddy-plugin/plugin.json | 传了技能包到「配置专家」 | 用**带一层文件夹**的包 |
+| 专家名称已被占用 | `plugin.json` 的 `name` 撞名 | 改 `name` 与 `plugin`（两处一起改） |
+| 没有 skill | SKILL.md 缺 `title` / `summary` | v2.6.1 起已具备 |
 
 ### 验证安装成功
 
