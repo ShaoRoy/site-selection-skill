@@ -375,7 +375,7 @@ site-selection-skill/
 
 ## 在其他城市 / 地区使用
 
-> 本项目开发与验证以**广州（广东）**为主。换到其他地区（例如上海、山东、川渝、江浙），
+> 本项目开发与验证以**广州（广东）**为主。换到其他地区（例如上海、山东、川渝、江浙），(自行添加自己城市)
 > 下面分三类说清楚：哪些直接能用、哪些必须替换、没替换会发生什么。
 >
 > **完整改造手册见 [docs/CUSTOMIZE.md](docs/CUSTOMIZE.md)**（含上海本帮菜、山东鲁菜的完整示例）。
@@ -401,7 +401,7 @@ site-selection-skill/
 | **业态参数文件** | params/large_yuecai.json、	ea_house.json | 复制 params/_template.json 改名，改回本目标与租售比区间 |
 | **行政区名** | --city 广州 --district 天河 | 用高德 dname 原名，如 --city 济南 --district 历下 |
 
-### 三、上海用户：基准库有，但要选对业态
+### 三、上海用户：基准库有，但要选对业态(自行添加自己城市)
 
 上海在 19 个城市里，但要注意三点：
 
@@ -411,14 +411,14 @@ site-selection-skill/
 | 城市系数不同 | 上海相对广州：投资 ×1.15、租金 **×1.30**、客单价 ×1.20、客流 ×1.10。用广州参数套上海会低估租金压力 |
 | 本帮菜无专属参数 | 默认落到「中型正餐」24 月，需在 data/formats.json 加规则（见 CUSTOMIZE.md） |
 
-### 四、山东用户：基准库里只有青岛
+### 四、山东用户：基准库里只有青岛(自行添加自己城市)
 
 `ash
 # 1) 先查基准库有没有你的城市
 python scripts/site_core.py benchmark --city 济南 --format 鲁菜 --area 800 --rent-wan 8 --ticket 60
 # 返回 city_in_benchmark: false → 说明没有该城市数据，程序不会套用其他城市
 
-# 山东目前只有「青岛」在基准库里
+# 山东目前只有「青岛」在基准库里(自行添加自己城市)
 python scripts/site_core.py benchmark --city 青岛 --format 鲁菜 --area 800 --rent-wan 8 --ticket 60
 
 # 2) 网格扫描：行政区名用高德原名
@@ -429,7 +429,7 @@ cp params/_template.json params/lu_cai.json
 # 改 payback_months / rent_ratio 区间 / gross_margin 区间
 `
 
-**基准库已覆盖的 19 个城市**：
+**基准库已覆盖的 19 个城市**：(自行添加自己城市)
 上海、广州、深圳、佛山、重庆、成都、杭州、武汉、苏州、西安、南京、长沙、天津、青岛、宁波、东莞、郑州、合肥、昆明
 
 ### 五、未覆盖时的行为（明确告知，不静默兜底）
