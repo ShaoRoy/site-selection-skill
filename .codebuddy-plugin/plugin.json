@@ -1,6 +1,6 @@
 {
   "name": "site-selection-analyst",
-  "version": "2.5.1",
+  "version": "2.6.1",
   "description": "Structured site selection analyst for chain restaurants: competitive landscape, catchment grading, rent ceiling, payback and industry benchmark.",
   "author": {
     "name": "YG",
@@ -10,9 +10,6 @@
   "agentName": "site-selection",
   "agents": [
     "./agents/site-selection.md"
-  ],
-  "skills": [
-    "."
   ],
   "displayName": {
     "en": "Site Scout",
@@ -68,6 +65,5 @@
     "GIS",
     "商圈",
     "回本测算"
-  ],
-  "homepage": "https://github.com/ShaoRoy/site-selection-skill"
+  ]
 }
