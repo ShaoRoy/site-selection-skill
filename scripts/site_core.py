@@ -639,7 +639,9 @@ def dedupe(pois, keyword="", whitelist=None):
             same = name_of(p) == name_of(q)
             if same and d <= 50:
                 dup = q; break
-            if d <= 30 and _dice(name_of(p), name_of(q["name"])) >= 0.6:
+            # q["name"] 是字符串，name_of() 要 dict —— 传 q["name"] 会 AttributeError
+            # （只有「两个不同名、距离≤30m、dice≥0.6」时才触发，selftest 恰好绕过）
+            if d <= 30 and _dice(name_of(p), name_of(q)) >= 0.6:
                 dup = q; break
         rec = {"name": name_of(p), "lat": lat, "lng": lng, "type": cat_of(p)}
         if dup:

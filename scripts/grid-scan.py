@@ -313,10 +313,20 @@ def main():
     cells = cells_for(bbox)
     print(f"  扫描范围 {bbox[0]:.3f},{bbox[1]:.3f} ~ {bbox[2]:.3f},{bbox[3]:.3f}｜切片 {len(cells)} 个")
 
-    est = 8 + len(cells) * len(CELLAR_KEYWORDS) * MAX_PAGES + min(args.top, len(merged)) * 2
+    # 预估必须与实际采集一致（下方「底图 POI」+「竞品」两轮都是按格子全量翻页）：
+    #   底图  len(cells) × len(CELLAR_KEYWORDS) × MAX_PAGES
+    #   竞品  len(cells) × len(comp_kws) × MAX_PAGES     ← 原来完全没算，低估约 43%
+    #   锚点  ANCHOR_CALLS
+    # 已删除 min(args.top, len(merged)) * 2 —— 那是幽灵项，实际没有对应调用。
+    comp_kws_est = [x.strip() for x in args.competitor.split(",") if x.strip()]
+    ANCHOR_CALLS = 8
+    per_cell = len(CELLAR_KEYWORDS) + len(comp_kws_est)
+    est = ANCHOR_CALLS + len(cells) * per_cell * MAX_PAGES
     print("\n== 额度预估 ==")
-    print(f"  锚点 8 次 ｜ 底图 {len(cells)}×{len(CELLAR_KEYWORDS)}×{MAX_PAGES} = "
-          f"{len(cells) * len(CELLAR_KEYWORDS) * MAX_PAGES} 次 ｜ 合计约 {est} 次"
+    print(f"  锚点 {ANCHOR_CALLS} 次"
+          f" ｜ 底图 {len(cells)}×{len(CELLAR_KEYWORDS)}×{MAX_PAGES} = {len(cells) * len(CELLAR_KEYWORDS) * MAX_PAGES} 次"
+          f" ｜ 竞品 {len(cells)}×{len(comp_kws_est)}×{MAX_PAGES} = {len(cells) * len(comp_kws_est) * MAX_PAGES} 次"
+          f" ｜ 合计约 {est} 次"
           f" ｜ 约 {est * MIN_INTERVAL_S / 60:.1f} 分钟 ｜ 占日配额 {est / DAILY_LIMIT * 100:.1f}%")
 
     if args.dry_run:

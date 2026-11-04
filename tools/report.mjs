@@ -323,6 +323,15 @@ function financeSection(md) {
         out.push('> 保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此**不相同**，差异全部来自成本乘数。', '')
       }
     }
+    // E3：params 目标回本（粤菜 36 月）与基准库实测（中位 51.7 / 高端中餐 90.7）差 1.4~2.5 倍，必须并列披露
+    {
+      const tgt = (f.rent_ceiling ?? {}).target_payback_months ?? (f.space_model ?? {}).target_payback_months
+      if (typeof tgt === 'number' && tgt > 0) {
+        out.push(`> 📐 **两套标尺**：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
+          + '行业基准库里同类业态的回本月数中位约 **51.7 个月**、高端中餐酒楼约 **90.7 个月**（19 城估算值）。'
+          + `两者差 1.4~2.5 倍——**${tgt} 个月不是行业常态，是偏紧的要求**。`, '')
+      }
+    }
     out.push(`| 指标（基准＝常规经营预期） | ${order.map((k) => label[k]).join(' | ')} |`)
     out.push(`| --- | ${order.map(() => '---').join(' | ')} |`)
     for (const key of keys) {
@@ -804,6 +813,9 @@ export function buildReport(data, profile) {
   const bm = data.benchmark
   if (bm && bm.matched) {
     md.push('**行业基准对标（19 城 × 48 业态库）**', '')
+  md.push('> ⚠️ **数据性质**：本库不是 19 城实测样本——同业态跨城的净利率、面积、备注完全相同，'
+    + '实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看**偏离方向**，'
+    + '不能当作该城市实测水位（审计 E4）。', '')
     md.push(
       `对标业态：**${bm.matched_format}**（${bm.category}）｜样本 ${bm.sample_size} 城`
       + `｜该业态回本中位 ${bm.payback_median} 月（区间 ${bm.payback_min}~${bm.payback_max}）`,
@@ -923,6 +935,14 @@ ${(() => {
   }[lv] ?? lb)
   const pvc = b.payback_verdict_cash
   return `<h3 style="font-size:15px;margin:18px 0 6px">回本周期判读（餐饮重资产大店实操标尺）</h3>
+${(() => {
+  const tgt = data.finance?.rent_ceiling?.target_payback_months ?? data.finance?.space_model?.target_payback_months
+  if (typeof tgt !== 'number' || tgt <= 0) return ''
+  return `<p style="color:#555;background:#f5f5f5;padding:8px 10px;border-left:3px solid #999;font-size:13px">`
+    + `📐 <b>两套标尺</b>：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
+    + `而行业基准库里同类业态的回本月数中位约 <b>51.7 个月</b>、高端中餐酒楼约 <b>90.7 个月</b>（19 城估算值）。`
+    + `两者差 1.4~2.5 倍——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
+})()}
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>会计口径回本（基准档）</td><td><b>${num(b.accounting_payback_months)} 个月</b> → <b>${mk(pv.level, pv.label)}</b></td></tr>
 ${pvc ? `<tr><td>现金流口径回本（基准档）</td><td>${num(b.payback_static_months)} 个月 → ${mk(pvc.level, pvc.label)}</td></tr>` : ''}
@@ -1080,6 +1100,8 @@ ${spLm.warnings.map((w) => `<p style="color:#c62828">⚠️ ${esc(w)}</p>`).join
   const bmRows = data.benchmark?.matched ? data.benchmark : null
   const bmHtml = bmRows
     ? `<h3>行业基准对标（19 城 × 48 业态库）</h3>
+<p style="color:#a15c00;background:#fff8e1;padding:8px 10px;border-left:3px solid #ffb300;font-size:13px">
+⚠️ <b>数据性质</b>：本库不是 19 城实测样本——同业态跨城的净利率、面积、备注完全相同，实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看<b>偏离方向</b>，不能当作该城市实测水位。</p>
 <p>对标业态：<b>${esc(bmRows.matched_format)}</b>（${esc(bmRows.category)}）｜样本 ${bmRows.sample_size} 城｜该业态回本中位 ${bmRows.payback_median} 月（区间 ${bmRows.payback_min}~${bmRows.payback_max}）</p>
 <table><tr><th>指标</th><th>本项目</th><th>行业基准</th><th>偏离</th><th>判定</th></tr>
 ${bmRows.compares.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.ours}${esc(c.unit)}</td><td>${c.benchmark}${esc(c.unit)}</td><td>${c.deviation_pct > 0 ? '+' : ''}${c.deviation_pct}%</td><td>${c.verdict === 'ok' ? '✅ 正常' : c.verdict === 'high' ? '⚠️ 偏高' : '⚠️ 偏低'}</td></tr>`).join('')}</table>
