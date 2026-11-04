@@ -872,8 +872,10 @@ function computeScenario(
     breakeven_revenue_daily: roundTo(breakevenDaily, 2),
     payback_static_months: roundTo(payback, 1),
     accounting_payback_months: roundTo(accountingPayback, 1),
-    payback_verdict: gradePayback(accountingPayback),
-    payback_verdict_cash: gradePayback(payback),
+    // 判定必须与展示同源：回本是「贴标尺」场景，展示 36.0 就该判「优秀」。
+    // 直接用未舍入值会让 36.000000000000004 掉到「可接受上限」，读者看到 36 却被告知 48 档。
+    payback_verdict: gradePayback(roundTo(accountingPayback, 1)),
+    payback_verdict_cash: gradePayback(roundTo(payback, 1)),
     max_rent_breakeven: roundTo(maxRentBreakeven, 2),
     max_rent_target: roundTo(maxRentTarget, 2),
     max_rent_ratio: roundTo(maxRentRatio, 4),
