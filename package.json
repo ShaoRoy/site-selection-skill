@@ -1,6 +1,6 @@
 {
   "name": "site-selection-skill",
-  "version": "2.10.9",
+  "version": "2.10.10",
   "private": true,
   "description": "连锁餐饮选址评估：双源 POI · 空间分析 · 财务三档 · 报告生成",
   "scripts": {

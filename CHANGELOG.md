@@ -1,3 +1,70 @@
+## 2.10.10
+
+### 修正：按 WorkBuddy 开放平台技能规范重构（解决「解析失败」与「低质量」）
+
+**问题一：zip 结构不合规 → 解析失败**
+
+官方要求 `{skill-name}/SKILL.md` 顶层包裹，而 01 包此前是**平铺**的：
+`SKILL.md` 直接在 zip 根，还混着 `.github/` `install.ps1` `package.json` `dsh/` 等 19 个顶层项。
+
+改为：
+
+```
+site-report/
+├── SKILL.md          ← 顶层包裹
+├── references/       ← 5 个
+├── scripts/          ← 9 个
+├── data/ params/     ← 脚本运行时依赖
+└── templates/
+```
+
+**问题二：frontmatter 缺 `author`（规范必填）**
+
+补齐 8 个必填字段：`name` / `display_name` / `display_name_en` / `description` /
+`description_zh` / `description_en` / `version` / `author`。
+另加 `examples_zh` / `examples_en` 各 4 条——会展示在详情页「试试这样用」。
+
+**问题三：SKILL.md 65.8 KB / 1093 行 → 16.8 KB / 213 行（压缩 84%）**
+
+平台评测时读的是 SKILL.md。原本把整本口径手册塞进技能定义，
+评测模型的指令优先级被规则轰炸淹没，产出质量下降 → 判「低质量」。
+
+按 progressive disclosure 拆成：
+
+| 文件 | 内容 | 行数 |
+|---|---|---|
+| `SKILL.md` | 角色 / 快速开始 / 三条口径 / 三阶段 SOP / 红线 / 参考索引 / 已知边界 | 213 |
+| `references/01-环境预检与变量字典.md` | Key 自检、变量字典、参数覆盖、比值校验、配额、现场反馈、网格扫描、截流两轴 | 256 |
+| `references/02-计算口径全书.md` | 三档因子、财务公式、极限租金、租期现金流、空间容量、敏感度 | 170 |
+| `references/03-数据源与治理.md` | 双源 GIS、L3 治理、坐标系、空间分析、否决规则包、工具链、翻译层、业态档案 | 409 |
+| `references/04-输出模板.md` | 三种报告骨架 | 26 |
+| `references/05-运维与排障.md` | Docker/Valhalla、WorldPop、降级策略 | 118 |
+
+**内容零丢失**：按节整体搬移，只换位置。
+
+**问题四：依赖声明把可选写成必需**
+
+原 `dependencies.python: ["openpyxl"]`、`env: ["AMAP_API_KEY"]` —— 会被当成硬依赖。
+实际只有 `import-benchmarks.py` 用 openpyxl；缺 Key 时 6 个核心命令仍可离线跑。
+
+改为 `pythonOptional` / `envOptional` 并逐条写明「缺了会怎样」，
+同时给 workbuddy target 加 `offlineCapable` 声明。
+
+**顺带**：SKILL.md 快速开始补了 5 条可直接复制的离线命令（含正确业态名），
+避免评测时用 `--format 粤菜大店` 这种不存在的名字拿到 `matched:false`。
+
+### 验证（解压后模拟沙箱）
+
+```
+python scripts/site_core.py selftest                        → 20/20 通过，退出码 0
+python scripts/site_core.py finance                         → 正常输出 JSON，退出码 0
+python scripts/site_core.py benchmark --format large_yuecai → matched=True
+node tools/test-tools-smoke.mjs                             → 13/13
+tsc -p tsconfig.json                                        → 退出码 0
+```
+
+---
+
 ## 2.10.9
 
 ### 修正：README 让跑 `npx tsc --noEmit`，但包里没有 tsconfig，实际跑不了
