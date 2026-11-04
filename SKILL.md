@@ -4,7 +4,7 @@ display_name: 实体门店选址评估专家
 display_name_en: Site Selection Feasibility Expert
 description_zh: 适配三级漏斗选址SOP：高德竞品扫描 + 腾讯周边交叉校验双源 GIS，驱动商圈初筛、现场排雷复核、财务锁盘测算；含 Voronoi 势力归属、截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。
 description_en: Three-stage site selection SOP with dual-source GIS. Covers trade-area screening, on-site due diligence, financial lock-in, Voronoi territory attribution, dual-axis interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis.
-version: 2.10.8
+version: 2.10.9
 description: 适配三级漏斗选址SOP。高德探路（竞品扫描）+ 腾讯周边交叉校验 双源 GIS，驱动商圈初筛、现场排雷复核、财务锁盘测算；含 Voronoi 势力归属、截流三级定级、极限租金反推、租期现金流、空间容量对账、假设台账与双维敏感度、参数覆盖三层。
 
 title: "选址智能评估（完整口径版）"

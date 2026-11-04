@@ -119,9 +119,9 @@ CSV **必须存为 UTF-8**。
 |---|---|---|
 | `test-tools-smoke.mjs` | ✅ 13 条 | 只依赖 node 内建 + 本包文件 |
 | `test-grid.mjs` | ⚠️ 部分 | 需要 Python 与 `out/` 目录 |
-| 其余 7 个 `test-*.mjs` | ❌ | 依赖 `../src/site-tools.ts` 与 `node_modules`（`@deepseek-ai/dsh-tools`），只在完整开发工作区可跑 |
+| 其余 7 个 `test-*.mjs` | ❌ | 依赖 `../src/site-tools.ts` 与宿主 `node_modules`，只在完整开发工作区可跑（引擎本身的类型检查可用 `npm run typecheck` 在包内完成） |
 
-**完整 232 条断言需要开发工作区**（含 `scratch-plugin/` 与 `node_modules`）。
+**完整 248 条断言需要开发工作区**（含 `scratch-plugin/` 与 `node_modules`）。
 发布包内置的引擎在 `dsh/site-tools.ts`，是 DSH 插件形态，不是可直接 import 的独立模块。
 
 想快速验证包没坏：

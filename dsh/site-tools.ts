@@ -438,7 +438,7 @@ export const vetoCheckTool = defineTool({
   async execute(args) {
     const specs = args.rules ?? []
     const custom = specs.length > 0
-    const rules: readonly VetoRule[] = custom ? specs.map((spec) => specToRule(spec)) : VETO_RULES
+    const rules: readonly VetoRule[] = custom ? specs.map((spec: RuleSpec) => specToRule(spec)) : VETO_RULES
     const version = custom ? (args.rules_version ?? `custom-${specs.length}rules`) : RULE_VERSION
     return evaluate(
       args.format_code,
@@ -3402,6 +3402,12 @@ export const financialCalcTool = defineTool({
 // ---------------------------------------------------------------------------
 
 /** 竞争分段：一段 = 品类 × 规模（同段才是直接竞品） */
+/** 业态档案里的一个竞争分段：key + 匹配正则源串 */
+interface ProfileSegment {
+  key: string
+  match: string
+}
+
 interface DedupeSegment {
   key: string
   pattern: RegExp
@@ -4039,7 +4045,7 @@ export const poiDedupeTool = defineTool({
       categoryPattern: compilePattern(args.category_pattern, 'category_pattern'),
       excludePattern: compilePattern(args.exclude_pattern, 'exclude_pattern'),
       excludeCategoryPattern: compilePattern(args.exclude_category_pattern, 'exclude_category_pattern'),
-      segments: (args.segments ?? []).map((seg) => ({
+      segments: (args.segments ?? []).map((seg: ProfileSegment) => ({
         key: seg.key,
         pattern: compilePattern(seg.match, `segments.${seg.key}`) as RegExp,
       })),

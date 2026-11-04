@@ -1,3 +1,46 @@
+## 2.10.9
+
+### 修正：README 让跑 `npx tsc --noEmit`，但包里没有 tsconfig，实际跑不了
+
+三个发布包此前都没有 `package.json` / `tsconfig.json`，README 里的类型检查指令是空头承诺。
+
+**补齐三个文件**：
+
+| 文件 | 作用 |
+|---|---|
+| `package.json` | `npm run typecheck` / `npm test` / `npm run check` |
+| `tsconfig.json` | 与开发工作区同口径（strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes） |
+| `types/dsh-shims.d.ts` | 给宿主模块 `@deepseek-ai/cordis` / `dsh-tools` 做最小声明 |
+
+**为什么需要 shim**：引擎 `import { defineTool } from '@deepseek-ai/dsh-tools'`，这两个包由宿主提供、不随发布包分发，没有声明连模块都解析不了。
+
+shim 的边界（已在文件头写明）：引擎自身的类型完整受检；只有「宿主是否会拒绝这份 schema」这一层无法在包内验证。
+
+**代价**：第一版 shim 用恒等泛型 `defineTool<T>(d: T): T`，回调参数失去上下文类型，冒出 43 个 implicit any 假错。改成给 `render` / `execute` 宽松签名后，只剩 2 个真错——都是 `args: any` 的套娃，已在源码里补 `RuleSpec` / `ProfileSegment` 标注解决。
+
+**验证**：包内 `tsc -p tsconfig.json` 退出码 0；开发工作区（真实宿主类型，更严）同样 0 error。
+
+### 修正两处显示不一致
+
+**① 最近竞品距离两个值（40m vs 41m）**
+
+`dedupe.nearest` = 40m、`rings.nearest[0]` = 41m，报告取 41m 未说明。
+两者是同一家店，必须同一个数——以 `dedupe.nearest` 为准（去重后的唯一真相）。
+现在两处都是 **40m**。
+
+**② 地图实画 62 点，图例写「内圈 55 家」**
+
+图例改成：
+
+```
+内圈·步行8分（圈内 55 家）
+图中共 62 点（圈外 7 点灰显）
+```
+
+「圈内」与「图中全部」分开说，读者不会再把两个数当成矛盾。
+
+---
+
 ## 2.10.8
 
 ### 修正：谈判锚点与保本红线取「最保守档」，导致健康生意也报「需降 76%」
