@@ -10,7 +10,7 @@
  * 不碰网络：全部用本地 fixture。
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { openSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -114,12 +114,19 @@ try {
       }
     }
     writeFileSync(join(mb, 'probe.json'), JSON.stringify(probe, null, 2), 'utf8')
+    // 不用默认 pipe 捕获 stdout：受限沙箱下 spawn 的 pipe 会 EPERM，
+    // 那样即使渲染器正常也拿不到输出 → 假失败。改为把 stdout 重定向到文件再读。
+    const logPath = join(tmp, 'render-static-map.out.txt')
     let outText = ''
     try {
-      outText = execFileSync(process.execPath, [join(HERE, 'render-static-map.mjs'), `--probe=${join(mb, 'probe.json')}`], {
-        cwd: tmp, encoding: 'utf8', timeout: 60000,
-      })
-    } catch (e) { outText = String(e.stdout ?? '') }
+      const fd = openSync(logPath, 'w')
+      try {
+        execFileSync(process.execPath, [join(HERE, 'render-static-map.mjs'), `--probe=${join(mb, 'probe.json')}`], {
+          cwd: tmp, stdio: ['ignore', fd, 'ignore'], timeout: 60000,
+        })
+      } finally { closeSync(fd) }
+    } catch { /* 非零退出也继续读日志，由断言判定 */ }
+    try { outText = readFileSync(logPath, 'utf8') } catch { outText = '' }
     const hit = /(\d+) 张命中/.exec(outText)
     check('render-static-map 默认能找到 ../tiles（回归 null≠undefined）', hit !== null && Number(hit[1]) > 0)
   }

@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.11
+version: 2.10.13
 author: "RoyShao"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -46,6 +46,7 @@ python scripts/site_core.py selftest      # 20 条断言，验证引擎可用
 
 ```bash
 #  1) 采集：地址 → POI + 空间分析
+# 采集 + 渲染需源码包（03-github）里的 tools/ Node 工具；技能包只带 Python 侧
 node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="survey/<调研表>.csv"
 
 #  2) 产出：report.html（地图内嵌，自包含单文件）
@@ -74,7 +75,8 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 
 1. **人口数据：不再寻找公开渠道。** 街道级真实人口没有可用的免费来源（政府公报多为图片/PDF，第三方为付费 B 端产品）。**用 POI 代理替代（住宅密度 + 职住比 + 配套 + 消费力品牌密度）**，不要再提"找人口数据"或"抓人口接口"。
 
-2. **场地条件：只做提醒，不做否决；且只管场地，不管办证。** 详见 `docs/COMPLIANCE-CHECKLIST.md`。
+2. **场地条件：只做提醒，不做否决；且只管场地，不管办证。** 证照与环评由承租方办理，系统只列「待核实项」。
+> 合规清单在源码包 `03-github` 的 `docs/COMPLIANCE-CHECKLIST.md`；技能包内不含该文件。
    - **营业执照、食品经营许可证由承租方自行办理，与出租方无关，属签约后的行政跟进——不进选址报告，也不进现场核查清单。**
    - 报告只核**场地是否具备办证与经营的前置条件**：场地用途、面积与布局、排烟、上下水与排污、消防、燃气、外立面、居民距离。
    - 输出格式必须是「已核实 N 项 / 待核实 M 项 / 不适用 K 项」+ 缺口清单；
@@ -170,19 +172,23 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 
 # 参考文件（按需读取，不要一次全读）
 
+> 首次上手顺序：先读 `07-preferences.md`（定型口径），再按任务读其余。
+
 | 文件 | 什么时候读 |
 |---|---|
-| `references/01-环境预检与变量字典.md` | 执行前：Key 自检、动态变量、参数覆盖、比值校验、配额、现场反馈格式、网格扫描、截流两轴 |
-| `references/02-计算口径全书.md` | 算钱时：三档情景因子、财务公式、极限租金、租期现金流、空间容量、敏感度 |
-| `references/03-数据源与治理.md` | 采数据时：高德/腾讯接口、L3 数据治理、坐标系、空间分析、否决规则包、工具链顺序、翻译层、业态档案 |
-| `references/04-输出模板.md` | 写报告时：商圈初选 / 现场复核 / 最终决策三种骨架 |
-| `references/05-运维与排障.md` | 跑不通时：Docker/Valhalla、WorldPop 人口栅格、降级策略 |
+| `references/01-env-and-vars.md` | 执行前：Key 自检、动态变量、参数覆盖、比值校验、配额、现场反馈格式、网格扫描、截流两轴 |
+| `references/02-formulas.md` | 算钱时：三档情景因子、财务公式、极限租金、租期现金流、空间容量、敏感度 |
+| `references/03-data-and-governance.md` | 采数据时：高德/腾讯接口、L3 数据治理、坐标系、空间分析、否决规则包、工具链顺序、翻译层、业态档案 |
+| `references/04-output-templates.md` | 写报告时：九段骨架的填充细则（按第 1 筛 / 第 1.5+2 筛 / 第 3 筛三个场景） |
+| `references/05-ops-and-troubleshooting.md` | 跑不通时：Docker/Valhalla、WorldPop 人口栅格、降级策略 |
+| `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 246 条、失败模式台账（按症状索引）、最近版本变更摘要 |
+| `references/07-preferences.md` | **动手前先读**：三条已定口径 + 数据纪律 + 口径细节 + 工程约定。与 SKILL.md 冲突时以它为准 |
 
 ---
 
 # 工具与脚本索引
 
-**6 个工具**（DSH 插件形态，`dsh/site-tools.ts`）：
+**6 个工具**（DSH 插件形态，源码包内 `dsh/site-tools.ts`；技能包走 `scripts/site_core.py` 同名子命令）：
 `poi_dedupe` · `geo_analyze` · `crs_guard` · `veto_check` · `financial_calc` · `benchmark_check`
 
 **9 个 Python 脚本**（WorkBuddy / 命令行形态）：
@@ -202,7 +208,7 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 **14 个 Node 工具**（渲染与编排）：`run-site` · `report` · `render-static-map` ·
 `render-map` · `tile-cache` · `guangzhou-probe` · `isochrone` · `profile-build` ·
 `import-survey` · `index-dashboard` · `review-segments` · `test-tools-smoke` · `test-grid`
-（`package.json` 里 `npm run typecheck` / `npm test` 可直接跑）
+（源码包 `03-github` 里 `npm run typecheck` / `npm test` 可直接跑）
 
 ---
 

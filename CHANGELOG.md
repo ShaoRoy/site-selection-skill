@@ -1,3 +1,143 @@
+## 2.10.13
+
+P1 评估闭环进包。评审指出的「卡在 L2」三条里，这一版补上最后一条：
+**评估反馈闭环留在源码包、专家包内没有**。
+
+### 新增 `references/07-preferences.md` —— 偏好台账
+
+把「用户反复纠正过、已经定型」的偏好从散落的提示词里抽出来，独立成册：
+
+| 小节 | 内容 |
+|---|---|
+| 三条已定口径 | 人口用 POI 代理 + WorldPop / 场地只提醒不裁决 / 楼层去重仅限商超 |
+| 数据纪律 | 不用可刷数据验模型、缺数据显式披露、每数可取、说人话、不反向调参 |
+| 口径细节 | 竞品数用 effective、座位翻台≠桌翻台、坪效用建筑面积、锚点用基准档、最近竞品以 dedupe 为准… |
+| 交付与表达 | 先要齐数据再动手、三类话不问、结论先行、不加空话免责 |
+| 工程约定 | 版本 +0.0.1、改代码只改 scratch-plugin、改完跑基线、坑写进台账 |
+
+**维护规则写进文件本身**：只记已定型、每条写「结论 + 为什么 + 怎么判」、
+冲突时以台账为准并回头修 SKILL.md、不删只归档。
+
+意义：以后加口径**不用改人格提示词**，往台账加一行即可。这是「专家越用越懂你」的落点。
+
+### 新增 `references/06-regression-and-failure-modes.md` —— 回归基线与失败模式台账
+
+- **自动化基线**：246 条断言分组明细 + 三档跑法（包内 / 源码包）
+- **失败模式台账**（按症状索引，四类）：
+  - 判定与展示不同源（36 月判成可接受、翻台 1.499 贴线）
+  - 参数与路径（`arg()` 默认 null、瓦片兄弟目录、zoom 漂移、CSV 编码、业态码来源）
+  - 沙箱与运行环境（`execFileSync` pipe EPERM、无参数退出码 2 是预期）
+  - 打包发布（`{skill-name}/` 包裹、examples ≤3、版本 +0.0.1、skills 未登记、版本四处不一致）
+- **最近版本变更摘要**（2.10.5 → 2.10.13 逐版一句话）
+- **改完必做三件事**：跑基线 / 核对断言数变了能否解释 / 新坑补进台账
+
+### 修正断言总数
+
+`docs/TEST-REGRESSION.md` 一直写 212/213，实测为 **246**
+（234 组内 + 12 registry 自检）。这次以实测为准，新台账写的是 246。
+
+### SKILL.md 参考索引
+
+从 5 份增到 7 份，并加阅读顺序提示：
+
+> 首次上手顺序：先读 `07-preferences.md`（定型口径），再按任务读其余。
+
+`04` 的描述同步改为「九段骨架的填充细则」——上一版重写了内容但索引还写着旧的三阶段骨架。
+
+### 验证
+
+```
+python scripts/site_core.py selftest   → 20/20
+node tools/test-tools-smoke.mjs        → 13/13
+pnpm test && pnpm typecheck            → 246 通过 + 0 error
+```
+
+---
+
+## 2.10.12
+
+按 WorkBuddy **专家包规范**做 P0 一致性修复。不改能力，只消除自相矛盾。
+
+### ① 专家包资产从未被加载（最关键）
+
+`plugin.json` 缺 `skills` 字段。包内其实自带 `skills/site-selection/`（5 references + 9 scripts + data + params），
+但没登记 → 平台不加载 → 专家只能靠 `agents` 那 204 行人格裸跑，脚本和知识库全部失效。
+
+```json
+"skills": ["./skills/site-selection"]
+```
+
+专家规范里 `skills` 是**可选字段**，所以不是「必填缺失」，而是「有资产没注册」。
+
+### ② agents 里写着「依赖外部技能，需单独安装」
+
+原 L61–62：
+
+> 本专家依赖**本地已安装的 restaurant-location-analysis 技能**，需通过「导入技能」单独安装。
+> 路径以技能目录为准（如 `~/.workbuddy/skills/restaurant-location-analysis/`）
+
+包里自带技能，却让人再去装一个不存在的技能。改为包内路径 `skills/site-selection/`，
+并加一条前置自检：`selftest` 不过就停下报「技能资产缺失」，不凭经验硬算。
+frontmatter 同时加 `skills: [site-selection]` 预加载。
+
+### ③ 输出规范两套骨架互斥 → 统一到人格层九段
+
+人格层是「九段证据链」，`references/04` 却是另一套「A/B/C 三阶段投决报告」，
+还含「【直接放弃】/【强烈建议签约】/【最终否决】」——与人格铁律 2「不判断能不能开」直接冲突。
+
+`04-output-templates.md` 重写：改为**九段骨架的填充细则**，按第 1 筛 / 第 1.5+2 筛 / 第 3 筛三个场景说明每段填什么，
+末尾明确「三个不许出现的东西」：裁决措辞、旧人口热力口径、第二套骨架。
+
+### ④ 旧口径词清理
+
+| 文件 | 改动 |
+|---|---|
+| `03` | `severity: hard 硬性否决` → `hard 硬伤`；`人口档位与竞品密度方向相反` → `人口密度…` |
+| `03` | `hard_vetoed` ×2 **保留**——一处是工具输出字段名，一处是「禁止输出 hard_vetoed 式结论」的禁用说明 |
+| `04` | 全部旧口径随重写清除；顶部加澄清：文件内「❌ 不写」列的反例词是必删写法，不是本文件口径 |
+
+### ⑤ references 改 ASCII 文件名
+
+```
+01-环境预检与变量字典.md      → 01-env-and-vars.md
+02-计算口径全书.md            → 02-formulas.md
+03-数据源与治理.md            → 03-data-and-governance.md
+04-输出模板.md                → 04-output-templates.md
+05-运维与排障.md              → 05-ops-and-troubleshooting.md
+```
+
+SKILL.md 里 5 处引用同步更新，全部可落地。
+
+### ⑥ 版本收敛
+
+`plugin.json` 停在 **2.10.3** 是长期遗漏——升版脚本只扫 `skills/` 子目录，从没覆盖
+`wb-expert/.codebuddy-plugin/plugin.json`。本次统一到 2.10.12，9 个 JSON 清单全部核对。
+
+### ⑦ SKILL.md 的包外引用加标注
+
+`tools/`、`dsh/`、`docs/COMPLIANCE-CHECKLIST.md`、`package.json` 不在技能包内，
+逐处标注「需源码包 03-github」，避免读者找不到文件。
+
+### ⑧ 冒烟测试不再依赖 pipe 捕获
+
+`test-tools-smoke.mjs` 的瓦片默认路径断言用 `execFileSync` 默认 `pipe` 捕获 stdout。
+受限沙箱下 spawn 的 pipe 会 **EPERM**，即使渲染器正常也拿不到输出 → 假失败
+（实测 danger-full-access 下 13/13，workspace-write 下 12/13）。
+
+改为把 stdout 重定向到文件再读，两种沙箱模式下都 13/13。
+
+### 验证
+
+```
+python scripts/site_core.py selftest            → 20/20，退出码 0
+node tools/test-tools-smoke.mjs                 → 13/13（受限沙箱下同样通过）
+tsc -p tsconfig.json                            → 退出码 0
+plugin.json 16 个必填字段 + 数量约束            → 全过
+references 旧口径词                             → 仅剩 03 的 2 处技术字段（有意保留）
+```
+
+---
+
 ## 2.10.11
 
 ### 修正：examples 超过平台上限（解析失败的直接原因）
