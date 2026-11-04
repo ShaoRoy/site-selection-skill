@@ -14,6 +14,19 @@ const num = (v, d = '—') => (typeof v === 'number' && Number.isFinite(v) ? Str
 /** 把分段 key（如 yuecai_large）翻译成人话 */
 const CUISINE_LABEL = { yuecai: '粤菜', chaoshan: '潮汕', other: '其他菜系', snack: '小吃' }
 const SCALE_LABEL = { small: '小吃快餐（人均<60）', mid: '中端（人均 60–120）', large: '高端（人均>120）' }
+/**
+ * 段名的「人均区间」是**推定**，不是实测。
+ * 该段全部无人均数据时（有价率 0%），不能写成断言式「人均>120」——
+ * 否则读者会以为这 15 家是实证出来的高端店。
+ */
+const scaleLabelBy = (seg) => {
+  // 段名来自 seg.key（如 yuecai_large），先走 segLabel 拿到完整名，再按有价率降级
+  const full = segLabel(seg.key)
+  if (typeof seg.cost_coverage === 'number' && seg.cost_coverage < 30) {
+    return full.replace(/（人均[^）]*）/, '（规模档推定，无人均实证）')
+  }
+  return full
+}
 const segLabel = (key) => {
   const parts = String(key).split('_')
   const scale = parts.length > 1 ? parts[parts.length - 1] : ''
@@ -103,15 +116,20 @@ function demandSection(data) {
   const d = data.demand
   if (d && d.demand_score) {
     const p = d.proxies ?? {}
+    // 密度分母必须写明实际半径：demand.inner_radius_m 与报告的「内圈·步行N分」不是同一个圈
+    const innerR = d.inner_radius_m
+    const innerLabel = typeof innerR === 'number' && innerR > 0
+      ? `${innerR}m 圆（≈${(Math.PI * (innerR / 1000) ** 2).toFixed(2)} km²）`
+      : '内圈面积'
     const out = ['## 4. 需求侧代理指标', '']
     out.push(`> 数据源：高德 POI 自动采集（${d.captured_at ?? '—'}）｜扫描半径 ${d.radius_m ?? '—'}m。**以下全部为代理指标，不是实测人口。**`, '')
     out.push('| 指标 | 值 | 怎么来的 |', '| --- | --- | --- |')
     out.push(`| 住宅密度 | ${p.residential_density_per_km2 ?? '—'} 个/km² | 住宅区 POI 数 ÷ 扫描面积 |`)
     out.push(`| 职住比 | ${p.job_housing_ratio ?? '—'} | 写字楼 POI ÷ 住宅区 POI（>1 偏就业型，<1 偏居住型） |`)
     out.push(`| 配套成熟度 | ${p.amenity_count ?? '—'} | 购物中心 + 学校 + 地铁站 数量 |`)
-    out.push(`| 咖啡密度 | ${p.coffee_density_per_km2 ?? '—'} 个/km² | 精品咖啡品牌 POI ÷ 内圈面积（消费力代理） |`)
-    out.push(`| 银行密度 | ${p.bank_density_per_km2 ?? '—'} 个/km² | 银行网点 POI ÷ 内圈面积（商务活动代理） |`)
-    out.push(`| 高端餐饮密度 | ${p.premium_dining_density_per_km2 ?? '—'} 个/km² | 连锁高端餐饮 POI ÷ 内圈面积 |`)
+    out.push(`| 咖啡密度 | ${p.coffee_density_per_km2 ?? '—'} 个/km² | 精品咖啡品牌 POI ÷ ${innerLabel}（消费力代理） |`)
+    out.push(`| 银行密度 | ${p.bank_density_per_km2 ?? '—'} 个/km² | 银行网点 POI ÷ ${innerLabel}（商务活动代理） |`)
+    out.push(`| 高端餐饮密度 | ${p.premium_dining_density_per_km2 ?? '—'} 个/km² | 连锁高端餐饮 POI ÷ ${innerLabel} |`)
     if (d.nearest?.metro) out.push(`| 最近地铁 | ${d.nearest.metro.name} ${d.nearest.metro.distance_m}m | 高德最近站点检索 |`)
     if (d.density_basis && typeof d.density_basis === 'object') {
       const basis = Object.entries(d.density_basis).map(([k, v]) => `${k}：${v}`).join('；')
@@ -287,6 +305,24 @@ function financeSection(md) {
     })
     : []
   if (keys.length > 0) {
+    // 三档情景参数必须披露：否则保守/乐观两档的保本额与极限租金无法按公式复算
+    {
+      const sf = f.scenario_factors
+      if (sf) {
+        out.push('**三档情景参数（报告据此可复算每一档）**', '')
+        out.push('| 情景 | 营收乘数 | 成本乘数 | 说明 |', '| --- | --- | --- | --- |')
+        for (const k of ['base', 'pessimistic', 'optimistic']) {
+          const f = sf[k]
+          if (!f) continue
+          const note = k === 'base' ? '用户给定值直接测算'
+            : k === 'pessimistic' ? '营收下调、成本上调（压力测算）'
+              : '营收上调、成本下调（乐观假设）'
+          out.push(`| ${f.label} | ×${f.revenue} | ×${f.cost} | ${note} |`)
+        }
+        out.push('')
+        out.push('> 保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此**不相同**，差异全部来自成本乘数。', '')
+      }
+    }
     out.push(`| 指标（基准＝常规经营预期） | ${order.map((k) => label[k]).join(' | ')} |`)
     out.push(`| --- | ${order.map(() => '---').join(' | ')} |`)
     for (const key of keys) {
@@ -421,7 +457,7 @@ function financeSection(md) {
         out.push(`| 面积产能校验 | 该面积按常规翻台应做 ${num(sp.implied_daily_revenue_normal)} 元/日；当前假设为其 **${ratioPct}%**${sp.input_consistency === 'ok' ? '' : ' ⚠️ 不自洽'} |`)
       }
       if (sp.breakeven_turnover_per_day >= 0) {
-        out.push(`| 建议翻台率 | 保本 ${sp.breakeven_turnover_per_day} 次/日 ｜ ${sp.target_payback_months} 个月回本需 ${sp.target_turnover_per_day} 次/日 ｜ 业态上限 ${sp.turnover_cap_per_day} |`)
+        out.push(`| 建议翻台率 | 保本 ${sp.breakeven_turnover_per_day} 次/日 ｜ ${sp.target_payback_months} 个月回本需 ${sp.target_turnover_per_day} 次/日（会计口径） ｜ 业态上限 ${sp.turnover_cap_per_day} |`)
       }
       if (sp.typical_ticket_max > 0) {
         out.push(`| 客单价校验 | ${sp.avg_ticket >= 0 ? `${sp.avg_ticket} 元` : '未提供'} ｜ 该业态典型 ${sp.typical_ticket_min}~${sp.typical_ticket_max} 元 ｜ ${sp.ticket_matches_format ? '匹配' : '⚠️ 与业态标签不符'} |`)
@@ -442,7 +478,7 @@ function financeSection(md) {
           out.push('| 口径提醒 | 本表是**座位翻台率**，不是桌翻台率；座位翻台受空座、拼台影响，同店同经营下低于桌翻台，两套口径不可混用 |')
         }
       }
-      out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
+      out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（按**建筑面积**，非营业面积；经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
       out.push(`| 单方造价 | ${num(sp.investment_per_sqm)} 元/㎡ |`)
       out.push(`| 盈亏平衡 | 日 ${num(Math.round(sp.breakeven_revenue_monthly / 30))} / 月 ${num(sp.breakeven_revenue_monthly)} 元 |`)
       if (sp.breakeven_customers_daily >= 0) {
@@ -562,10 +598,10 @@ export function buildReport(data, profile) {
   md.push(`| 剔除 / 合并 | ${num(d.dropped)} / ${num(d.merged)} |`)
   md.push(`| 同段竞品 / 异段 | ${num(d.same_type_count)} / ${num(d.other_type_count)} |`)
   if (Array.isArray(d.segments) && d.segments.length > 0) {
-    md.push(`| 竞争分段（★=你所在段） | ${d.segments.map((s) => `${segLabel(s.key)}${s.is_self ? '★' : ''} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost} 元）` : ''}`).join(' ｜ ')} |`)
+    md.push(`| 竞争分段（★=你所在段） | ${d.segments.map((s) => `${scaleLabelBy(s)}${s.is_self ? '★' : ''} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost} 元）` : ''}`).join(' ｜ ')} |`)
     const selfSeg = d.segments.find((s) => s.is_self)
     if (selfSeg) {
-      md.push(`| 直接对手 | ${segLabel(selfSeg.key)}：${selfSeg.count} 家${selfSeg.avg_cost > 0 ? `，人均 ${selfSeg.avg_cost} 元` : ''} |`)
+      md.push(`| 直接对手 | ${scaleLabelBy(selfSeg)}：${selfSeg.count} 家${selfSeg.avg_cost > 0 ? `，人均 ${selfSeg.avg_cost} 元` : ''} |`)
     }
   }
   md.push(`| 高德覆盖率 | ${cov.amap >= 0 ? `${cov.amap}%` : '多关键词扫描'} |`)
@@ -595,7 +631,7 @@ export function buildReport(data, profile) {
       md.push(`| Top1 势力份额 | ${_t[0].share_pct}%（${_t[0].name}） |`)
       md.push(`| Top3 合计 | ${_t3}% |`)
       md.push(`| Top10 合计 | ${_t10}% |`)
-      if (_restN > 0) md.push(`| 其余 ${_restN} 家瓜分 | ${Number((100 - _t10).toFixed(1))}% |`)
+      if (_restN > 0) md.push(`| Top20 之外 ${_restN} 家瓜分 | ${Number((100 - _t10).toFixed(1))}% |`)
       md.push(`| 集中度判读 | **${_verdict}** |`)
       md.push('', '> 势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。', '')
     }
@@ -812,7 +848,7 @@ export function buildReport(data, profile) {
   const segSelf = Array.isArray(d.segments) ? d.segments.find((s) => s.is_self) : null
   const segTotal = Array.isArray(d.segments) ? d.segments.reduce((a, s) => a + s.count, 0) : 0
   const segPlain = segSelf
-    ? `你的直接对手是「${segLabel(segSelf.key)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : ''}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是**协同或弱竞争**，不是直接对手。`
+    ? `你的直接对手是「${scaleLabelBy(segSelf)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : '，**该段全部无高德人均数据**，分段依据是店名与品类而非人均实证'}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是**协同或弱竞争**，不是直接对手。`
     : ''
 
   const segRows = Array.isArray(d.segments) && d.segments.length > 0
@@ -821,7 +857,7 @@ export function buildReport(data, profile) {
 下表按「菜系 + 规模」把人分成几段，<b>★ = 你所在的段（直接竞品）</b>，其余段是协同或弱竞争。</p>
 ${segPlain ? `<div class="concl" style="font-size:14px">${esc(segPlain)}</div>` : ''}
 <table><tr><th>分段</th><th>家数</th><th>人均</th><th>评分</th><th>有价率</th><th>机器键</th></tr>
-${d.segments.map((s) => `<tr><td>${esc(segLabel(s.key))}${s.is_self ? ' ★' : ''}</td><td>${s.count}</td><td>${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'}</td><td>${s.avg_rating > 0 ? s.avg_rating : '—'}</td><td>${s.cost_coverage ?? 0}%</td><td style="color:#aaa;font-size:12px">${esc(s.key)}</td></tr>`).join('')}</table>`
+${d.segments.map((s) => `<tr><td>${esc(scaleLabelBy(s))}${s.is_self ? ' ★' : ''}</td><td>${s.count}</td><td>${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'}</td><td>${s.avg_rating > 0 ? s.avg_rating : '—'}</td><td>${s.cost_coverage ?? 0}%</td><td style="color:#aaa;font-size:12px">${esc(s.key)}</td></tr>`).join('')}</table>`
     : ''
 
   const vetoHtml = data.veto
@@ -940,13 +976,18 @@ ${data.finance.recommendation ? (() => {
     const d = data.demand
     if (d && d.demand_score) {
       const p = d.proxies ?? {}
+  // 密度分母写明实际半径（与「内圈·步行N分」不是同一个圈）
+  const _innerR = d.demand?.inner_radius_m
+  const innerLabel = typeof _innerR === 'number' && _innerR > 0
+    ? `${_innerR}m 圆（≈${(Math.PI * (_innerR / 1000) ** 2).toFixed(2)} km²）`
+    : '内圈面积'
       const rows = [
         `<tr><td>住宅密度</td><td>${p.residential_density_per_km2 ?? '—'} 个/km²</td><td>住宅区 POI ÷ 扫描面积</td></tr>`,
         `<tr><td>职住比</td><td>${p.job_housing_ratio ?? '—'}</td><td>写字楼 POI ÷ 住宅区 POI（&gt;1 偏就业型）</td></tr>`,
         `<tr><td>配套成熟度</td><td>${p.amenity_count ?? '—'}</td><td>购物中心 + 学校 + 地铁站</td></tr>`,
-        `<tr><td>咖啡密度</td><td>${p.coffee_density_per_km2 ?? '—'} 个/km²</td><td>精品咖啡 POI ÷ 内圈面积（消费力代理）</td></tr>`,
-        `<tr><td>银行密度</td><td>${p.bank_density_per_km2 ?? '—'} 个/km²</td><td>银行网点 POI ÷ 内圈面积</td></tr>`,
-        `<tr><td>高端餐饮密度</td><td>${p.premium_dining_density_per_km2 ?? '—'} 个/km²</td><td>连锁高端餐饮 POI ÷ 内圈面积</td></tr>`,
+        `<tr><td>咖啡密度</td><td>${p.coffee_density_per_km2 ?? '—'} 个/km²</td><td>精品咖啡 POI ÷ ${innerLabel}（消费力代理）</td></tr>`,
+        `<tr><td>银行密度</td><td>${p.bank_density_per_km2 ?? '—'} 个/km²</td><td>银行网点 POI ÷ ${innerLabel}</td></tr>`,
+        `<tr><td>高端餐饮密度</td><td>${p.premium_dining_density_per_km2 ?? '—'} 个/km²</td><td>连锁高端餐饮 POI ÷ ${innerLabel}</td></tr>`,
       ]
       if (d.nearest?.metro) rows.push(`<tr><td>最近地铁</td><td>${esc(d.nearest.metro.name)} ${d.nearest.metro.distance_m}m</td><td>高德最近站点检索</td></tr>`)
       const caveat = d.proxy_caveat && typeof d.proxy_caveat === 'object'
@@ -1012,7 +1053,7 @@ ${leaseLm.yearly.map((y) => `<tr><td>${y.year}</td><td>${num(y.rent_monthly)}</t
 ${spLm.turnover_per_day >= 0 ? `<tr><td>翻台率</td><td>座口径 ${spLm.turnover_per_day} 次/日 ｜ 桌口径 ${spLm.turnover_tables_per_day} 次/日（${spLm.tables} 桌 × ${spLm.table_size} 人） ｜ 业态常规 ${spLm.normal_turnover_per_day} ／ 上限 ${spLm.turnover_cap_per_day}</td></tr>
 <tr><td>日均客流 / 容量利用率</td><td>${num(spLm.daily_customers)} 人 / ${spLm.utilization_pct}%</td></tr>` : ''}
 ${spLm.implied_daily_revenue_normal > 0 ? `<tr><td>面积产能校验</td><td>该面积按常规翻台应做 ${num(spLm.implied_daily_revenue_normal)} 元/日；当前假设为其 <b>${(spLm.revenue_vs_normal_ratio * 100).toFixed(1)}%</b>${spLm.input_consistency === 'ok' ? '' : ' ⚠️ 不自洽'}</td></tr>` : ''}
-${spLm.breakeven_turnover_per_day >= 0 ? `<tr><td>建议翻台率</td><td>保本 ${spLm.breakeven_turnover_per_day} 次/日 ｜ ${spLm.target_payback_months} 个月回本需 ${spLm.target_turnover_per_day} 次/日 ｜ 业态上限 ${spLm.turnover_cap_per_day}</td></tr>` : ''}
+${spLm.breakeven_turnover_per_day >= 0 ? `<tr><td>建议翻台率</td><td>保本 ${spLm.breakeven_turnover_per_day} 次/日（会计口径） ｜ ${spLm.target_payback_months} 个月回本需 ${spLm.target_turnover_per_day} 次/日 ｜ 业态上限 ${spLm.turnover_cap_per_day}</td></tr>` : ''}
 ${spLm.ticket_matches_format === false ? `<tr><td>客单价校验</td><td style="color:#c62828">${spLm.avg_ticket} 元 ｜ 该业态典型 ${spLm.typical_ticket_min}~${spLm.typical_ticket_max} 元 ｜ ⚠️ 与业态标签不符</td></tr>` : ''}
 ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
   const mk = {
@@ -1028,7 +1069,7 @@ ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
     : ""
   return `<tr><td>翻台风险判定</td><td><b>${mk}</b>：${esc(spLm.turnover_risk_note)}</td></tr>` + bandRow
 })() : ""}
-<tr><td>坪效</td><td>${num(spLm.revenue_per_sqm_month)} 元/㎡/月（经验基准 ${spLm.revenue_per_sqm_benchmark}）</td></tr>
+<tr><td>坪效</td><td>${num(spLm.revenue_per_sqm_month)} 元/㎡/月（按<b>建筑面积</b>，非营业面积；经验基准 ${spLm.revenue_per_sqm_benchmark}）</td></tr>
 <tr><td>单方造价</td><td>${num(spLm.investment_per_sqm)} 元/㎡</td></tr>
 <tr><td>盈亏平衡</td><td>日 ${num(Math.round(spLm.breakeven_revenue_monthly / 30))} / 月 ${num(spLm.breakeven_revenue_monthly)} 元</td></tr>
 ${spLm.breakeven_customers_daily >= 0 ? `<tr><td>保本客单量</td><td>${spLm.breakeven_customers_daily} 单/日</td></tr>` : ''}</table>
@@ -1264,7 +1305,7 @@ ${(() => {
     ['Top1 势力份额', `${top[0].share_pct}%（${esc(top[0].name)}）`],
     ['Top3 合计', `${t3}%`],
     ['Top10 合计', `${top10}%`],
-    restN > 0 ? [`其余 ${restN} 家瓜分`, `${restShare}%`] : null,
+    restN > 0 ? [`Top20 之外 ${restN} 家瓜分`, `${restShare}%`] : null,
     ['集中度判读', `<b>${verdict}</b>`],
   ].filter(Boolean)
   return `<table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>

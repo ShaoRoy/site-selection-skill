@@ -339,6 +339,15 @@ const keptSegmented = costBands.length === 0
     })
 if (reassignedCount > 0) console.log(`人均硬分层：${reassignedCount} 家按客单价重判了规模段（覆盖店名猜测）`)
 
+// 最终 POI 列表：分段以「人均重判后」为准，same_type 同步重算。
+// 不这样做会出现——地图按店名猜测染色 26 个红点、正文按人均重判写 15 家，
+// 同一份数据两套口径（审计报告 A 项）。
+const selfSegFinal = dedupe.self_segment
+const poisFinal = keptSegmented.map((p) => ({
+  ...p,
+  same_type: selfSegFinal === '' || selfSegFinal === undefined ? true : p.segment === selfSegFinal,
+}))
+
 const segMap = new Map()
 for (const p of keptSegmented) segMap.set(p.segment, (segMap.get(p.segment) ?? 0) + 1)
 const segmentsFinal = [...segMap.entries()]
@@ -634,7 +643,7 @@ writeFileSync(
       population,
       data_quality: dq,
       rings: ringResults,
-      pois: dedupe.kept,
+      pois: poisFinal,
     },
     null,
     2,
@@ -646,7 +655,7 @@ console.log(`\n[结果已落盘] ${decodeURIComponent(dumpFile.pathname)}`)
 const reviewFile = new URL(`${slug}-review.csv`, outDir)
 const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 const reviewLines = ['名称,类目,自动分段,人工校正,人均,评分']
-for (const p of dedupe.kept) {
+for (const p of poisFinal) {
   reviewLines.push([
     csvCell(p.name),
     csvCell(p.category),
@@ -656,8 +665,10 @@ for (const p of dedupe.kept) {
     p.rating > 0 ? p.rating : '',
   ].join(','))
 }
-writeFileSync(reviewFile, `${reviewLines.join('\n')}\n`, 'utf8')
-console.log(`[人工核对清单] ${decodeURIComponent(reviewFile.pathname)}（${dedupe.kept.length} 行）`)
+// Excel 在中文 Windows 默认按 GBK 打开无 BOM 的 CSV = 全乱码
+// 加 UTF-8 BOM 后双击即可正常显示
+writeFileSync(reviewFile, '\ufeff' + `${reviewLines.join('\n')}\n`, 'utf8')
+console.log(`[人工核对清单] ${decodeURIComponent(reviewFile.pathname)}（${poisFinal.length} 行）`)
 console.log('核对：node .\\tools\\review-segments.mjs --in=' + decodeURIComponent(reviewFile.pathname).replace(/^\/([A-Za-z]:)/, '$1'))
 console.log('出图：node .\\tools\\render-map.mjs （自动取最新的 out/*.json）')
 

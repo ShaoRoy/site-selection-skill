@@ -648,6 +648,8 @@ export interface RentRecommendation {
 
 /** `financial_calc` 的规范返回值（与 output.schema 严格一致）。 */
 export interface FinancialCalcResult {
+  /** 三档情景的营收/成本乘数——报告必须披露，否则保守/乐观两档无法复算 */
+  scenario_factors: Readonly<Record<ScenarioKey, { revenue: number; cost: number; label: string }>>
   per_scenario: Partial<Record<ScenarioKey, ScenarioResult>>
   low_confidence_params: string[]
   param_version: string
@@ -704,6 +706,13 @@ const SCENARIO_FACTORS: Readonly<Record<ScenarioKey, { revenue: number; cost: nu
   base: { revenue: 1, cost: 1 },
   optimistic: { revenue: 1.15, cost: 0.97 },
   pessimistic: { revenue: 0.85, cost: 1.05 },
+}
+
+/** 带人话标签的情景乘数，直接进报告披露表 */
+const SCENARIO_FACTORS_WITH_LABEL: Readonly<Record<ScenarioKey, { revenue: number; cost: number; label: string }>> = {
+  base: { ...SCENARIO_FACTORS.base, label: '基准' },
+  pessimistic: { ...SCENARIO_FACTORS.pessimistic, label: '保守' },
+  optimistic: { ...SCENARIO_FACTORS.optimistic, label: '乐观' },
 }
 
 /** 保留固定小数位并回到 number，避免浮点尾巴进入 JSON。 */
@@ -2450,6 +2459,7 @@ function runFinancials(
 
   return {
     per_scenario: perScenario,
+    scenario_factors: SCENARIO_FACTORS_WITH_LABEL,
     low_confidence_params: lowConfidence,
     param_version: PARAM_VERSION,
     formula_version: FORMULA_VERSION,
@@ -2772,6 +2782,17 @@ const scenarioResultSchema = {
   },
 } as const
 
+/** 情景乘数子 schema：营收 × revenue、成本 × cost */
+const scenarioFactorSchema = {
+  type: 'object' as const,
+  additionalProperties: false as const,
+  properties: {
+    revenue: { type: 'number' as const, required: true as const, description: '营收乘数' },
+    cost: { type: 'number' as const, required: true as const, description: '成本乘数' },
+    label: { type: 'string' as const, required: true as const, description: '人话标签' },
+  },
+} as const
+
 export const financialCalcTool = defineTool({
   name: 'financial_calc',
   description:
@@ -2866,6 +2887,17 @@ export const financialCalcTool = defineTool({
             base: scenarioResultSchema,
             pessimistic: scenarioResultSchema,
             optimistic: scenarioResultSchema,
+          },
+        },
+        scenario_factors: {
+          type: 'object',
+          required: true,
+          additionalProperties: false,
+          description: '三档情景的营收/成本乘数。报告必须披露——否则保守/乐观两档的保本额与极限租金无法按公式复算',
+          properties: {
+            base: { ...scenarioFactorSchema, required: true as const },
+            pessimistic: { ...scenarioFactorSchema, required: true as const },
+            optimistic: { ...scenarioFactorSchema, required: true as const },
           },
         },
         low_confidence_params: {
