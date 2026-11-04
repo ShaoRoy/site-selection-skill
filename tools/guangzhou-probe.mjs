@@ -76,6 +76,12 @@ if (!TENCENT) { console.error('缺少腾讯 Key'); process.exit(1) }
 // 只取非 --flag 的位置参数，避免 --profile=xxx 被当成场景名
 const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const address = positional[0] ?? '广州市天河区体育西路'
+// 双源开关：由 run-site.mjs 按「是否带租金」决定，默认关。
+// 关掉时只跑高德，省腾讯 place/* 四个接口合计 800/日 的额度。
+const DUAL_SOURCE = process.argv.includes('--dual-source')
+console.log(DUAL_SOURCE
+  ? '源模式：双源（高德 + 腾讯交叉校验）← 第 2 筛，已检出真实租金'
+  : '源模式：单源（仅高德）← 第 1/1.5 筛，省腾讯 POI 额度')
 // 城市提示：从地址里认出城市就传，认不出则不限定（全国匹配），避免外地地址报 30001
 const CITY_HINTS = ['北京', '上海', '广州', '深圳', '佛山', '东莞', '重庆', '成都', '杭州', '武汉',
   '苏州', '西安', '南京', '长沙', '天津', '青岛', '济南', '宁波', '郑州', '合肥', '昆明']
@@ -232,6 +238,7 @@ for (const kw of sweepList) {
 const amapCoverage = sweepList.length > 1 ? -1 : (amapTotal === 0 ? 0 : Math.min(100, (amapPois.length / amapTotal) * 100))
 
 // ── 3. 腾讯周边（半径压到 1000，翻页取全；配额/异常时降级为单源）
+// --dual-source 未开时整段跳过：第 1/1.5 筛不花腾讯额度
 const tRadius = Math.min(radius, 1000)
 const TENCENT_PAGE_SIZE = 20
 const TENCENT_MAX_PAGES = 10
@@ -239,7 +246,7 @@ let tTotal = 0
 let tencentPois = []
 let tencentOk = true
 let tencentMessage = ''
-for (let page = 1; page <= TENCENT_MAX_PAGES; page += 1) {
+for (let page = 1; DUAL_SOURCE && page <= TENCENT_MAX_PAGES; page += 1) {
   let res
   try {
     res = await getJson(
@@ -274,7 +281,9 @@ if (sweepList.length > 1) {
   console.log(`高德 radius=${radius} → count=${amapTotal}，取回 ${amapPois.length} 条，覆盖率 ${amapCoverage.toFixed(1)}%`)
   if (amapCoverage < 95) console.warn(`⚠️ 高德覆盖率仅 ${amapCoverage.toFixed(1)}%：单次最多 200 条，加 --sweep 可按多关键词扫描补齐`)
 }
-console.log(`腾讯 radius=${tRadius} → count=${tTotal}，取回 ${tencentPois.length} 条，覆盖率 ${tencentCoverage.toFixed(1)}%${tencentOk ? '' : '（不可用）'}`)
+console.log(DUAL_SOURCE
+  ? `腾讯 radius=${tRadius} → count=${tTotal}，取回 ${tencentPois.length} 条，覆盖率 ${tencentCoverage.toFixed(1)}%${tencentOk ? '' : '（不可用）'}`
+  : '腾讯：本轮跳过（单源模式，未检出真实租金）')
 
 // ── 4. 去重清洗
 // 采集层依赖 DSH 插件的计算模块（src/site-tools.ts）。技能包里没有 src/，
@@ -583,6 +592,22 @@ const dq = (() => {
   const amapFetchedZero = !(amapPois.length > 0)
   const tencentFetchedZero = !(tencentPois.length > 0)
   const warnings = []
+
+  // 单源模式：腾讯本轮根本没跑，不参与判定，也不该报「腾讯返回 0」
+  if (!DUAL_SOURCE) {
+    if (amapZero || amapFetchedZero) warnings.push('高德 count 或取回条数为 0：查配额 / Key 权限 / 坐标')
+    if (amapCoverage >= 0 && amapCoverage < 50) warnings.push(`高德覆盖率仅 ${amapCoverage.toFixed(1)}%，漏采严重`)
+    return {
+      verdict: warnings.length > 0 ? 'partial' : 'ok',
+      source_mode: 'single',
+      amap: { count: amapTotal, fetched: amapPois.length, coverage: Number(amapCoverage.toFixed(1)) },
+      tencent: null,
+      warnings,
+      note: '本次为单源（仅高德）。腾讯交叉校验只在检出真实租金后启用（第 2 筛）；'
+        + '报告不得声称「双源交叉验证」。',
+    }
+  }
+
   if (!tencentOk) warnings.push('腾讯接口不可用（已降级为单源）')
   if (amapZero || amapFetchedZero) warnings.push('高德 count 或取回条数为 0：查配额 / Key 权限 / 坐标')
   if (tencentOk && (tencentZero || tencentFetchedZero)) warnings.push('腾讯返回 0：查配额 / Key 权限')
@@ -595,6 +620,7 @@ const dq = (() => {
 
   return {
     verdict,
+    source_mode: tencentOk ? 'dual' : 'single',
     amap: { count: amapTotal, fetched: amapPois.length, coverage: Number(amapCoverage.toFixed(1)) },
     tencent: { count: tTotal, fetched: tencentPois.length, coverage: Number(tencentCoverage.toFixed(1)), ok: tencentOk },
     warnings,
@@ -626,7 +652,7 @@ writeFileSync(
       center,
       scan_radius: radius,
       isochrone_notice: isochroneNotice,
-      coverage: { amap: Number(amapCoverage.toFixed(1)), tencent: Number(tencentCoverage.toFixed(1)), tencent_ok: tencentOk },
+      coverage: { amap: Number(amapCoverage.toFixed(1)), tencent: Number(tencentCoverage.toFixed(1)), tencent_ok: tencentOk, source_mode: DUAL_SOURCE ? 'dual' : 'single' },
       dedupe: {
         raw: dedupe.raw,
         effective: dedupe.effective,
@@ -687,6 +713,7 @@ console.log(JSON.stringify({
   tencent_fetched: tencentPois.length,
   tencent_coverage_pct: Number(tencentCoverage.toFixed(1)),
   tencent_ok: tencentOk,
+  source_mode: DUAL_SOURCE ? 'dual' : 'single',
   raw: dedupe.raw,
   effective: dedupe.effective,
   dropped: dedupe.dropped.length,

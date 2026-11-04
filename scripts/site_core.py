@@ -18,6 +18,7 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -833,8 +834,223 @@ def selftest():
     chk("步行 10 分半径 ≈ 593m", abs(g["radius_m"] - 593) <= 2)
     chk("截流定级有结果", g["competition"]["level"] in ("none", "light", "heavy"))
 
+    # ── 租金识别（决定是否升级第 2 筛双源校验）─────────────────────────
+    # 触发：能换算成元/月且 ≥ MIN_RENT
+    for text, want in [
+        ("20000\u5143/\u6708", 20000),
+        ("\u79df\u91d120000\u6708", 20000),
+        ("2w/\u6708\u79df", 20000),
+        ("\u6708\u79df\u4e24\u4e07", 20000),
+        ("\u623f\u79df 1.5\u4e07/\u6708", 15000),
+        ("\u94fa\u79df 8000 \u5143\u6bcf\u6708", 8000),
+        ("\u79df\u91d1\u4e09\u4e07\u4e94", 35000),        # 口语省略千
+        ("\u79df\u91d1\u4e09\u5343\u4e94", 3500),
+        ("\u79df\u91d1\u4e24\u4e07\u4e94", 25000),
+        ("\u4e00\u4e2a\u6708\u4e24\u4e07\u5757", 20000),
+        ("\u4e00\u5e74\u79df\u91d124\u4e07", 20000),       # 年租折月
+        ("\u5e74\u79df30\u4e07", 25000),
+        ("\u79df\u91d1 1200", 1200),                       # 四位数照常
+        ("\u4e00\u95f4 350\u5e73\u7684\u5e97\uff0c\u79df\u91d1 2 \u4e07", 20000),  # 面积+租金同句
+        ("\u9762\u79ef2000\u33a1\uff0c\u79df\u91d1\u5341\u4e07/\u6708", 100000),
+        ("1200\u33a1\u7684\u5e97\uff0c\u6708\u79df\u4e24\u4e07\u4e94", 25000),
+    ]:
+        r1 = detect_rent(text)
+        chk("rent 触发 %s → %d" % (text, want),
+            r1["hit"] and abs((r1["monthly_rent"] or 0) - want) < 1
+            and r1["advice"] == "enter_stage2")
+
+    # 追问：只有「租金」二字没有数
+    for text in ["\u79df\u91d1", "\u8fd9\u4e2a\u79df\u91d1\u8d35\u4e0d\u8d35"]:
+        r2 = detect_rent(text)
+        chk("rent 追问 %s" % text, (not r2["hit"]) and r2["advice"] == "ask_amount")
+
+    # 不触发：三位数与面积数量级重叠
+    for text in ["\u79df\u91d1\u4e24\u767e\u4e94", "\u79df\u91d1 800", "\u79df\u91d1\u4e94\u767e"]:
+        r3 = detect_rent(text)
+        chk("rent 拒收三位数 %s" % text, (not r3["hit"]) and r3["advice"] == "ignore")
+
+    # 不触发：金额其实是面积
+    for text in ["\u9762\u79ef1200\u33a1", "\u5546\u94fa 800 \u5e73\u65b9\u7c73",
+                 "\u5efa\u9762 1500 \u5e73", "\u9762\u79ef 300"]:
+        r4 = detect_rent(text)
+        chk("rent 拒收面积 %s" % text, (not r4["hit"]) and r4["advice"] == "ignore")
+
+    # 不触发：营业额 / 投入 / 其他费用
+    for text in ["\u4e00\u5929\u53562\u4e07", "\u6211\u6295\u4e86200\u4e07", "\u8f6c\u8ba9\u8d3930\u4e07"]:
+        r5 = detect_rent(text)
+        chk("rent 拒收非租金 %s" % text, (not r5["hit"]) and r5["advice"] == "ignore")
+
     print(f"\n{ok}/{ok + fail} 通过")
     return 0 if fail == 0 else 1
+
+
+# ── 租金识别：对话中判断是否已给出可用月租金 ──────────────────────────────
+#
+# 用途：决定是否升级到「第 2 筛」并启用腾讯+高德双源校验。
+#
+# 三档结论：
+#   hit=True           有可用月租金（≥ MIN_RENT）→ 触发第 2 筛
+#   理由 below-min     金额太小（三位数）→ 不触发；与面积数量级重叠，不敢认
+#   理由 no-amount     只有「租金」二字没有数 → 不触发，但应主动追问
+#   理由 neg:xxx       金额实为面积/营业额/投入/其他费用 → 不触发
+#
+# 单位换算：万/w=10000，千/k=1000，元/块=1；年租 ÷12
+# 口语省略单位：X万Y = 万位 + 个位×1000（三万五=35000），X千Y、X百Y 同理
+# 面积防误触：后缀紧邻（㎡/m2/平方米/平方/平/坪）或前缀紧邻（面积/建面/…）即排除该金额
+# 候选优先级：邻近租金词 > 数值更大（否则「面积2000㎡，租金1500」会取到 2000）
+
+_CN_NUM = "\u96f6\u4e00\u4e8c\u4e24\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d"
+_CN_MAP = dict(zip(_CN_NUM, [0, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9]))
+_CN_TEN, _CN_HUN, _CN_THOU = "\u5341", "\u767e", "\u5343"
+_CN_MAP[_CN_TEN] = 10
+_CN_MAP[_CN_HUN] = 100
+_CN_MAP[_CN_THOU] = 1000
+_CN_WAN, _CN_YI = "\u4e07", "\u4ebf"
+
+UNIT_MUL = {
+    _CN_WAN: 10000, "w": 10000, "W": 10000,
+    _CN_THOU: 1000, "k": 1000, "K": 1000,
+    "\u5757": 1, "\u5143": 1,          # 块 / 元
+}
+_UNIT_CHARS = "".join(UNIT_MUL)
+
+RENT_KW = ["\u79df\u91d1", "\u6708\u79df", "\u623f\u79df", "\u94fa\u79df",
+           "\u5e97\u79df", "\u627f\u79df", "\u623f\u4e1c"]      # 租金 月租 房租 铺租 店租 承租 房东
+NOT_RENT_KW = ["\u8425\u4e1a\u989d", "\u6d41\u6c34", "\u6295\u4e86", "\u6295\u8d44",
+               "\u88c5\u4fee", "\u8f6c\u8ba9\u8d39", "\u62bc\u91d1", "\u7269\u4e1a\u8d39",
+               "\u5de5\u8d44", "\u98df\u6750", "\u6bdb\u5229", "\u5356"]
+# 营业额 流水 投了 投资 装修 转让费 押金 物业费 工资 食材 毛利 卖
+
+AREA_SUFFIX = ["\u33a1", "m2", "M2", "\u5e73\u65b9\u7c73", "\u5e73\u65b9",
+               "\u5e73", "\u576a"]                              # ㎡ m2 平方米 平方 平 坪
+AREA_PREFIX = ["\u9762\u79ef", "\u5efa\u9762", "\u5efa\u7b51\u9762",
+               "\u4f7f\u7528\u9762\u79ef", "\u542b\u516c\u644a"]  # 面积 建面 建筑面 使用面积 含公摊
+
+_MON_WORDS = ["\u6708\u79df", "\u6708"]                          # 月租 月
+_YEAR = "\u5e74"                                                 # 年
+_SLASH, _MEI = "/", "\u6bcf"                                     # / 每
+
+_AMT = r"(\d+(?:\.\d+)?|[" + _CN_NUM + _CN_TEN + _CN_HUN + _CN_THOU + _CN_WAN + _CN_YI + r"]+)"
+
+# 月租下限：三位数与面积数量级重叠（300㎡ / 800㎡），一律不认
+MIN_RENT = 1000
+
+
+def _cn2num(s):
+    """中文/阿拉伯混合数字 → float。支持「三万五」这类口语省略单位。"""
+    if not s:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        pass
+    for ch, mult, sub in ((_CN_WAN, 10000, 1000), (_CN_THOU, 1000, 100), (_CN_HUN, 100, 10)):
+        m = re.match("^(.+)" + ch + "([" + _CN_NUM + "])$", s)
+        if m:
+            base = _cn2num(m.group(1))
+            if base is not None:
+                return base * mult + _CN_MAP[m.group(2)] * sub
+    total = section = num = 0.0
+    for ch in s:
+        if ch.isdigit():
+            num = float(ch)
+        elif ch in (_CN_TEN, _CN_HUN, _CN_THOU):
+            section += (num if num else 1) * _CN_MAP[ch]
+            num = 0.0
+        elif ch in _CN_MAP:
+            num = float(_CN_MAP[ch])
+        elif ch == _CN_WAN:
+            section = (section + num) * 10000
+            total += section
+            section = num = 0.0
+        elif ch == _CN_YI:
+            section = (section + num) * 1e8
+            total += section
+            section = num = 0.0
+    return total + section + num
+
+
+def _is_area(t, start, end):
+    """金额是否其实是面积：后缀紧邻或前缀紧邻。窗口必须窄，
+    否则「一间350平的店，租金2万」会把租金也一起滤掉。"""
+    after = t[end:end + 3]
+    for u in AREA_SUFFIX:
+        if after.startswith(u):
+            return True
+    before = t[max(0, start - 4):start]
+    return any(k in before for k in AREA_PREFIX)
+
+
+def _near_rent_kw(t, start, end):
+    return any(k in t[max(0, start - 10):end + 6] for k in RENT_KW)
+
+
+def detect_rent(text):
+    """从口语里识别月租金。
+
+    返回 {"hit": bool, "monthly_rent": float|None, "basis": str, "advice": str}
+    advice ∈ {"enter_stage2", "ask_amount", "ignore"}
+    """
+    empty = {"hit": False, "monthly_rent": None, "basis": "", "advice": "ignore"}
+    if not text:
+        return dict(empty, basis="\u7a7a\u8f93\u5165")     # 空输入
+
+    t = text.replace("\uff0c", "").replace("\u3001", "")
+    for sp in (" ", "\t", "\n"):
+        t = t.replace(sp, "")
+
+    for k in NOT_RENT_KW:
+        if k in t:
+            return dict(empty, basis="\u53cd\u4f8b\u8bcd:" + k)
+
+    found = []
+    for m in re.finditer(_AMT, t):
+        s, e = m.start(), m.end()
+        if _is_area(t, s, e):
+            continue
+        val = _cn2num(m.group(1))
+        if val is None or val <= 0:
+            continue
+        tail = t[e:e + 1]
+        has_unit = bool(tail and tail in _UNIT_CHARS)
+        if has_unit:
+            val *= UNIT_MUL[tail]
+        found.append({"v": val, "e": e, "raw": m.group(1),
+                      "unit": tail if has_unit else "",
+                      "kw": _near_rent_kw(t, s, e)})
+
+    if not found:
+        # 有「租金」字样但没金额 → 该追问
+        if any(k in t for k in RENT_KW):
+            return dict(empty, basis="\u6709\u79df\u91d1\u8bcd\u65e0\u91d1\u989d",
+                        advice="ask_amount")
+        return dict(empty, basis="\u65e0\u91d1\u989d\u65e0\u79df\u91d1\u8bcd")
+
+    prefer = [c for c in found if c["kw"]]
+    pool = prefer if prefer else found
+    c = max(pool, key=lambda x: x["v"])
+    val, e = c["v"], c["e"]
+
+    if val < MIN_RENT:
+        return dict(empty, basis="\u4f4e\u4e8e\u4e0b\u9650(%.0f<%.0f)" % (val, MIN_RENT))
+
+    has_kw = any(k in t for k in RENT_KW)
+    has_month = any(w in t for w in _MON_WORDS)
+    whole_year = (_YEAR in t) and not has_month
+    has_period = (has_month or whole_year
+                  or ((_SLASH + _MEI) in t[e:e + 8]))
+    if not has_kw and not has_period:
+        return dict(empty, basis="\u65e0\u79df\u91d1\u8bed\u5883")
+
+    if whole_year:
+        val /= 12
+        if val < MIN_RENT:
+            return dict(empty, basis="\u5e74\u79df\u6298\u6708\u540e\u4f4e\u4e8e\u4e0b\u9650(%.0f)" % val)
+
+    return {"hit": True, "monthly_rent": round(val, 2),
+            "basis": "raw=%s%s%s" % (c["raw"], c["unit"],
+                                     " year/12" if whole_year else ""),
+            "advice": "enter_stage2"}
 
 
 USAGE_BANNER = """\
@@ -869,7 +1085,7 @@ def main():
         return 0
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["finance", "crs", "veto", "dedupe", "geo", "benchmark", "formats", "selftest"])
+    ap.add_argument("cmd", choices=["finance", "crs", "veto", "dedupe", "geo", "benchmark", "formats", "rent", "selftest"])
     ap.add_argument("--params"); ap.add_argument("--area", type=float); ap.add_argument("--catchment")
     ap.add_argument("--target", type=int); ap.add_argument("--lease"); ap.add_argument("--space")
     ap.add_argument("--overrides"); ap.add_argument("--points"); ap.add_argument("--crs", default="gcj02")
@@ -882,6 +1098,7 @@ def main():
     ap.add_argument("--out")
     ap.add_argument("--benchmarks", help="自定义基准库路径（默认 data/benchmarks.json）")
     ap.add_argument("--formats", help="自定义业态规则路径（默认 data/formats.json）")
+    ap.add_argument("--text", help="rent 子命令：待识别的口语文本")
     a = ap.parse_args()
     j = lambda p: json.load(open(p, encoding="utf-8-sig")) if p and os.path.exists(p) else {}
 
@@ -906,6 +1123,13 @@ def main():
                "external_rules": n_ext,
                "total_rules": len(PAYBACK_BY_FORMAT),
                "rules": list_formats()}
+    elif a.cmd == "rent":
+        if not a.text:
+            raise SystemExit("rent 子命令需要 --text")
+        res = detect_rent(a.text)
+        res["text"] = a.text
+        res["min_rent"] = MIN_RENT
+        res["stage2_triggered"] = res["hit"]
     else:
         if a.formats:
             load_format_rules(a.formats)

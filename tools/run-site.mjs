@@ -185,8 +185,28 @@ function readSurvey(path) {
 }
 
 async function runOne(address, surveyPath) {
+  // 调研表必须先读：第 2 筛的双源校验由「带租金」触发，
+  // 而采集在第 190 行就要决定单源还是双源，不能等读到 L337 才判。
+  const surveyPre = surveyPath && existsSync(surveyPath) ? readSurvey(surveyPath) : null
+  const rentPre = surveyPre ? Number(surveyPre.params?.monthly_rent?.value) : NaN
+  const hasRent = Number.isFinite(rentPre) && rentPre > 0
+  const stage = hasRent ? 2 : 1.5
+  const walkProvider = hasRent ? 'tencent' : 'amap'
+  console.log(
+    `\n筛次判定：${hasRent ? `第 2 筛（检出月租金 ${rentPre} 元）→ 腾讯+高德双源校验`
+      : '第 1.5 筛（未检出租金）→ 单源高德'}`,
+  )
+  console.log(
+    `步行距离建议：--provider ${walkProvider}`
+    + (hasRent
+      ? '（腾讯带 steps.type，可数天桥/地道/人行横道，这是决策值）'
+      : '（高德初判参考值；等拿到真实租金再用腾讯精算，不占腾讯 POI 额度）'),
+  )
+
   const probeArgs = [address, `--profile=${slug}`]
   if (args.has('sweep')) probeArgs.push('--sweep')
+  // --dual-source 只在带租金时透传；不带时 probe 只跑高德，省腾讯 800/日 的 POI 额度
+  if (hasRent) probeArgs.push('--dual-source')
   run(`② 采集与分析（${address}）`, 'guangzhou-probe.mjs', probeArgs)
 
   const jsons = readdirSync(OUT)
