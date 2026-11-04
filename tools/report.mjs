@@ -619,7 +619,18 @@ export function buildReport(data, profile) {
     }
   }
   md.push(`| 高德覆盖率 | ${cov.amap >= 0 ? `${cov.amap}%` : '多关键词扫描'} |`)
-  md.push(`| 腾讯覆盖率 | ${num(cov.tencent)}% |`, '')
+  md.push(`| 腾讯覆盖率 | ${num(cov.tencent)}% |`)
+  // 数据源模式必须写明：单源不许声称「双源交叉验证」
+  const sourceMode = cov.source_mode ?? data.data_quality?.source_mode
+  if (sourceMode === 'dual') {
+    md.push('| 数据源模式 | **双源交叉**（高德 + 腾讯）：第 2 筛，已检出真实租金 |')
+  } else if (sourceMode === 'single') {
+    md.push('| 数据源模式 | **单源**（仅高德）：未检出真实租金，腾讯交叉校验未启用。'
+      + '本报告**不含**双源交叉验证，竞品数只有高德一个来源 |')
+  } else {
+    md.push('| 数据源模式 | 未标注（旧版 probe 输出），按单源看待 |')
+  }
+  md.push('')
   const dq = data.data_quality
   if (dq) {
     const mark = dq.verdict === 'ok' ? '✅ 正常' : dq.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'
@@ -1308,6 +1319,12 @@ ${data._staticMapSvg ? '<p style="color:#777;font-size:12px;margin:6px 0 0">地�
 <tr><td>同段竞品 / 异段</td><td>${num(d.same_type_count)} / ${num(d.other_type_count)}</td></tr>
 <tr><td>高德覆盖率</td><td>${cov.amap >= 0 ? `${cov.amap}%` : '多关键词扫描'}</td></tr>
 <tr><td>腾讯覆盖率</td><td>${num(cov.tencent)}%</td></tr>
+${(() => {
+  const sm = cov.source_mode ?? data.data_quality?.source_mode
+  if (sm === 'dual') return '<tr><td>数据源模式</td><td><b>双源交叉</b>（高德 + 腾讯）：第 2 筛，已检出真实租金</td></tr>'
+  if (sm === 'single') return '<tr><td>数据源模式</td><td><b>单源</b>（仅高德）：未检出真实租金，腾讯交叉校验未启用。本报告<b>不含</b>双源交叉验证，竞品数只有高德一个来源</td></tr>'
+  return '<tr><td>数据源模式</td><td>未标注（旧版 probe 输出），按单源看待</td></tr>'
+})()}
 ${data.data_quality ? `<tr><td>采集可信度</td><td>${data.data_quality.verdict === 'ok' ? '✅ 正常' : data.data_quality.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'}（${esc(data.data_quality.verdict)}）${data.data_quality.warnings?.length ? `：${esc(data.data_quality.warnings.join('；'))}` : ''}</td></tr>` : ''}</table>
 ${segRows}
 <h2>2. 竞品分布</h2>
