@@ -43,7 +43,11 @@ function verdict(data) {
   const sameType = data.dedupe?.same_type_count ?? data.dedupe?.effective ?? 0
   const otherType = data.dedupe?.other_type_count ?? 0
   const nearest = inner.nearest?.[0]
-  const level = count > 30 ? '贴脸红海' : count >= 11 ? '很密集' : count >= 4 ? '正常竞争' : '几乎空档'
+  // 圈层密度分级：标签自带白话，非行业读者也能读懂「红海」是什么意思
+  const level = count > 30 ? '贴脸红海 —— 密度极高，客人随手一拉就是一家'
+    : count >= 11 ? '很密集 —— 选择很多，得靠差异化'
+      : count >= 4 ? '正常竞争 —— 有对手，但不至于抢破头'
+        : '几乎空档 —— 先查是不是真没需求'
   const plain = count > 30
     ? '顾客根本不缺选择，新店要靠记忆点抢客，不靠位置'
     : count >= 11
@@ -125,7 +129,7 @@ function demandSection(data) {
     out.push(`> 数据源：高德 POI 自动采集（${d.captured_at ?? '—'}）｜扫描半径 ${d.radius_m ?? '—'}m。**以下全部为代理指标，不是实测人口。**`, '')
     out.push('| 指标 | 值 | 怎么来的 |', '| --- | --- | --- |')
     out.push(`| 住宅密度 | ${p.residential_density_per_km2 ?? '—'} 个/km² | 住宅区 POI 数 ÷ 扫描面积 |`)
-    out.push(`| 职住比 | ${p.job_housing_ratio ?? '—'} | 写字楼 POI ÷ 住宅区 POI（>1 偏就业型，<1 偏居住型） |`)
+    out.push(`| 职住比 | ${p.job_housing_ratio ?? '—'} | 写字楼 POI ÷ 住宅区 POI（>1 偏就业型，<1 偏居住型）—— 这个数告诉你周围上班的人多还是住家的人多：上班的多－工作日午市好做；住家的多－晚市和周末好做 |`)
     out.push(`| 配套成熟度 | ${p.amenity_count ?? '—'} | 购物中心 + 学校 + 地铁站 数量 |`)
     out.push(`| 咖啡密度 | ${p.coffee_density_per_km2 ?? '—'} 个/km² | 精品咖啡品牌 POI ÷ ${innerLabel}（消费力代理） |`)
     out.push(`| 银行密度 | ${p.bank_density_per_km2 ?? '—'} 个/km² | 银行网点 POI ÷ ${innerLabel}（商务活动代理） |`)
@@ -287,15 +291,15 @@ function financeSection(md) {
   const label = { base: '基准', pessimistic: '保守', optimistic: '乐观' }
   const metric = {
     revenue: '月营业额（元）',
-    net_profit: '月净利·会计口径（元）',
-    monthly_cash_flow: '月现金净流（元）',
-    roi: '年化 ROI',
-    breakeven_revenue_daily: '保本日营业额（元）',
-    payback_static_months: '回本·现金口径（月）',
-    accounting_payback_months: '回本·会计口径（月）',
-    max_rent_breakeven: '极限租金·保本（元/月）',
-    max_rent_target: '极限租金·目标回本（元/月）',
-    max_rent_ratio: '极限租金占营业额',
+    net_profit: '月净利·会计口径（元） —— 扣掉装修设备折旧后的账面利润',
+    monthly_cash_flow: '月现金净流（元） —— 实际进账的钱，不扣折旧',
+    roi: '年化 ROI —— 一年赚的钱 ÷ 投进去的钱',
+    breakeven_revenue_daily: '保本日营业额（元） —— 一天至少卖这么多才不亏',
+    payback_static_months: '回本·现金口径（月） —— 按实进账算，多久把本钱挣回来',
+    accounting_payback_months: '回本·会计口径（月） —— 把折旧摊进去算，账面多久回本（更保守）',
+    max_rent_breakeven: '极限租金·保本（元/月） —— 租金涨到这个数就刚好不赚不亏',
+    max_rent_target: '极限租金·目标回本（元/月） —— 租金到顶到多少，仍能在目标月数内回本',
+    max_rent_ratio: '极限租金占营业额 —— 租金吃掉营业额几成',
   }
   // 只渲染标量指标；payback_verdict 这类对象字段单独成表，不能塞进三档表里显示「—」
   const keys = order.length > 0
@@ -376,17 +380,17 @@ function financeSection(md) {
       }[pv.level] ?? pv.label
       out.push('**回本周期判读（餐饮重资产大店实操标尺）**', '')
       out.push('| 项 | 值 |', '| --- | --- |')
-      out.push(`| 会计口径回本（基准档） | **${num(b.accounting_payback_months)} 个月** → ${mark} |`)
+      out.push(`| 会计口径回本（基准档） | **${num(b.accounting_payback_months)} 个月** → ${mark} —— 扣掉装修折旧后，账面要这么多月才回本 |`)
       if (pvc) {
         const markC = {
           too_good: '🔍 快得不真实', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
           very_risky: '❌ 风险极高', no_value: '⛔ 基本没有投资价值', never: '⛔ 无法回本',
         }[pvc.level] ?? pvc.label
-        out.push(`| 现金流口径回本（基准档） | ${num(b.payback_static_months)} 个月 → ${markC} |`)
+        out.push(`| 现金流口径回本（基准档） | ${num(b.payback_static_months)} 个月 → ${markC} —— 只算钱进出，账面数字会更好看 |`)
       }
       out.push(`| 判读依据 | ${pv.note} |`)
       out.push('')
-      out.push('> **行业实操标尺**（装修投入几百万的重资产大店）：')
+      out.push('> **行业实操标尺**（装修投入几百万的重资产大店） —— 这个标尺回答「多久回本算正常」：')
       out.push('> · **24–36 个月（2–3 年）＝ 优秀门店**　· **≤48 个月（4 年）＝ 可勉强接受的上限**')
       out.push('> · 49–60 个月＝风险偏高　· 61–84 个月（5–7 年）＝风险极高　· **>84 个月（7–8 年）＝基本没有投资价值**')
       out.push('> 这是经验标尺，只用来给算出来的回本月数贴标签，不反过来影响测算结果。', '')
@@ -396,7 +400,8 @@ function financeSection(md) {
   const rec = f.recommendation
   if (rec) {
     const verdict = { healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict
-    out.push('**建议租金（跨档取最保守，供谈判使用）**', '')
+    out.push('**建议租金（供谈判使用）**', '')
+      out.push('> 取值方式：基准/保守/乐观三档各算一遍，取其中**最保守**的那个——即使按最差情况算，也不会亏。', '')
     out.push('| 项 | 值 |', '| --- | --- |')
     if (rec.anchor_unreachable) {
       out.push(`| 谈判锚点 | **不可达**（即便零租金，${rec.based_on_scenario} 档也达不到目标回本） |`)
@@ -463,8 +468,8 @@ function financeSection(md) {
       out.push(`| 建筑 / 厨房 / 营业 | ${num(sp.area_sqm)} / ${num(sp.kitchen_area_sqm)}（${(sp.kitchen_ratio * 100).toFixed(0)}%）/ ${num(sp.operating_area_sqm)} ㎡ |`)
       out.push(`| 座位数 | ${sp.seats}（${sp.seat_source === 'derived' ? '按每座面积推算' : sp.seat_source === 'input' ? '调用方提供' : '无法确定'}） |`)
       if (sp.turnover_per_day >= 0) {
-        out.push(`| 翻台率 | 座口径 ${sp.turnover_per_day} 次/日 ｜ 桌口径 ${sp.turnover_tables_per_day} 次/日（${sp.tables} 桌 × ${sp.table_size} 人） ｜ 业态常规 ${sp.normal_turnover_per_day} ／ 上限 ${sp.turnover_cap_per_day} |`)
-        out.push(`| 日均客流 / 容量利用率 | ${num(sp.daily_customers)} 人 / ${sp.utilization_pct}% |`)
+        out.push(`| 翻台率 | 座口径 ${sp.turnover_per_day} 次/日（一个座位一天被坐几轮）｜ 桌口径 ${sp.turnover_tables_per_day} 次/日（${sp.tables} 桌 × ${sp.table_size} 人） ｜ 业态常规 ${sp.normal_turnover_per_day} ／ 上限 ${sp.turnover_cap_per_day} |`)
+        out.push(`| 日均客流 / 容量利用率 | ${num(sp.daily_customers)} 人 / ${sp.utilization_pct}%（店里能坐的位子实际坐满了多少，高＝座位用得透，低＝空着也要付租） |`)
       }
       if (sp.implied_daily_revenue_normal > 0) {
         const ratioPct = (sp.revenue_vs_normal_ratio * 100).toFixed(1)
@@ -492,11 +497,11 @@ function financeSection(md) {
           out.push('| 口径提醒 | 本表是**座位翻台率**，不是桌翻台率；座位翻台受空座、拼台影响，同店同经营下低于桌翻台，两套口径不可混用 |')
         }
       }
-      out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（按**建筑面积**，非营业面积；经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
-      out.push(`| 单方造价 | ${num(sp.investment_per_sqm)} 元/㎡ |`)
+      out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（每平米每月能做多少营业额，用来看地方有没有被浪费；按**建筑面积**算，不是营业面积；经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
+      out.push(`| 单方造价 | ${num(sp.investment_per_sqm)} 元/㎡（每平米投了多少钱：装修+设备+其他初始投入） |`)
       out.push(`| 盈亏平衡 | 日 ${num(Math.round(sp.breakeven_revenue_monthly / 30))} / 月 ${num(sp.breakeven_revenue_monthly)} 元 |`)
       if (sp.breakeven_customers_daily >= 0) {
-        out.push(`| 保本客单量 | ${sp.breakeven_customers_daily} 单/日 |`)
+        out.push(`| 保本客单量 | ${sp.breakeven_customers_daily} 单/日（一天至少接待多少单才不亏） |`)
       }
       out.push('')
       if (sp.defaults_used.length > 0) out.push(`> 空间模型缺省系数：${sp.defaults_used.join('、')}`)
@@ -537,7 +542,7 @@ function financeSection(md) {
     out.push('**敏感度：各参数 ±20% 对谈判锚点的影响**', '')
     out.push('| 参数 | 锚点 −20% | 锚点 基准 | 锚点 +20% | 该参数是否影响结论 |', '| --- | --- | --- | --- | --- |')
     for (const s of sens) {
-      out.push(`| ${s.param} | ${num(s.anchor_low)} | ${num(s.anchor_base)} | ${num(s.anchor_high)} | ${s.conclusion_flips ? '**会翻转**' : '不变'} |`)
+      out.push(`| ${s.param} | ${num(s.anchor_low)} | ${num(s.anchor_base)} | ${num(s.anchor_high)} | ${s.conclusion_flips ? '**会翻转** —— 这个数只要估错 20%，结论就从「能做」变「不能做」，必须实测' : '不变'} |`)
     }
     out.push('')
   }
@@ -587,7 +592,7 @@ export function buildReport(data, profile) {
   md.push(`- 业态档案：**${profile?.name ?? '未指定'}**`)
   md.push(`- 坐标（GCJ-02）：${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`)
   md.push(`- 生成时间：${now}`)
-  md.push(`- 等时圈来源：${inner.source === 'valhalla' ? '本地 Valhalla 路网' : inner.source === 'osrm' ? '本地 OSRM 路网' : '直线估算【估算】'}`)
+  md.push(`- 等时圈来源：${inner.source === 'valhalla' ? '本地 Valhalla 路网' : inner.source === 'osrm' ? '本地 OSRM 路网' : '直线估算【估算】'}（行走范围按真实道路路径算出来的，不是在地图上画个圆；导航引擎名字不影响结论）`)
   const isoN = data.isochrone_notice
   if (isoN) {
     md.push('')
@@ -605,6 +610,47 @@ export function buildReport(data, profile) {
     for (const w of dq.warnings ?? []) md.push(`> - ${w}`)
     md.push('')
   }
+
+  // 白话速查：本报告大量使用行业口径，不看这节会读不懂
+  md.push('### 看不懂的话先看这里（白话版）', '')
+  md.push('> 这节不用记，遇到不懂的词回来查一眼就行。', '')
+  md.push('| 报告里的说法 | 大白话 |', '| --- | --- |')
+  md.push('| **截流 / 截流定级** | 你的店能"拦下"多少本来要路过的人。'
+    + '**重度截流**＝这条街上抢客的店太多，客人还没走到你门口就被别人截走了 |')
+  md.push('| **截流两轴** | 第一轴看**这个铺位本身**（位置显不显眼、好不好进、在几楼）；'
+    + '第二轴看**周围对手**（多少家在抢同一批人）。一个管"人流进不进得来"，一个管"进来后会不会被抢走"，两回事 |')
+  md.push('| **势力份额 / Voronoi 归属** | 把这块地切成小格子，每格算给离它最近的那家店。'
+    + '某店分到的格子越多＝它的"地盘"越大。**这不是营业额，也不是市占率**，只说明"谁离得近" |')
+  md.push('| **Top3 集中度** | 前 3 名加起来占多少地盘。占比高＝头部几家把客抓得牢，新店难插进去；'
+    + '占比低＝碎片化，靠差异化就能站住 |')
+  md.push('| **同段 / 异段** | 「段」是按"菜系 × 价位"分的类。同段＝跟你同类同价，是真正抢客的人；'
+    + '异段＝不同类或不同价，多数是互补不是对手 |')
+  md.push('| **直接 / 替代 / 间接竞品** | 直接＝同类同价，客人只能二选一；'
+    + '替代＝同类不同价，平时不抢、办宴席时会流动；间接＝不同品类，抢的是同一笔"吃饭预算" |')
+  md.push('| **翻台率** | 一个座位一天被坐了几轮。1.998 次 ≈ 每座一天接待两拨客人。'
+    + '**座位翻台 ≠ 桌翻台**：一桌 4 人，空 1 个座就拉低座位翻台 |')
+  md.push('| **坪效** | 每平方米每个月能做多少营业额。用来看"这块地方有没有被浪费" |')
+  md.push('| **保本日营业额** | 一天至少卖多少钱才不亏。低于这个数就是在赔钱 |')
+  md.push('| **极限租金** | **保本那档**＝租金再高一分钱就开始亏；'
+    + '**目标回本那档**＝租金到这个数，就没法在目标月数内回本 |')
+  md.push('| **谈判锚点** | 谈租金的参考上限，**不是"砍到这个价就签"**——高于它，压力测试下回本就不成立 |')
+  md.push('| **租售比** | 月租金 ÷ 月营业额。租金占营业额几成。餐饮大店经验：10% 以内健康，15% 以上警戒 |')
+  md.push('| **现金口径 / 会计口径** | 现金口径＝只算钱进出，回本快，看"多久能周转开"；'
+    + '会计口径＝把装修设备的折旧摊进去，回本慢，看"这笔投资账面划不划算"。两个都要看 |')
+  md.push('| **摊销** | 装修和设备的一次性投入，按月摊到成本里。450 万 ÷ 60 个月＝每月 7.5 万 |')
+  md.push('| **容量利用率** | 店里能坐的位子实际坐满了多少。66.6% ≈ 每 3 个位子有 1 个空着 |')
+  md.push('| **职住比** | 写字楼数量 ÷ 住宅数量。>1 上班的人多（工作日午市好做），<1 住家的人多（晚市和周末好做） |')
+  md.push('| **等时圈 / 圈层** | 从点位出发走 N 分钟能到的范围，按真实路网算，不是画个圆 |')
+  md.push('| **单方造价** | 每平方米投了多少钱（装修＋设备＋其他初始投入） |')
+  md.push('| **保本客单量** | 一天至少接待多少单才不亏 |')
+  md.push('| **敏感度「会翻转」** | 这个参数只要估错 20%，结论就从"能做"变"不能做"——'
+    + '所以它必须实测，不能拍脑袋估 |')
+  md.push('| **截流系数** | 算营业额时乘的一个折扣：路过的人里有多少比例真会进你的店 |')
+  md.push('| **硬伤 / 待核实** | 硬伤＝明确不满足的硬条件；'
+    + '待核实＝还没拿到数据、需要现场确认的项——**是待办清单，不是否决** |')
+  md.push('| **规模档推定，无人均实证** | 这家店人均多少我们没拿到真实数据，是按店名和规模"猜"的档位，别太当真 |')
+  md.push('| **ROI** | 年化投资回报率：一年赚的钱 ÷ 投进去的钱 |')
+  md.push('')
 
   md.push('## 1. 数据质量', '', '| 项 | 值 |', '| --- | --- |')
   md.push(`| 原始 POI | ${num(d.raw)} |`)
@@ -652,7 +698,7 @@ export function buildReport(data, profile) {
           : _t3 >= 15 ? '较分散：头部优势弱，靠差异化就能站住'
             : '极度分散：没有真正的头部，谁都能切一块，但也谁都不占优'
       md.push('**竞争集中度**', '', '| 指标 | 值 |', '| --- | --- |')
-      md.push(`| 圈内竞品（主圈） | ${_n} 家 |`)
+      md.push(`| 圈内竞品（主圈） | ${_n} 家 —— 你正常做生意的那个范围里有多少家竞品 |`)
       md.push(`| Top1 势力份额 | ${_t[0].share_pct}%（${_t[0].name}） |`)
       md.push(`| Top3 合计 | ${_t3}% |`)
       md.push(`| Top10 合计 | ${_t10}% |`)
@@ -720,7 +766,7 @@ export function buildReport(data, profile) {
     tierLines.push(`| 替代竞品 | 同品类、不同价位段 | ${tier.substituteCount} | 客群会互相流动（聚餐/宴请档期最明显） |`)
     tierLines.push(`| 间接竞品 | 不同品类 | ${tier.indirectCount} | 抢同一笔餐饮预算，但不是同一场景 |`)
     if (tier.subList.length > 0) {
-      tierLines.push('', `替代层明细：${tier.subList.map((s) => `${s.key} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost}）` : ''}`).join('；')}`)
+      tierLines.push('', `替代层明细（同类不同价，平时不抢、办宴席时会流动）：${tier.subList.map((s) => `${s.key} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost}）` : ''}`).join('；')}`)
     }
     tierLines.push('')
   }
@@ -738,18 +784,21 @@ export function buildReport(data, profile) {
     const capApplied = data.finance?.catchment_code ? true : false
     const capCell = capInfo
       ? `| 第一轴·点位截流力 | **${capCode} ${capInfo[0]}**（客流 ×${capInfo[1]}${capApplied ? '，已计入财务' : '，待财务参数到位后计入'}） |`
-      : '| 第一轴·点位截流力 | 未判定（现场看动线位置/可视/楼层后按 L1–L5 打级） |'
+      : '| 第一轴·点位截流力 | 未判定 —— 要去现场看铺位在动线的什么位置、显不显眼、在几楼，再按 L1–L5 打级（L1 最好：临主街、一眼看见、一楼；L5 最差：藏在深处、背街、高层） |'
     md.push('| 项 | 值 |', '| --- | --- |')
     md.push(capCell)
-    md.push(`| 第二轴·竞争截流压力 | **${comp.label}**（${comp.level}） |`)
-    md.push(`| 圈内最近竞品 | ${comp.nearestName} ${comp.nearestM} m |`)
-    md.push(`| Top1 势力份额 | ${comp.top1Name} ${comp.top1Pct}% |`)
-    md.push(`| Top3 合计势力份额 | ${comp.top3Pct}% |`)
-    md.push(`| Voronoi 归属 | 本点位落在「${comp.centerCell}」的势力范围内 |`, '')
+    md.push(`| 第二轴·竞争截流压力 | **${comp.label}**（${comp.level}）—— ${
+      comp.level === 'heavy' ? '抢客的店太多，客人还没走到你门口就被别人截走了'
+        : comp.level === 'moderate' || comp.level === 'medium' ? '周围有对手，但还没到抢客的程度'
+          : '附近没什么人跟你抢同一批客人'} |`)
+    md.push(`| 圈内最近竞品 | ${comp.nearestName} ${comp.nearestM} m —— 你开业第一天就要跟它分客 |`)
+    md.push(`| Top1 势力份额 | ${comp.top1Name} ${comp.top1Pct}% —— 这块地盘它占了 ${comp.top1Pct}%（按"谁离得近"算，不是营业额） |`)
+    md.push(`| Top3 合计势力份额 | ${comp.top3Pct}% —— 前三名加起来占了 ${comp.top3Pct}% 的地盘，剩下的人分剩下的 |`)
+    md.push(`| Voronoi 归属 | 本点位落在「${comp.centerCell}」的势力范围内 —— 就是说这块地"归"它，你开门等于直接跟它抢同一批人 |`, '')
     md.push('触发理由：', '')
     for (const r of comp.reasons) md.push(`- ${r}`)
     md.push('')
-    md.push('> **两轴不能互相替代**：第一轴看「这个铺位能截多少路过客流」（场地属性，现场判），')
+    md.push('> **两轴不能互相替代** —— 第一轴看「这个铺位能截多少路过客流」（场地属性，现场判），')
     md.push('> 第二轴看「对手抢走多少」（竞争属性，POI 推算）。')
     md.push('> 前者调客流，后者调风险，报告里必须分开写。', '')
   }
@@ -858,6 +907,9 @@ export function buildReport(data, profile) {
   if (trace.length > 0) {
     md.push('## 附录：计算口径（每个数字怎么来的）', '')
     md.push('> 参数搞错时，看这张表最快——每行都给了公式和本次代入的数值。', '')
+  md.push('> 表里的术语：**成本因子**＝保守/乐观档对成本的缩放倍数（基准档就是 1，不放不缩）；'
+    + '**跨档取最保守**＝基准/保守/乐观三档各算一遍，取其中最难过的那个当结论，'
+    + '宁可按最差情况准备。', '')
     md.push('| 组 | 指标 | 计算口径 | 本次代入 | 结果 |', '| --- | --- | --- | --- | --- |')
     for (const r of trace) {
       md.push(`| ${r.group} | ${r.metric} | ${r.formula} | ${r.substituted} | **${r.result}** |`)
@@ -869,7 +921,9 @@ export function buildReport(data, profile) {
   md.push(inner.source === 'valhalla' || inner.source === 'osrm'
     ? '> 等时圈为本地路网计算，已去除沿主干道走廊的细长尖刺；外圈因范围过大不报份额。'
     : '> 等时圈为直线估算【估算】，遇江面/快速路会高估可达范围；外圈因范围过大不报份额。')
-  md.push('> 数据来源：高德/腾讯 POI（含缓存）、本地 Valhalla/OSRM、用户录入调研表。仅供决策参考。')
+  md.push('> 数据来源：高德/腾讯 POI、本地路网引擎、用户录入调研表。'
+    + '—— 竞品和配套是从地图公司的商家库抓的，距离和走路时间是用本地导航引擎按真实道路算的，'
+    + '财务参数是你自己填的。建议拿这份跟现场实测对一遍再拍板。')
 
   const markdown = md.join('\n')
 
@@ -1312,6 +1366,36 @@ ${data._staticMapSvg
     : '<p style="color:#999">未生成静态地图（缺 map-static.svg，跑 <code>node tools/render-static-map.mjs --probe=probe.json</code>）</p>'}
 ${data._staticMapSvg ? '<p style="color:#777;font-size:12px;margin:6px 0 0">地图已内嵌瓦片，<b>打印 / 存 PDF 会一并保留</b>；圈层按主圈绘制。</p>' : ''}
 
+<h3>看不懂的话先看这里（白话版）</h3>
+<p style="color:#666;font-size:13px;margin:6px 0 10px">这节不用记，遇到不懂的词回来查一眼就行。</p>
+<table>
+<tr><th style="width:26%">报告里的说法</th><th>大白话</th></tr>
+<tr><td><b>截流 / 截流定级</b></td><td>你的店能"拦下"多少本来要路过的人。<b>重度截流</b>＝这条街上抢客的店太多，客人还没走到你门口就被别人截走了</td></tr>
+<tr><td><b>截流两轴</b></td><td>第一轴看<b>这个铺位本身</b>（位置显不显眼、好不好进、在几楼）；第二轴看<b>周围对手</b>（多少家在抢同一批人）。一个管"人流进不进得来"，一个管"进来后会不会被抢走"，两回事</td></tr>
+<tr><td><b>势力份额 / Voronoi 归属</b></td><td>把这块地切成小格子，每格算给离它最近的那家店。某店分到的格子越多＝它的"地盘"越大。<b>这不是营业额，也不是市占率</b>，只说明"谁离得近"</td></tr>
+<tr><td><b>Top3 集中度</b></td><td>前 3 名加起来占多少地盘。占比高＝头部几家把客抓得牢，新店难插进去；占比低＝碎片化，靠差异化就能站住</td></tr>
+<tr><td><b>同段 / 异段</b></td><td>「段」是按"菜系 × 价位"分的类。同段＝跟你同类同价，是真正抢客的人；异段＝不同类或不同价，多数是互补不是对手</td></tr>
+<tr><td><b>直接 / 替代 / 间接竞品</b></td><td>直接＝同类同价，客人只能二选一；替代＝同类不同价，平时不抢、办宴席时会流动；间接＝不同品类，抢的是同一笔"吃饭预算"</td></tr>
+<tr><td><b>翻台率</b></td><td>一个座位一天被坐了几轮。1.998 次 ≈ 每座一天接待两拨客人。<b>座位翻台 ≠ 桌翻台</b>：一桌 4 人，空 1 个座就拉低座位翻台</td></tr>
+<tr><td><b>坪效</b></td><td>每平方米每个月能做多少营业额。用来看"这块地方有没有被浪费"</td></tr>
+<tr><td><b>保本日营业额</b></td><td>一天至少卖多少钱才不亏。低于这个数就是在赔钱</td></tr>
+<tr><td><b>极限租金</b></td><td><b>保本那档</b>＝租金再高一分钱就开始亏；<b>目标回本那档</b>＝租金到这个数，就没法在目标月数内回本</td></tr>
+<tr><td><b>谈判锚点</b></td><td>谈租金的参考上限，<b>不是"砍到这个价就签"</b>——高于它，压力测试下回本就不成立</td></tr>
+<tr><td><b>租售比</b></td><td>月租金 ÷ 月营业额。租金占营业额几成。餐饮大店经验：10% 以内健康，15% 以上警戒</td></tr>
+<tr><td><b>现金口径 / 会计口径</b></td><td>现金口径＝只算钱进出，回本快，看"多久能周转开"；会计口径＝把装修设备的折旧摊进去，回本慢，看"这笔投资账面划不划算"。两个都要看</td></tr>
+<tr><td><b>摊销</b></td><td>装修和设备的一次性投入，按月摊到成本里。450 万 ÷ 60 个月＝每月 7.5 万</td></tr>
+<tr><td><b>容量利用率</b></td><td>店里能坐的位子实际坐满了多少。66.6% ≈ 每 3 个位子有 1 个空着</td></tr>
+<tr><td><b>职住比</b></td><td>写字楼数量 ÷ 住宅数量。&gt;1 上班的人多（工作日午市好做），&lt;1 住家的人多（晚市和周末好做）</td></tr>
+<tr><td><b>等时圈 / 圈层</b></td><td>从点位出发走 N 分钟能到的范围，按真实路网算，不是画个圆</td></tr>
+<tr><td><b>单方造价</b></td><td>每平方米投了多少钱（装修＋设备＋其他初始投入）</td></tr>
+<tr><td><b>保本客单量</b></td><td>一天至少接待多少单才不亏</td></tr>
+<tr><td><b>敏感度「会翻转」</b></td><td>这个参数只要估错 20%，结论就从"能做"变"不能做"——所以它必须实测，不能拍脑袋估</td></tr>
+<tr><td><b>截流系数</b></td><td>算营业额时乘的一个折扣：路过的人里有多少比例真会进你的店</td></tr>
+<tr><td><b>硬伤 / 待核实</b></td><td>硬伤＝明确不满足的硬条件；待核实＝还没拿到数据、需要现场确认的项——<b>是待办清单，不是否决</b></td></tr>
+<tr><td><b>规模档推定，无人均实证</b></td><td>这家店人均多少我们没拿到真实数据，是按店名和规模"猜"的档位，别太当真</td></tr>
+<tr><td><b>ROI</b></td><td>年化投资回报率：一年赚的钱 ÷ 投进去的钱</td></tr>
+</table>
+
 <h2>1. 数据质量</h2><table>
 <tr><td>原始 POI</td><td>${num(d.raw)}</td></tr>
 <tr><td>去重后有效</td><td>${num(d.effective)}</td></tr>
@@ -1371,7 +1455,7 @@ ${auditHtml}
 ${bmHtml}
 ${traceHtml}
 <blockquote>${(inner.source === 'valhalla' || inner.source === 'osrm') ? '等时圈为本地路网计算，已去除沿主干道走廊的细长尖刺' : '等时圈为直线估算【估算】，遇江面/快速路会高估可达范围'}；外圈因范围过大不报份额。<br>
-数据来源：高德/腾讯 POI（含缓存）、本地 Valhalla/OSRM、用户录入调研表。仅供决策参考。</blockquote>
+数据来源：高德/腾讯 POI、本地路网引擎、用户录入调研表。—— 竞品和配套是从地图公司的商家库抓的，距离和走路时间是用本地导航引擎按真实道路算的，财务参数是你自己填的。建议拿这份跟现场实测对一遍再拍板。</blockquote>
 <style>
 tr.poirow{cursor:pointer}
 tr.poirow:hover{background:#f5f5f5}
