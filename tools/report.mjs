@@ -404,6 +404,11 @@ function financeSection(md) {
       out.push(`| 谈判锚点 | ${num(rec.target_rent)} 元/月（取自 ${rec.based_on_scenario} 档） |`)
     }
     out.push(`| 保本红线 | ${num(rec.ceiling_rent)} 元/月 |`)
+    // 压力测试下限：保守档（营收↓15% 且 成本↑5%）两条线，只作风险提示，不作谈判出价
+    if (typeof rec.target_rent_conservative === 'number') {
+      out.push(`| 压力下限（保守档） | 锚点 ${num(rec.target_rent_conservative)} 元/月`
+        + ` ｜ 保本 ${num(rec.ceiling_rent_conservative)} 元/月 — 「营收降 15% 且成本涨 5%」时的最坏情况，**不作为谈判出价** |`)
+    }
     // 锚点不可达时，「需降 X 元」会自相矛盾（锚点是负的，降多少都没用）
     out.push(rec.anchor_unreachable
       ? '| 距锚点 | **不适用**——锚点不可达，说明问题不在租金，而在营收/成本结构 |'

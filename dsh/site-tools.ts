@@ -610,10 +610,19 @@ export interface RentCeiling {
 
 /** 建议租金：跨档取最保守值，作为谈判锚点与不可越过的红线。 */
 export interface RentRecommendation {
-  /** 谈判锚点：所有已算情景里最低的目标回本租金上限（压力测试后仍成立） */
+  /** 谈判锚点：**基准档**的目标回本租金上限（常规经营预期下可接受的价格上限） */
   target_rent: number
-  /** 红线：所有已算情景里最低的保本租金上限；越过即亏损 */
+  /**
+   * 压力测试下限：所有情景里最低的目标回本租金上限（保守档 = 营收↓15% 且 成本↑5%）。
+   * 只作风险提示，不作为谈判出价——拿它出价等于按最坏情况要价，谈不成。
+   */
+  target_rent_conservative: number
+  /** 保守档锚点取自哪个情景 */
+  conservative_scenario: string
+  /** 红线：**基准档**的保本租金上限；越过即亏损（常规经营预期口径） */
   ceiling_rent: number
+  /** 压力红线：所有情景里最低的保本租金上限（保守档），仅作最坏情况提示 */
+  ceiling_rent_conservative: number
   /** 当前租金 − 锚点；正数 = 需要下调的幅度 */
   gap_to_target: number
   /** 租金安全余量（元/月）= 锚点 − 当前租金；负数表示需下调。**这才是「余量」的绝对值** */
@@ -2162,10 +2171,14 @@ function runFinancials(
   // 建议租金：跨档取最保守值 —— 谈判不能拿基准档的乐观值当锚点，
   // 否则一遇到「营收 -15%、成本 +5%」的悲观情景就全盘推翻。
   const computed = requested.map((key) => ({ key, result: perScenario[key]! }))
-  let anchorScenario = computed[0]!
+  // 锚点按基准档：除非没算基准档，才退回首个情景
+  let anchorScenario = computed.find((item) => item.key === 'base') ?? computed[0]!
+  // 红线与压力下限仍取全档最保守
+  const baseScenario = computed.find((item) => item.key === 'base') ?? computed[0]!
+  let anchorScenarioWorst = computed[0]!
   let ceilingScenarioWorst = computed[0]!
   for (const item of computed) {
-    if (item.result.max_rent_target < anchorScenario.result.max_rent_target) anchorScenario = item
+    if (item.result.max_rent_target < anchorScenarioWorst.result.max_rent_target) anchorScenarioWorst = item
     if (item.result.max_rent_breakeven < ceilingScenarioWorst.result.max_rent_breakeven) {
       ceilingScenarioWorst = item
     }
@@ -2197,7 +2210,10 @@ function runFinancials(
           + `当前 ${asPct(currentRentRatio)}，超警戒线 ${((currentRentRatio - ratioLine.warningMax) * 100).toFixed(1)} 个百分点`
   const recommendation: RentRecommendation = {
     target_rent: anchorScenario.result.max_rent_target,
-    ceiling_rent: ceilingScenarioWorst.result.max_rent_breakeven,
+    target_rent_conservative: anchorScenarioWorst.result.max_rent_target,
+    conservative_scenario: anchorScenarioWorst.key,
+    ceiling_rent: baseScenario.result.max_rent_breakeven,
+    ceiling_rent_conservative: ceilingScenarioWorst.result.max_rent_breakeven,
     gap_to_target: roundTo(values.monthly_rent - anchorScenario.result.max_rent_target, 2),
     // 租金安全余量（元/月）= 锚点 − 当前租金；正数=还有空间，负数=需下调
     rent_headroom: roundTo(anchorScenario.result.max_rent_target - values.monthly_rent, 2),
@@ -2208,7 +2224,7 @@ function runFinancials(
     rent_vs_anchor_pct: anchorScenario.result.max_rent_target > 0
       ? roundTo(values.monthly_rent / anchorScenario.result.max_rent_target, 4)
       : 0,
-    gap_to_ceiling: roundTo(values.monthly_rent - ceilingScenarioWorst.result.max_rent_breakeven, 2),
+    gap_to_ceiling: roundTo(values.monthly_rent - baseScenario.result.max_rent_breakeven, 2),
     based_on_scenario: anchorScenario.key,
     current_rent_ratio: roundTo(currentRentRatio, 4),
     rent_ratio_healthy_max: ratioLine.healthyMax,
@@ -2946,10 +2962,28 @@ export const financialCalcTool = defineTool({
           required: true,
           additionalProperties: false,
           description:
-            '建议租金：跨档取最保守值。target_rent 是谈判锚点，ceiling_rent 是不可越过的保本红线。',
+            '建议租金。target_rent 是谈判锚点（按基准档），target_rent_conservative 是压力测试下限（保守档，仅作风险提示），ceiling_rent 是不可越过的保本红线（取全档最保守）。',
           properties: {
-            target_rent: { type: 'number', required: true, description: '谈判锚点（元/月）' },
-            ceiling_rent: { type: 'number', required: true, description: '保本红线（元/月）' },
+            target_rent: {
+              type: 'number', required: true,
+              description: '谈判锚点（元/月）：基准档的目标回本租金上限，常规经营预期下可接受的价格上限',
+            },
+            target_rent_conservative: {
+              type: 'number', required: true,
+              description: '压力测试下限（元/月）：保守档（营收↓15% 且 成本↑5%）下的目标回本租金上限。只作风险提示，不作谈判出价',
+            },
+            conservative_scenario: {
+              type: 'string', required: true,
+              description: '压力下限取自哪个情景',
+            },
+            ceiling_rent: {
+              type: 'number', required: true,
+              description: '保本红线（元/月）：基准档的保本租金上限，越过即亏损',
+            },
+            ceiling_rent_conservative: {
+              type: 'number', required: true,
+              description: '压力红线（元/月）：保守档的保本租金上限，仅作最坏情况提示',
+            },
             gap_to_target: { type: 'number', required: true, description: '当前租金 − 锚点；正数=需下调' },
             rent_headroom: { type: 'number', required: true, description: '租金安全余量（元/月）= 锚点 − 当前租金' },
             rent_headroom_pct: { type: 'number', required: true, description: '安全余量占锚点比例（0–1）' },
