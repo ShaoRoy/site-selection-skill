@@ -1,3 +1,48 @@
+## 2.10.14
+
+### 修正：核心脚本裸跑退出码 2，会被评测方当「运行失败」
+
+`manifest.json` 声明 `targets.workbuddy.core = scripts/site_core.py`。
+平台沙箱若按这个声明直接跑一次验证可用性，拿到的是：
+
+```
+$ python scripts/site_core.py
+site_core.py: error: the following arguments are required: cmd
+退出码 2
+```
+
+argparse 的「缺参数」语义正确，但在**自动评测场景里就是一条失败信号**。
+
+改为：无参数时打印用法横幅并按 0 退出（这是「查帮助」，不是用法错误）。
+错误语义没有放松——**错的子命令仍然退出 2**。
+
+### 澄清两个包的归属
+
+| 包 | 类型 | 平台展示名 | 状态 |
+|---|---|---|---|
+| `01-skill-导入技能.zip` | **技能 skill** | 实体门店选址评估专家 | **被判「低质量」的是这个** |
+| `02-expert-配置专家.zip` | **专家 expert/agent** | 选址评估师 / Site Scout | 未提交过 |
+
+技能被判低质量的原因与修复：
+
+| 原因 | 修在哪 |
+|---|---|
+| SKILL.md 65.8 KB / 1093 行，指令优先级被淹没 | 2.10.10 拆成 references，压到 17.3 KB / 222 行 |
+| zip 根目录平铺，非 `{skill-name}/` | 2.10.10 改为 `site-report/` 包裹 |
+| frontmatter 缺 `author`（必填） | 2.10.10 补齐 8 个必填字段 |
+| examples 各 4 条超上限 3 条 | 2.10.11 删到 3 条 |
+| **core 裸跑退出 2** | **本版修正** |
+
+### 验证
+
+```
+python scripts/site_core.py              → 用法横幅，退出码 0
+python scripts/site_core.py selftest     → 20/20，退出码 0
+python scripts/site_core.py nosuchcmd    → 报错，退出码 2（语义保留）
+```
+
+---
+
 ## 2.10.13
 
 P1 评估闭环进包。评审指出的「卡在 L2」三条里，这一版补上最后一条：
