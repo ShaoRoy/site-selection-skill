@@ -1,8 +1,8 @@
 ﻿# site-selection skill 安装脚本（WorkBuddy / DSH 通用）
-# 用法：pwsh -File install.ps1            → 装到 ~/.dsh/skills/site-selection
+# 用法：pwsh -File install.ps1            → 装到 ~/.dsh/skills/restaurant-location-analysis
 #       pwsh -File install.ps1 -Target X   → 装到自定义目录
 
-param([string]$Target = "$env:USERPROFILE\.dsh\skills\site-selection")
+param([string]$Target = "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis")
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 Write-Host "安装到: $Target"

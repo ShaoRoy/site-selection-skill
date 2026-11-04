@@ -1,6 +1,6 @@
 # tools/ —— 报告渲染器（零依赖，Node 18+）
 
-这 6 个脚本把 `probe.json`（点位分析结果）渲染成可交付的 HTML 报告。
+这些脚本把 `probe.json`（点位分析结果）渲染成可交付的 HTML 报告，并汇总点位进度看板。
 **纯 Node 内建模块，不需要 npm install。** 没有 Node 时，按 `SKILL.md` 的报告结构由模型直接组织输出。
 
 ---
@@ -58,6 +58,7 @@ node tools/report.mjs --in=probe.json
 | `tile-cache.mjs` | 高德瓦片下载与缓存（并发、断点续传） |
 | `import-survey.mjs` | 调研表 CSV → JSON（财务参数、现场字段） |
 | `profile-build.mjs` | 业态档案建档 / 校验 / 脚手架 |
+| `index-dashboard.mjs` | 汇总各点位状态与网格覆盖，生成进度看板（`run-site.mjs` 跑完自动调用） |
 
 ---
 

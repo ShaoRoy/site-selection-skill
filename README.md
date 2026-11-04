@@ -1,4 +1,4 @@
-# 选址智能评估 Skill
+# 选址智能分析 Skill
 
 <p>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
@@ -8,7 +8,7 @@
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.0
+> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.2
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -18,8 +18,8 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.0.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.0.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.2.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.2.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1` | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -140,7 +140,7 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 | 平台 | 说明 |
 |---|---|
 | Windows 10 / 11 | 推荐，install.ps1 一键安装（PowerShell 5.1 或 7 均可） |
-| macOS / Linux | Python 脚本同样可用，手动复制目录到 ~/.dsh/skills/site-selection |
+| macOS / Linux | Python 脚本同样可用，手动复制目录到 ~/.dsh/skills/restaurant-location-analysis |
 
 ## 安装
 
@@ -156,11 +156,11 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 git clone https://github.com/ShaoRoy/site-selection-skill.git
 cd site-selection-skill
 
-# 2. 运行安装脚本（默认装到 ~/.dsh/skills/site-selection）
+# 2. 运行安装脚本（默认装到 ~/.dsh/skills/restaurant-location-analysis）
 powershell -File install.ps1
 
 # 装到自定义目录：
-# powershell -File install.ps1 -Target "D:\your\skills\site-selection"
+# powershell -File install.ps1 -Target "D:\your\skills\restaurant-location-analysis"
 ```
 
 脚本会自动做三件事：复制文件 → 检查 Python/openpyxl → 检查高德 Key。
@@ -169,8 +169,8 @@ powershell -File install.ps1
 
 ```powershell
 # 1. clone 仓库
-git clone https://github.com/ShaoRoy/site-selection-skill.git "$env:USERPROFILE\.dsh\skills\site-selection"
-cd "$env:USERPROFILE\.dsh\skills\site-selection"
+git clone https://github.com/ShaoRoy/site-selection-skill.git "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
+cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 
 # 2. 安装 Python 依赖（仅 import-benchmarks.py 需要 openpyxl）
 pip install openpyxl
@@ -197,7 +197,7 @@ New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dsh\secrets" | Out-
 ### 自检（必做）
 
 ```powershell
-cd "$env:USERPROFILE\.dsh\skills\site-selection"
+cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 python scripts/site_core.py selftest
 ```
 
@@ -249,7 +249,7 @@ avatars/expert.png              ← 头像 512×512
 | 所选文件夹中未找到 SKILL.md | 传了专家包到「导入技能」 | 用**不带外层文件夹**的包 |
 | 未找到 .codebuddy-plugin/plugin.json | 传了技能包到「配置专家」 | 用**带一层文件夹**的包 |
 | 专家名称已被占用 | `plugin.json` 的 `name` 撞名 | 改 `name` 与 `plugin`（两处一起改） |
-| 没有 skill | SKILL.md 缺 `title` / `summary` | v2.10.0 起已具备 |
+| 没有 skill | SKILL.md 缺 `title` / `summary` | 当前版本已具备 |
 
 ### 验证安装成功
 
@@ -267,7 +267,7 @@ Agent 应该会：读 `SKILL.md` → 调 `scripts/site_core.py` 算财务口径 
 |---|---|
 | `INVALID_USER_KEY` | 高德 Key 类型选错，去控制台换「Web 服务」类型 |
 | `python: command not found` | 没装 Python 或没加 PATH；脚本类功能不可用，但 SKILL.md 方法论仍可读 |
-| Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/site-selection/`（目录名要叫 `site-selection`，不是 `site-selection-skill`） |
+| Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/restaurant-location-analysis/`（目录名要叫 `site-selection`，不是 `site-selection-skill`） |
 | `openpyxl` 导入失败 | `pip install openpyxl`；只有 `import-benchmarks.py` 需要 |
 | 路径含中文 / 空格 | 部分脚本对路径敏感，建议装在纯英文路径 |
 | 高德额度耗尽 | 个人开发者默认日额度 5000 次，网格扫描前先 `--dry-run` 看预计调用量 |

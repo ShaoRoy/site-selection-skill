@@ -1,15 +1,15 @@
 {
   "name": "site-selection-analyst",
-  "version": "2.10.0",
+  "version": "2.10.2",
   "description": "Structured site selection analyst for chain restaurants: competitive landscape, catchment grading, rent ceiling, payback and industry benchmark.",
   "author": {
     "name": "YG",
     "email": "yg@example.com"
   },
   "expertType": "agent",
-  "agentName": "site-selection",
+  "agentName": "site-selection-analyst",
   "agents": [
-    "./agents/site-selection.md"
+    "./agents/site-selection-analyst.md"
   ],
   "displayName": {
     "en": "Site Scout",

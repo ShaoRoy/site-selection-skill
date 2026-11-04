@@ -7,7 +7,7 @@ description_en: Three-stage site selection SOP with dual-source GIS. Covers trad
 version: 2.9.1
 description: 适配三级漏斗选址SOP。高德探路（竞品扫描）+ 腾讯周边交叉校验 双源 GIS，驱动商圈初筛、现场排雷复核、财务锁盘测算；含 Voronoi 势力归属、截流三级定级、极限租金反推、租期现金流、空间容量对账、假设台账与双维敏感度、参数覆盖三层。
 
-title: "选址智能评估（完整口径版）"
+title: "选址智能分析（完整口径版）"
 summary: "连锁餐饮 / 实体门店选址评估完整版：四道筛选流程、十节口径规范、22 条公式、截流两轴、财务双口径、极限租金反推、行业基准对标、人口栅格交叉校验。"
 read_when:
   - 用户要评估某个门店点位、商铺、商场铺位
