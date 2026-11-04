@@ -1251,49 +1251,180 @@ function gradePayback(months: number): { level: PaybackLevel; label: string; not
     : { level: band.level, label: band.label, note: band.note }
 }
 
-const TURNOVER_RISK_BANDS: Readonly<Record<string, { red: number; greenLow: number; greenHigh: number; label: string }>> = {
-  large_yuecai: { red: 1.5, greenLow: 2.0, greenHigh: 2.5, label: '粤菜正餐（午晚市）' },
-  large_dining: { red: 1.5, greenLow: 2.0, greenHigh: 2.5, label: '粤菜正餐（午晚市）' },
-  tea_house: { red: 1.4, greenLow: 2.0, greenHigh: 2.8, label: '24h 茶市茶楼' },
+/**
+ * 座位翻台基准（次/日）：按细分业态给五档 + 客单价配对区间。
+ *
+ * 口径说明：
+ *  · 本表是**座位翻台率**，不是桌翻台率。座位翻台受空座、拼台影响，
+ *    同店同经营下座位翻台低于桌翻台，两套口径不可混用。
+ *  · 全部为**日均稳态值**，非节假日峰值、非新店爆火期。
+ *  · maxReal 是物理天花板（极端火爆短期可达），**不用于财务测算**，
+ *    财务基准只能取绿色或黄色区间。
+ *  · 面积修正：>800㎡ 重资产大店的翻台普遍比小店低 0.2–0.4，
+ *    本表已按大店口径给值；小店场景请用对应子类型而非通用档。
+ */
+export interface TurnoverBand {
+  /** 低于此值 → 红色告警：现实可行性低，只作压力测算 */
+  alertBelow: number
+  /** 黄色区间下界（通常 === alertBelow） */
+  warnLow: number
+  /** 黄色区间上界（通常 === normalLow） */
+  warnHigh: number
+  /** 绿色合理区间下界 */
+  normalLow: number
+  /** 绿色合理区间上界 */
+  normalHigh: number
+  /** 物理上限：超过即参数可疑，非日常预期 */
+  maxReal: number
+  /** 典型客单价下限（元/人） */
+  ticketMin: number
+  /** 典型客单价上限（元/人） */
+  ticketMax: number
+  label: string
 }
 
-/** 按业态判定翻台风险。未配置的业态返回 unknown，不臆造结论。 */
+/** 顺序敏感：更具体的子类型必须排在通用档之前。 */
+const TURNOVER_RISK_BANDS: ReadonlyArray<{ match: RegExp; band: TurnoverBand }> = [
+  // ── 粤式 ──
+  {
+    match: /yue_grand|grand_banquet|粤式大酒楼|大酒楼|large_yuecai|large_dining|large_|酒楼|宴会/i,
+    band: { alertBelow: 1.5, warnLow: 1.5, warnHigh: 1.8, normalLow: 1.8, normalHigh: 2.2, maxReal: 2.6, ticketMin: 150, ticketMax: 400, label: '粤式大酒楼（正餐宴请 >1000㎡）' },
+  },
+  {
+    match: /yumcha_day|tea_house_day|全天茶楼|早茶|yumcha/i,
+    band: { alertBelow: 1.4, warnLow: 1.4, warnHigh: 1.7, normalLow: 1.7, normalHigh: 2.2, maxReal: 2.7, ticketMin: 60, ticketMax: 130, label: '粤式全天茶楼（早茶+午晚市，非 24h）' },
+  },
+  {
+    match: /tea_house|24h|纯茶市|茶楼|茶居|点心/,
+    band: { alertBelow: 1.3, warnLow: 1.3, warnHigh: 1.6, normalLow: 1.6, normalHigh: 2.1, maxReal: 2.6, ticketMin: 60, ticketMax: 120, label: '24h 纯茶市茶楼' },
+  },
+  {
+    match: /cha_chaan|chachaan|茶餐厅|冰室/,
+    band: { alertBelow: 2.5, warnLow: 2.5, warnHigh: 3.0, normalLow: 3.0, normalHigh: 4.0, maxReal: 5.0, ticketMin: 40, ticketMax: 75, label: '茶餐厅（简餐粤式）' },
+  },
+  // ── 火锅 ──
+  {
+    match: /hotpot_mini|小火锅|一人食/,
+    band: { alertBelow: 2.4, warnLow: 2.4, warnHigh: 2.8, normalLow: 2.8, normalHigh: 3.5, maxReal: 4.2, ticketMin: 70, ticketMax: 110, label: '精品小火锅 / 一人食火锅' },
+  },
+  {
+    match: /hotpot|火锅|海底捞/i,
+    band: { alertBelow: 2.0, warnLow: 2.0, warnHigh: 2.4, normalLow: 2.4, normalHigh: 3.0, maxReal: 3.8, ticketMin: 100, ticketMax: 160, label: '大众连锁火锅（>800㎡）' },
+  },
+  // ── 烧烤 ──
+  {
+    match: /bbq|烧烤|烤肉|grill/i,
+    band: { alertBelow: 1.8, warnLow: 1.8, warnHigh: 2.2, normalLow: 2.2, normalHigh: 2.8, maxReal: 3.4, ticketMin: 90, ticketMax: 140, label: '大众烧烤（夜间为主）' },
+  },
+  // ── 中式正餐 ──
+  {
+    match: /fine_private|私房菜|高端宴请/,
+    band: { alertBelow: 1.0, warnLow: 1.0, warnHigh: 1.3, normalLow: 1.3, normalHigh: 1.8, maxReal: 2.0, ticketMin: 260, ticketMax: 600, label: '高端私房菜 / 宴请正餐' },
+  },
+  {
+    match: /single_dish|酸菜鱼|太二|单品正餐/,
+    band: { alertBelow: 2.0, warnLow: 2.0, warnHigh: 2.4, normalLow: 2.4, normalHigh: 3.1, maxReal: 3.8, ticketMin: 85, ticketMax: 130, label: '特色单品正餐（酸菜鱼类）' },
+  },
+  {
+    match: /sichuan|hunan|川湘|家常菜|湘菜|川菜/i,
+    band: { alertBelow: 1.8, warnLow: 1.8, warnHigh: 2.1, normalLow: 2.1, normalHigh: 2.7, maxReal: 3.2, ticketMin: 90, ticketMax: 160, label: '川湘家常菜大店（>800㎡）' },
+  },
+  // ── 快餐简餐 ──
+  {
+    match: /noodle|粉面|面馆|粉店/,
+    band: { alertBelow: 4.0, warnLow: 4.0, warnHigh: 5.0, normalLow: 5.0, normalHigh: 7.0, maxReal: 8.5, ticketMin: 22, ticketMax: 38, label: '粉面门店（堂食为主）' },
+  },
+  {
+    match: /chinese_fast|中式快餐|老乡鸡|快餐|fast_food|fastfood|小吃/,
+    band: { alertBelow: 3.5, warnLow: 3.5, warnHigh: 4.2, normalLow: 4.2, normalHigh: 6.0, maxReal: 7.5, ticketMin: 28, ticketMax: 45, label: '中式快餐（老乡鸡模式）' },
+  },
+  // ── 日料西餐 ──
+  {
+    match: /fine_dining|法餐|高端日料|米其林/i,
+    band: { alertBelow: 0.9, warnLow: 0.9, warnHigh: 1.1, normalLow: 1.1, normalHigh: 1.5, maxReal: 1.8, ticketMin: 400, ticketMax: 1000, label: '高端日料 / 法餐 fine-dining' },
+  },
+  {
+    match: /izakaya|居酒屋|酒馆|烧鸟/,
+    band: { alertBelow: 1.4, warnLow: 1.4, warnHigh: 1.7, normalLow: 1.7, normalHigh: 2.3, maxReal: 2.8, ticketMin: 120, ticketMax: 200, label: '居酒屋（夜间）' },
+  },
+  // ── 咖啡茶饮 ──
+  {
+    match: /cafe|coffee|咖啡/i,
+    band: { alertBelow: 2.2, warnLow: 2.2, warnHigh: 2.8, normalLow: 2.8, normalHigh: 4.0, maxReal: 5.5, ticketMin: 40, ticketMax: 65, label: '精品咖啡馆（堂食占比高）' },
+  },
+]
+
+/** 按业态码找翻台基准；未配置返回 undefined（不臆造结论）。 */
+function findTurnoverBand(formatCode: string): TurnoverBand | undefined {
+  return TURNOVER_RISK_BANDS.find((x) => x.match.test(formatCode))?.band
+}
+
+/** 客单价区间：翻台基准表优先，未匹配业态回落到面积预设。 */
+function bandTicketRange(
+  formatCode: string,
+  fallbackMin: number,
+  fallbackMax: number,
+): { min: number; max: number } {
+  const b = findTurnoverBand(formatCode)
+  return b === undefined ? { min: fallbackMin, max: fallbackMax } : { min: b.ticketMin, max: b.ticketMax }
+}
+
+export type TurnoverRisk = 'red' | 'yellow' | 'green' | 'high' | 'impossible' | 'unknown'
+
+/**
+ * 按业态判定座位翻台风险（五档）。
+ *
+ * 判定用**未舍入原值**，note 里统一展示 3 位小数——
+ * 避免出现「显示 1.50 却判 1.499 < 1.5」这种视觉矛盾。
+ */
 function gradeTurnoverRisk(
   formatCode: string,
   turnover: number | undefined,
-): { risk: 'red' | 'yellow' | 'green' | 'high' | 'unknown'; note: string } {
+  override?: TurnoverBand,
+): { risk: TurnoverRisk; note: string; band: TurnoverBand | null } {
   if (turnover === undefined || !Number.isFinite(turnover) || turnover <= 0) {
-    return { risk: 'unknown', note: '翻台率无法计算' }
+    return { risk: 'unknown', note: '翻台率无法计算', band: null }
   }
-  const key = Object.keys(TURNOVER_RISK_BANDS).find((k) => formatCode.includes(k))
-  const band = key === undefined ? undefined : TURNOVER_RISK_BANDS[key]
-  if (band === undefined) return { risk: 'unknown', note: '该业态未配置翻台阈值' }
-  // 四个分支统一用「未舍入值」口径，否则 yellow/green 分支显示值与判定值会有末位差
+  const band = override ?? findTurnoverBand(formatCode)
+  if (band === undefined) return { risk: 'unknown', note: '该业态未配置翻台阈值', band: null }
+
   const t = turnover.toFixed(3)
-  const nearLine = Math.abs(turnover - band.red) < 0.01
-  const nearTip = nearLine
-    ? `（贴线：与下限只差 ${Math.abs(turnover - band.red).toFixed(4)}，营收或客流稍微一改就会翻档）`
+  const nearTip = Math.abs(turnover - band.alertBelow) < 0.01
+    ? `（贴线：与下限只差 ${Math.abs(turnover - band.alertBelow).toFixed(4)}，营收或客流稍微一改就会翻档）`
     : ''
-  if (turnover < band.red) {
+  const range = `${band.normalLow.toFixed(2)}–${band.normalHigh.toFixed(2)}`
+
+  if (turnover < band.alertBelow) {
     return {
-      risk: 'red',
-      note: `翻台 ${t} 次/日（未舍入值）低于 ${band.label} 下限 ${band.red}：`
+      risk: 'red', band,
+      note: `翻台 ${t} 次/日（座位翻台·未舍入值）低于 ${band.label} 告警线 ${band.alertBelow}：`
         + '这个参数组合现实可行性低，财务结果只能做压力测算，不代表正常经营预期' + nearTip,
     }
   }
-  if (turnover < band.greenLow) {
+  if (turnover < band.normalLow) {
     return {
-      risk: 'yellow',
-      note: `翻台 ${t} 次/日（未舍入值）偏低（${band.label} 合理区间 ${band.greenLow.toFixed(2)}–${band.greenHigh.toFixed(2)}）：`
-        + '需核实是位置问题，还是营收/客流参数估低了',
+      risk: 'yellow', band,
+      note: `翻台 ${t} 次/日（座位翻台·未舍入值）落在黄色提示区间（${band.label} 合理区间 ${range}）：`
+        + '薄利，需要较好的运营把客流做起来才算稳',
     }
   }
-  if (turnover <= band.greenHigh) {
-    return { risk: 'green', note: `翻台 ${t} 次/日（未舍入值）落在 ${band.label} 合理区间 ${band.greenLow.toFixed(2)}–${band.greenHigh.toFixed(2)}` }
+  if (turnover <= band.normalHigh) {
+    return {
+      risk: 'green', band,
+      note: `翻台 ${t} 次/日（座位翻台·未舍入值）落在 ${band.label} 合理区间 ${range}`,
+    }
+  }
+  if (turnover <= band.maxReal) {
+    return {
+      risk: 'high', band,
+      note: `翻台 ${t} 次/日（座位翻台·未舍入值）高于 ${band.label} 常态上限 ${band.normalHigh}：`
+        + `通常只在节假日或爆火期出现，物理天花板约 ${band.maxReal}，不宜按全年稳态测算`,
+    }
   }
   return {
-    risk: 'high',
-    note: `翻台 ${t} 次/日（未舍入值）高于 ${band.label} 常见上限 ${band.greenHigh}：通常只在节假日高峰出现，不宜按全年稳态测算`,
+    risk: 'impossible', band,
+    note: `翻台 ${t} 次/日（座位翻台·未舍入值）已超过 ${band.label} 的物理上限 ${band.maxReal}：`
+      + '这个数字现实中做不出来，大概率是营收或座位数录错了，请先核参数',
   }
 }
 
@@ -1401,7 +1532,13 @@ export interface SpaceModel {
   /** 目标回本所需翻台（现金流口径）；-1 表示无法计算 */
   target_turnover_cash_per_day: number
   /** 业态翻台风险分级：red 该组合现实可行性低 ｜ yellow 偏低 ｜ green 合理 ｜ high 偏高 */
-  turnover_risk: 'red' | 'yellow' | 'green' | 'high' | 'unknown'
+  turnover_risk: TurnoverRisk
+  /** 翻台五档基准；未匹配业态时不输出该字段（供报告展示红/黄/绿/上限） */
+  turnover_band?: {
+    alert_below: number; warn_low: number; warn_high: number
+    normal_low: number; normal_high: number; max_real: number
+    label: string
+  }
   /** 翻台风险的人话说明 */
   turnover_risk_note: string
   /** 坪效（元/㎡/月，按建筑面积计） */
@@ -1621,11 +1758,15 @@ function buildSpaceModel(
     consistency = 'revenue_too_low'
   }
 
+  const turnoverGrade = gradeTurnoverRisk(formatCode, turnover)
+  // 客单价区间与翻台基准同源：成对校验，避免「业态标签贴错、整套判读跑偏」
+  const ticketRange = bandTicketRange(formatCode, preset.ticketMin, preset.ticketMax)
+
   // 客单价 ↔ 业态标签一致性：茶楼（只喝茶吃点心，50~110 元）与正餐（有菜有酒，150~400 元）不能混
   const formatLabel = suggestTargetPayback(formatCode).label
   const ticketMatches = avgTicket === undefined
     ? true
-    : avgTicket >= preset.ticketMin && avgTicket <= preset.ticketMax
+    : avgTicket >= ticketRange.min && avgTicket <= ticketRange.max
   const ticketNote = ticketMatches || avgTicket === undefined
     ? ''
     : `客单价 ${Math.round(avgTicket)} 元不在「${formatLabel}」的典型区间 ${preset.ticketMin}~${preset.ticketMax} 元：`
@@ -1684,8 +1825,8 @@ function buildSpaceModel(
     implied_daily_revenue_normal: impliedDailyNormal > 0 ? roundTo(impliedDailyNormal, 2) : -1,
     revenue_vs_normal_ratio: revenueVsNormal >= 0 ? roundTo(revenueVsNormal, 4) : -1,
     input_consistency: consistency,
-    typical_ticket_min: preset.ticketMin,
-    typical_ticket_max: preset.ticketMax,
+    typical_ticket_min: ticketRange.min,
+    typical_ticket_max: ticketRange.max,
     ticket_matches_format: ticketMatches,
     ticket_note: ticketNote,
     capacity_customers_per_day: roundTo(capacityCustomers, 1),
@@ -1695,8 +1836,19 @@ function buildSpaceModel(
     catchment_multiplier: catchmentMult,
     target_daily_revenue_cash: targetDailyRevenueCash > 0 ? roundTo(targetDailyRevenueCash, 2) : -1,
     target_turnover_cash_per_day: targetTurnoverCash !== undefined ? roundTo(targetTurnoverCash, 2) : -1,
-    turnover_risk: gradeTurnoverRisk(formatCode, turnover).risk,
-    turnover_risk_note: gradeTurnoverRisk(formatCode, turnover).note,
+    turnover_risk: turnoverGrade.risk,
+    turnover_risk_note: turnoverGrade.note,
+    ...(turnoverGrade.band === null ? {} : {
+      turnover_band: {
+        alert_below: turnoverGrade.band.alertBelow,
+        warn_low: turnoverGrade.band.warnLow,
+        warn_high: turnoverGrade.band.warnHigh,
+        normal_low: turnoverGrade.band.normalLow,
+        normal_high: turnoverGrade.band.normalHigh,
+        max_real: turnoverGrade.band.maxReal,
+        label: turnoverGrade.band.label,
+      },
+    }),
     revenue_per_sqm_month: roundTo(revenuePerSqm, 2),
     revenue_per_sqm_benchmark: preset.revenuePerSqmBenchmark,
     breakeven_revenue_monthly: roundTo(breakevenDaily * 30, 2),
@@ -2994,10 +3146,24 @@ export const financialCalcTool = defineTool({
             target_turnover_cash_per_day: { type: 'number', required: true, description: '现金流口径目标翻台' },
             turnover_risk: {
               type: 'string', required: true,
-              enum: ['red', 'yellow', 'green', 'high', 'unknown'],
-              description: '翻台风险：red 现实可行性低／yellow 偏低／green 合理／high 偏高',
+              enum: ['red', 'yellow', 'green', 'high', 'impossible', 'unknown'],
+              description: '座位翻台五档：red 现实可行性低（只作压力测算）／yellow 偏低薄利／'
+                + 'green 合理／high 高于常态（旺季/爆火）／impossible 超物理上限（参数可疑）',
             },
-            turnover_risk_note: { type: 'string', required: true, description: '翻台风险说明' },
+            turnover_risk_note: { type: 'string', required: true, description: '翻台风险说明（展示 3 位小数）' },
+            turnover_band: {
+              type: 'object', additionalProperties: false,
+              description: '该业态的五档翻台基准；未匹配业态时为 null。max_real 仅作物理上限提示，不用于财务测算',
+              properties: {
+                alert_below: { type: 'number', required: true, description: '告警线：低于此值判红' },
+                warn_low: { type: 'number', required: true, description: '黄色区间下界' },
+                warn_high: { type: 'number', required: true, description: '黄色区间上界' },
+                normal_low: { type: 'number', required: true, description: '绿色合理区间下界' },
+                normal_high: { type: 'number', required: true, description: '绿色合理区间上界' },
+                max_real: { type: 'number', required: true, description: '物理上限，超过即参数可疑' },
+                label: { type: 'string', required: true, description: '业态子类型名称' },
+              },
+            },
             revenue_per_sqm_month: { type: 'number', required: true, description: '坪效（元/㎡/月，按建筑面积计）' },
             revenue_per_sqm_benchmark: { type: 'number', required: true, description: '该业态坪效经验基准（元/㎡/月）' },
             breakeven_revenue_monthly: { type: 'number', required: true, description: '保本营业额（月，元）' },

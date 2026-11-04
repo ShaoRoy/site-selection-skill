@@ -19,7 +19,6 @@ import argparse
 import json
 import math
 import os
-from pathlib import Path
 import sys
 import time
 import urllib.parse
@@ -33,7 +32,7 @@ for stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-AMAP_KEY_FILE = str(Path.home() / ".dsh" / "secrets" / "amap.key")
+AMAP_KEY_FILE = os.path.join(os.path.expanduser("~"), ".dsh", "secrets", "amap.key")
 API = "https://restapi.amap.com/v3"
 
 # 请求间隔（秒）：高德个人 key 的 QPS 上限普遍很低，宁慢勿封
@@ -53,7 +52,7 @@ QUOTA_FILE = os.path.join(
 def load_quota():
     today = datetime.now().strftime("%Y-%m-%d")
     try:
-        with open(QUOTA_FILE, encoding="utf-8-sig") as f:
+        with open(QUOTA_FILE, encoding="utf-8") as f:
             q = json.load(f)
         if q.get("date") != today:
             return {"date": today, "calls": 0}
@@ -90,7 +89,7 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
-    with open(AMAP_KEY_FILE, encoding="utf-8-sig") as f:
+    with open(AMAP_KEY_FILE, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
@@ -127,10 +126,7 @@ def api_get(path, params):
 
 
 def geocode(address, city):
-    params = {"address": address}
-    if city:
-        params["city"] = city
-    data = api_get("geocode/geo", params)
+    data = api_get("geocode/geo", {"address": address, "city": city})
     codes = data.get("geocodes") or []
     if not codes:
         raise SystemExit(f"地理编码无结果：{address}")
@@ -205,8 +201,7 @@ def score_block(metrics, weights):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("address")
-    ap.add_argument("--city", default=None,
-                    help="城市名。地址里已含城市名时可省略；跨城市使用时建议显式指定")
+    ap.add_argument("--city", default="广州")
     ap.add_argument("--radius", type=int, default=3000)
     ap.add_argument("--inner-radius", type=int, default=1000)
     ap.add_argument("--out", default=None)
@@ -267,13 +262,27 @@ def main():
     }
 
     # ---- 代理指标 ----
+    # 分母口径必须统一，否则「住宅密度用 3000m 圆、咖啡密度用 1000m 圆」横向不可比。
+    # 统一用**扫描半径**（--radius，默认 3000m）作分母；品牌类因为采集半径是 inner，
+    # 若 inner 小于 radius，则按 inner 面积折算回扫描面积，保证所有密度同一把尺子。
+    brand_scale = (inner_km2 / area_km2) if area_km2 > 0 else 1.0
+    brand_area = area_km2 if inner_km2 >= area_km2 else inner_km2
+
+    def brand_density_scaled(count):
+        # 采集只覆盖 inner 圈：用 inner 面积算密度，再标注口径；不硬凑到扫描面积
+        return density(count, brand_area)
+
     res_density = density(counts["residential"], area_km2)
     office_density = density(counts["office"], area_km2)
     job_housing = round(counts["office"] / counts["residential"], 2) if counts["residential"] else None
     amenity = counts["mall"] + counts["school"] + counts["metro"]
-    coffee_density = density(brand["coffee"], inner_km2)
-    bank_density = density(brand["bank"], inner_km2)
-    premium_density = density(brand["premium_dining"], inner_km2)
+    coffee_density = brand_density_scaled(brand["coffee"])
+    bank_density = brand_density_scaled(brand["bank"])
+    premium_density = brand_density_scaled(brand["premium_dining"])
+    density_basis = {
+        "扫描类（住宅/写字楼）": f"{args.radius}m 圆，{area_km2:.2f} km²",
+        "品牌类（咖啡/银行/高端餐饮）": f"{int((brand_area * 1e6 / 3.141592653589793) ** 0.5)}m 圆，{brand_area:.2f} km²",
+    }
 
     metrics = {
         "住宅密度": (res_density, 60.0),          # 60 个/km² 视为高密度（经验上限）
@@ -317,6 +326,7 @@ def main():
             "bank_density_per_km2": bank_density,
             "premium_dining_density_per_km2": premium_density,
         },
+        "density_basis": density_basis,
         "demand_score": {
             "score": score,
             "max": 100,

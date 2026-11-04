@@ -31,7 +31,6 @@ import csv
 import json
 import math
 import os
-from pathlib import Path
 import sys
 import time
 import urllib.parse
@@ -45,7 +44,7 @@ for stream in (sys.stdout, sys.stderr):
         pass
 
 API = "https://restapi.amap.com/v3"
-KEY_FILE = str(Path.home() / ".dsh" / "secrets" / "amap.key")
+KEY_FILE = os.path.join(os.path.expanduser("~"), ".dsh", "secrets", "amap.key")
 MIN_INTERVAL_S = 0.6
 CALLS = {"total": 0, "ok": 0, "failed": 0}
 
@@ -61,7 +60,7 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
-    with open(KEY_FILE, encoding="utf-8-sig") as f:
+    with open(KEY_FILE, encoding="utf-8") as f:
         for line in f:
             if line.strip() and not line.startswith("#"):
                 return line.strip()
@@ -91,11 +90,8 @@ def api_get(path, params):
     raise RuntimeError(f"持续限流：{last.get('info')}")
 
 
-def geocode(address, city=None):
-    params = {"address": address}
-    if city:
-        params["city"] = city
-    data = api_get("geocode/geo", params)
+def geocode(address, city="广州"):
+    data = api_get("geocode/geo", {"address": address, "city": city})
     codes = data.get("geocodes") or []
     if not codes:
         raise SystemExit(f"地理编码无结果：{address}")
@@ -103,12 +99,9 @@ def geocode(address, city=None):
     return lat, lng
 
 
-def search_poi(name, city=None):
+def search_poi(name, city="广州"):
     """名称 → 坐标（取第一个）。结果需人工核对，尤其地铁站要写具体出口。"""
-    params = {"keywords": name, "offset": 1, "page": 1}
-    if city:
-        params["city"] = city
-    data = api_get("place/text", params)
+    data = api_get("place/text", {"keywords": name, "city": city, "offset": 1, "page": 1})
     pois = data.get("pois") or []
     if not pois:
         return None
@@ -174,8 +167,7 @@ def main():
     ap.add_argument("--to-name")
     ap.add_argument("--to", help="单个目标坐标")
     ap.add_argument("--kind", default="")
-    ap.add_argument("--city", default=None,
-                    help="城市名。地址里已含城市名时可省略；跨城市使用时建议显式指定")
+    ap.add_argument("--city", default="广州")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 

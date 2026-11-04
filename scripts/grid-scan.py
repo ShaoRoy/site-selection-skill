@@ -22,7 +22,6 @@ import importlib.util
 import json
 import math
 import os
-from pathlib import Path
 import sys
 import time
 import urllib.parse
@@ -37,7 +36,7 @@ for stream in (sys.stdout, sys.stderr):
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(TOOLS)
 API = "https://restapi.amap.com/v3"
-KEY_FILE = str(Path.home() / ".dsh" / "secrets" / "amap.key")
+KEY_FILE = os.path.join(os.path.expanduser("~"), ".dsh", "secrets", "amap.key")
 GRID_DIR = os.path.join(ROOT, "out", "grid")
 
 MIN_INTERVAL_S = 0.6
@@ -57,7 +56,7 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
-    with open(KEY_FILE, encoding="utf-8-sig") as f:
+    with open(KEY_FILE, encoding="utf-8") as f:
         for line in f:
             if line.strip() and not line.startswith("#"):
                 return line.strip()
@@ -267,13 +266,16 @@ def main():
     args = ap.parse_args()
 
     os.makedirs(GRID_DIR, exist_ok=True)
-    cache_path = os.path.join(GRID_DIR, f"_pool-{args.city}-{args.district or 'all'}.json")
+    # --city / --district 直接拼文件名，传 ../x 会写到 GRID_DIR 之外
+    def _safe(v):
+        return "".join(c for c in str(v) if c.isalnum() or c in "-_\u4e00-\u9fa5") or "na"
+    cache_path = os.path.join(GRID_DIR, f"_pool-{_safe(args.city)}-{_safe(args.district or 'all')}.json")
 
     # 复用缓存：改权重后重排，不重复花钱
     if args.rescore:
         if not os.path.exists(cache_path):
             sys.exit(f"没有缓存 {cache_path}，先跑一次 --execute")
-        with open(cache_path, encoding="utf-8-sig") as f:
+        with open(cache_path, encoding="utf-8") as f:
             c = json.load(f)
         print(f"复用缓存：锚点 {len(c['anchors'])}｜底图 {sum(len(v) for v in c['pool'].values())} 条"
               f"｜竞品 {len(c['competitors'])} 家（0 次调用）")

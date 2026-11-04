@@ -427,8 +427,20 @@ function financeSection(md) {
         out.push(`| 客单价校验 | ${sp.avg_ticket >= 0 ? `${sp.avg_ticket} 元` : '未提供'} ｜ 该业态典型 ${sp.typical_ticket_min}~${sp.typical_ticket_max} 元 ｜ ${sp.ticket_matches_format ? '匹配' : '⚠️ 与业态标签不符'} |`)
       }
       if (sp.turnover_risk && sp.turnover_risk !== 'unknown') {
-        const mark = { red: '⛔ 现实可行性低', yellow: '⚠️ 偏低', green: '✅ 合理', high: '⚠️ 偏高' }[sp.turnover_risk]
+        const mark = {
+          red: '⛔ 现实可行性低', yellow: '⚠️ 偏低薄利', green: '✅ 合理',
+          high: '⚠️ 高于常态', impossible: '⛔ 超物理上限',
+        }[sp.turnover_risk]
         out.push(`| 翻台风险判定 | **${mark}**：${sp.turnover_risk_note} |`)
+        const tb = sp.turnover_band
+        if (tb) {
+          out.push(
+            `| 翻台基准（座位翻台） | ${tb.label}：告警 <${tb.alert_below}`
+            + ` ｜ 黄色 ${tb.warn_low}–${tb.warn_high} ｜ 绿色 ${tb.normal_low}–${tb.normal_high}`
+            + ` ｜ 物理上限 ${tb.max_real}（**不用于财务测算**） |`,
+          )
+          out.push('| 口径提醒 | 本表是**座位翻台率**，不是桌翻台率；座位翻台受空座、拼台影响，同店同经营下低于桌翻台，两套口径不可混用 |')
+        }
       }
       out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
       out.push(`| 单方造价 | ${num(sp.investment_per_sqm)} 元/㎡ |`)
@@ -490,6 +502,8 @@ function financeSection(md) {
     out.push('> ⚠️ ' + spRisk.turnover_risk_note + '。', '')
   } else if (spRisk && spRisk.turnover_risk === 'high') {
     out.push('> ⚠️ ' + spRisk.turnover_risk_note + '。', '')
+  } else if (spRisk && spRisk.turnover_risk === 'impossible') {
+    out.push('> ⛔ **参数超出物理上限**：' + spRisk.turnover_risk_note + '。', '')
   }
 
   const spaceSens = Array.isArray(f.space_sensitivity) ? f.space_sensitivity : []
@@ -1001,8 +1015,18 @@ ${spLm.implied_daily_revenue_normal > 0 ? `<tr><td>面积产能校验</td><td>�
 ${spLm.breakeven_turnover_per_day >= 0 ? `<tr><td>建议翻台率</td><td>保本 ${spLm.breakeven_turnover_per_day} 次/日 ｜ ${spLm.target_payback_months} 个月回本需 ${spLm.target_turnover_per_day} 次/日 ｜ 业态上限 ${spLm.turnover_cap_per_day}</td></tr>` : ''}
 ${spLm.ticket_matches_format === false ? `<tr><td>客单价校验</td><td style="color:#c62828">${spLm.avg_ticket} 元 ｜ 该业态典型 ${spLm.typical_ticket_min}~${spLm.typical_ticket_max} 元 ｜ ⚠️ 与业态标签不符</td></tr>` : ''}
 ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
-  const mk = { red: "⛔ 现实可行性低", yellow: "⚠️ 偏低", green: "✅ 合理", high: "⚠️ 偏高" }[spLm.turnover_risk]
-  return `<tr><td>翻台风险判定</td><td><b>${mk}</b>：${esc(spLm.turnover_risk_note)}</td></tr>`
+  const mk = {
+    red: "⛔ 现实可行性低", yellow: "⚠️ 偏低薄利", green: "✅ 合理",
+    high: "⚠️ 高于常态", impossible: "⛔ 超物理上限",
+  }[spLm.turnover_risk]
+  const tb = spLm.turnover_band
+  const bandRow = tb
+    ? `<tr><td>翻台基准（座位翻台）</td><td>${esc(tb.label)}：告警 &lt;${tb.alert_below}`
+      + ` ｜ 黄色 ${tb.warn_low}–${tb.warn_high} ｜ 绿色 ${tb.normal_low}–${tb.normal_high}`
+      + ` ｜ 物理上限 ${tb.max_real}（<b>不用于财务测算</b>）</td></tr>`
+      + `<tr><td>口径提醒</td><td>本表是<b>座位翻台率</b>，不是桌翻台率；座位翻台受空座、拼台影响，同店同经营下低于桌翻台，两套口径不可混用</td></tr>`
+    : ""
+  return `<tr><td>翻台风险判定</td><td><b>${mk}</b>：${esc(spLm.turnover_risk_note)}</td></tr>` + bandRow
 })() : ""}
 <tr><td>坪效</td><td>${num(spLm.revenue_per_sqm_month)} 元/㎡/月（经验基准 ${spLm.revenue_per_sqm_benchmark}）</td></tr>
 <tr><td>单方造价</td><td>${num(spLm.investment_per_sqm)} 元/㎡</td></tr>

@@ -12,6 +12,8 @@
  */
 
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const outDirUrl = new URL('../out/', import.meta.url)
 const toPath = (url) => decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1')
@@ -32,7 +34,8 @@ const offlineOnly = args.includes('--offline')
 /** 默认不画车行圈虚线（商圈锁后边界意义不大，只保留右侧距离带表）；加 --show-outer 可恢复 */
 const showOuter = args.includes('--show-outer')
 const target = args.find((a) => !a.startsWith('--'))
-  ? new URL(`file:///${args.find((a) => !a.startsWith('--')).replace(/\\/g, '/')}`)
+  // 用 pathToFileURL + resolve：相对路径按 cwd 解析，不再假设是绝对路径
+  ? pathToFileURL(resolve(args.find((a) => !a.startsWith('--'))))
   : latestJson()
 
 const data = JSON.parse(readFileSync(target, 'utf8'))

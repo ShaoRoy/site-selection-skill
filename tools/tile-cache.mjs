@@ -144,13 +144,24 @@ async function fetchOne(z, x, y) {
     return
   }
   try {
-    const res = await fetch(tileUrl(z, x, y), { headers: { 'User-Agent': 'site-selection-local/1.0' } })
+    // 超时 15s：瓦片源挂住时不能无限等待
+    const res = await fetch(tileUrl(z, x, y), {
+      headers: { 'User-Agent': 'site-selection-local/1.0' },
+      signal: AbortSignal.timeout(15000),
+    })
     if (!res.ok) {
       failed += 1
       done += 1
       return
     }
     const buf = Buffer.from(await res.arrayBuffer())
+    // 大小上限：正常瓦片 < 60KB，异常大响应直接丢弃，避免填满磁盘
+    if (buf.length > 512 * 1024) {
+      console.warn(`\n  ⚠️ 瓦片异常大（${Math.round(buf.length / 1024)}KB），已跳过 ${z}/${x}/${y}`)
+      failed += 1
+      done += 1
+      return
+    }
     mkdirSync(dir, { recursive: true })
     writeFileSync(file, buf)
     downloaded += 1

@@ -12,7 +12,7 @@ import-benchmarks.py —— 把《餐饮业态分城市GIS数据底稿.xlsx》�
          异常区间（面积为 0、客单为 0、回本为负等）。
 
 用法：
-  python import-benchmarks.py --src "path/to/餐饮业态分城市GIS数据底稿.xlsx"
+  python tools/import-benchmarks.py --src "F:\\Claude Roy\\餐饮业态分城市GIS数据底稿.xlsx"
 """
 
 import argparse
@@ -54,6 +54,8 @@ def num(v):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True)
+    ap.add_argument("--check", action="store_true",
+                    help="dry-run：只解析与统计，不覆盖 src/benchmark-data.ts")
     args = ap.parse_args()
 
     wb = openpyxl.load_workbook(args.src, data_only=True)
@@ -237,9 +239,14 @@ def main():
     ts.append("")
 
     ts_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "benchmark-data.ts")
-    with open(ts_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(ts))
-    print(f"已生成 TS 数据模块：{os.path.normpath(ts_path)}")
+    if args.check:
+        # dry-run：直接覆盖源码风险太大，先让人看一眼统计
+        print(f"[check] 将生成 {len(ts)} 行，目标文件 {os.path.normpath(ts_path)}（未写入）")
+        print("[check] 确认无误后去掉 --check 再跑一次")
+    else:
+        with open(ts_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(ts))
+        print(f"已生成 TS 数据模块：{os.path.normpath(ts_path)}")
 
     # ── 质检报告
     print(f"矩阵：{len(formats)} 行｜城市 {len({r['city'] for r in formats})}｜业态 {len({r['format'] for r in formats})}")
