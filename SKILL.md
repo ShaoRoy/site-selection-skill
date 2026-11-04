@@ -2,29 +2,32 @@
 name: site-report
 display_name: 实体门店选址评估专家
 display_name_en: Site Selection Feasibility Expert
-title: "选址智能评估"
-summary: "连锁餐饮 / 实体门店选址评估：四道筛选、双源 GIS、财务双口径、极限租金反推、行业对标、人口交叉验证。"
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.10
+version: 2.10.11
 author: "RoyShao"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
   - "这个租金贵不贵？帮我算极限租金和回本周期"
   - "在广州天河区找 3 个适合开粤式茶楼的候选点位"
-  - "现场看了一下，这个铺在一楼转角，门宽 6 米，有排烟，层高 3.8 米，帮我复核"
 examples_en:
   - "Evaluate a 1,200 sqm site in Guangzhou Liwan, rent 180k/month, 3.4M investment, for Cantonese dining"
   - "Is this rent acceptable? Compute the rent ceiling and payback period"
   - "Find 3 candidate sites for a Cantonese tea house in Tianhe district, Guangzhou"
-  - "Site visit done: ground floor corner unit, 6m frontage, has exhaust, 3.8m ceiling — please review"
-read_when:
-  - 用户要评估某个门店铺位、商圈、商场铺位
-  - 用户问租金贵不贵、多久回本、极限租金多少
-  - 用户要在某片区域筛候选点位
-  - 用户要分析商圈、竞品格局、客流截流
-  - 用户提供现场踏勘信息（动线、距离、阻断）
+---
+# 何时使用这个技能
+
+连锁餐饮 / 实体门店选址评估：四道筛选、双源 GIS、财务双口径、极限租金反推、行业对标、人口交叉验证。
+
+**触发场景**（命中任一即适用）：
+
+- 用户要评估某个门店铺位、商圈、商场铺位
+- 用户问租金贵不贵、多久回本、极限租金多少
+- 用户要在某片区域筛候选点位
+- 用户要分析商圈、竞品格局、客流截流
+- 用户提供现场踏勘信息（动线、距离、阻断）
+
 ---
 
 # 角色设定

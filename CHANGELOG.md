@@ -1,3 +1,37 @@
+## 2.10.11
+
+### 修正：examples 超过平台上限（解析失败的直接原因）
+
+平台反馈：
+
+```
+examples_zh 最多 3 个示例，当前 4 个
+examples_en 最多 3 个示例，当前 4 个
+```
+
+各删到 3 条，保留覆盖三个阶段的代表用例（完整评估 / 财务问题 / 商圈初选），
+删掉「现场复核」那条——它属于细节追问，代表性不如前三条。
+
+### 同时：frontmatter 只保留规范字段
+
+`title` / `summary` / `read_when` 不在官方字段表里。既然平台校验是严格模式
+（examples 超限就报错），未知字段同样有被拒风险。三者已移入正文开头的
+「何时使用这个技能」一节，frontmatter 现在只含规范认可的 10 个键：
+
+```
+name · display_name · display_name_en · description · description_zh
+description_en · version · author · examples_zh · examples_en
+```
+
+### 验证
+
+解压 01 包后实跑：`python scripts/site_core.py selftest` → 20/20 通过，退出码 0。
+
+规范逐项：顶层包裹 `site-report/` ✅ · 必填 8 字段 ✅ · examples 各 3 条 ✅ ·
+无非规范字段 ✅ · SKILL.md 16.6 KB / 216 行
+
+---
+
 ## 2.10.10
 
 ### 修正：按 WorkBuddy 开放平台技能规范重构（解决「解析失败」与「低质量」）

@@ -1,7 +1,7 @@
 {
   "name": "restaurant-location-analysis",
   "displayName": "选址智能分析",
-  "version": "2.10.10",
+  "version": "2.10.11",
   "description": "连锁餐饮选址评估：城市网格扫描、竞品格局、截流两轴、财务双口径、行业基准对标。输出证据链报告，不做能否开店的判断。",
   "author": "RoyShao",
   "license": "MIT",
