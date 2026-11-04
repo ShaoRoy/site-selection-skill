@@ -1,3 +1,37 @@
+## 2.10.3
+
+### 修正：包内缺失 `tools/isochrone.mjs`，采集链路断链
+
+`tools/guangzhou-probe.mjs` 直接 `import('./isochrone.mjs')`，`tools/run-site.mjs`
+也会 spawn 它，但**三个发布包都没有这个文件**。用户一旦跑采集就会
+`ERR_MODULE_NOT_FOUND`。
+
+这不是 2.10.2 引入的，是更早的打包遗漏（打包脚本只挑了渲染链的几个文件）。
+
+**本次补齐 4 个可移植文件**：
+
+| 文件 | 作用 | 依赖 |
+|---|---|---|
+| `tools/isochrone.mjs` | 路网等时圈（Valhalla/OSRM，降级直线） | node 内建 |
+| `tools/review-segments.mjs` | 竞争分段人工复核 | node 内建 |
+| `tools/test-grid.mjs` | 网格编号 / registry / 看板测试 | node 内建 + Python |
+| `tools/sample-survey.csv` | 调研表样例 | — |
+
+### 校验方法升级
+
+新增「依赖图谱检查」：对包内每个 `.mjs` 解析 `import` 与子进程 spawn 目标，
+逐个确认目标文件在包内存在。比人工列清单可靠——文件自己会说话。
+
+结果：`00 处引用断裂`。
+
+### 文档：说明哪些测试包内能跑
+
+`tools/README.md` 新增对照表：只有 `test-tools-smoke.mjs`（13 条）能在包内直接跑；
+其余 7 个测试依赖 `../src/site-tools.ts` 与 `node_modules`，需完整开发工作区。
+此前 README 只列了 6 个文件，容易让人以为包是残缺的。
+
+---
+
 ## 2.10.2
 
 ### 版本重编号 + 三包全量对齐（2026-11-04）

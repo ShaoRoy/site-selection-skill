@@ -58,6 +58,14 @@ node tools/report.mjs --in=probe.json
 | `tile-cache.mjs` | 高德瓦片下载与缓存（并发、断点续传） |
 | `import-survey.mjs` | 调研表 CSV → JSON（财务参数、现场字段） |
 | `profile-build.mjs` | 业态档案建档 / 校验 / 脚手架 |
+| `run-site.mjs` | 全流程编排：采集 → 分析 → 财务 → 报告 |
+| `isochrone.mjs` | 路网等时圈（Valhalla / OSRM，无引擎时降级为直线） |
+| `index-dashboard.mjs` | 刷新进度看板 `out/index.md` |
+| `guangzhou-probe.mjs` | 采集入口（双源 POI） |
+| `review-segments.mjs` | 竞争分段人工复核 |
+| `test-tools-smoke.mjs` | 渲染链冒烟测试（13 条，**包内可直接跑**） |
+| `test-grid.mjs` | 网格编号 / registry / 看板测试 |
+| `sample-survey.csv` | 调研表样例 |
 | `index-dashboard.mjs` | 汇总各点位状态与网格覆盖，生成进度看板（`run-site.mjs` 跑完自动调用） |
 
 ---
@@ -102,3 +110,22 @@ CSV **必须存为 UTF-8**。
 报告照常生成，只是财务段全部回落业态默认值，你会以为是系统算错。
 
 另：数字里带千分位（`150,000`）请加引号 `"150,000"`，否则会被当成两列。
+
+---
+
+## 包内能跑哪些测试
+
+| 测试 | 包内可跑 | 说明 |
+|---|---|---|
+| `test-tools-smoke.mjs` | ✅ 13 条 | 只依赖 node 内建 + 本包文件 |
+| `test-grid.mjs` | ⚠️ 部分 | 需要 Python 与 `out/` 目录 |
+| 其余 7 个 `test-*.mjs` | ❌ | 依赖 `../src/site-tools.ts` 与 `node_modules`（`@deepseek-ai/dsh-tools`），只在完整开发工作区可跑 |
+
+**完整 232 条断言需要开发工作区**（含 `scratch-plugin/` 与 `node_modules`）。
+发布包内置的引擎在 `dsh/site-tools.ts`，是 DSH 插件形态，不是可直接 import 的独立模块。
+
+想快速验证包没坏：
+
+```bash
+node tools/test-tools-smoke.mjs
+```

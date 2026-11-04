@@ -1,0 +1,17 @@
+type,key,value,source,confidence
+meta,store_id,GZ-ZJXC-001,,
+meta,format_code,large_dining,,
+meta,catchment_level,L3,现场判定：商场餐饮区内侧铺,0.7
+field,exhaust,true,现场踏勘,0.9
+field,power_kw,120,电表实测,0.9
+field,ceiling_m,4.2,卷尺实测,0.85
+field,fire_egress_m,1.8,消防图纸,0.8
+field,gas_m3h,25,燃气表,0.9
+field,parking_slots,45,物业确认,0.7
+field,rent,0.18,租赁意向书,0.6
+param,daily_revenue,18000,同商圈对标,0.6
+param,gross_margin,0.62,老板口述,0.5
+param,monthly_rent,150000,租赁意向书,0.8
+param,monthly_labor,60000,人效估算,0.6
+param,monthly_other_fixed,25000,物业费+水电,0.7
+param,initial_investment,3500000,工程报价,0.4
