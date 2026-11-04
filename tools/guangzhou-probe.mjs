@@ -566,7 +566,14 @@ for (const ring of rings) {
     share_suppressed: !isPrimaryRing,
     top,
     distance_bands: distanceBands,
-    nearest: inside.slice(0, 3).map((r) => ({ name: r.name, distance_m: r.distance_m })),
+    // 与 dedupe.nearest 对齐：同一家店在「圈层」和「去重汇总」两处必须同一个距离值，
+    // 否则报告取一个、明细取另一个，读者会看到 40m 与 41m 并存。
+    nearest: (() => {
+      const list = inside.slice(0, 3).map((r) => ({ name: r.name, distance_m: r.distance_m }))
+      const dn = dedupe.nearest
+      if (dn === undefined || dn === null) return list
+      return list.map((x) => (x.name === dn.name ? { ...x, distance_m: dn.distance_m } : x))
+    })(),
   })
   const bandText = distanceBands.map((b) => `${b.label} ${b.count} 家`).join('｜')
   console.log(`\n[${ring.label}] ${source !== 'estimate' ? `${source} 路网等时圈（${iso.length} 顶点${lockRadius > 0 ? ` · 商圈锁 ${lockRadius}m` : ''}）` : `直线半径 ${result.isochrone.straight_radius_m} 米`}｜范围 ${(result.coverage.total_area_sqm / 1000000).toFixed(2)} km²｜网格 ${gridStep}m`)

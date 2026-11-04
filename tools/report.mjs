@@ -327,13 +327,21 @@ function financeSection(md) {
         out.push('> 保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此**不相同**，差异全部来自成本乘数。', '')
       }
     }
-    // E3：params 目标回本（粤菜 36 月）与基准库实测（中位 51.7 / 高端中餐 90.7）差 1.4~2.5 倍，必须并列披露
+    // E3：params 目标回本（粤菜 36 月）与基准库的高端中餐中位（108.7，区间 90.7~131.1）差 3.0 倍，必须并列披露。
+// 基准值一律从 probe.json 的 benchmark 节点取，禁止硬编码——51.7 那个数当时无法从交付物回溯，已删
     {
       const tgt = (f.rent_ceiling ?? {}).target_payback_months ?? (f.space_model ?? {}).target_payback_months
+      // 基准值一律从 probe.json 取，禁止硬编码：payback_median/min/max 已在 benchmark 节点里
+      const bmk = md.benchmark ?? {}
+      const bmMed = typeof bmk.payback_median === 'number' ? bmk.payback_median : null
+      const bmMin = typeof bmk.payback_min === 'number' ? bmk.payback_min : null
+      const bmMax = typeof bmk.payback_max === 'number' ? bmk.payback_max : null
+      const ratioTxt = (bmMed !== null && tgt > 0) ? (bmMed / tgt).toFixed(1) : '—'
       if (typeof tgt === 'number' && tgt > 0) {
         out.push(`> 📐 **两套标尺**：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
-          + '行业基准库里同类业态的回本月数中位约 **51.7 个月**、高端中餐酒楼约 **90.7 个月**（19 城估算值）。'
-          + `两者差 1.4~2.5 倍——**${tgt} 个月不是行业常态，是偏紧的要求**。`, '')
+          + `行业基准库里高端中餐酒楼的回本中位是 **${bmMed} 个月**`
+          + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，19 城估算值）` : '（19 城估算值）')
+          + `。两者差 **${ratioTxt} 倍**——**${tgt} 个月不是行业常态，是偏紧的要求**。`, '')
       }
     }
     out.push(`| 指标（基准＝常规经营预期） | ${order.map((k) => label[k]).join(' | ')} |`)
@@ -930,7 +938,7 @@ export function buildReport(data, profile) {
   const segSelf = Array.isArray(d.segments) ? d.segments.find((s) => s.is_self) : null
   const segTotal = Array.isArray(d.segments) ? d.segments.reduce((a, s) => a + s.count, 0) : 0
   const segPlain = segSelf
-    ? `你的直接对手是「${scaleLabelBy(segSelf)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : '，**该段全部无高德人均数据**，分段依据是店名与品类而非人均实证'}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是**协同或弱竞争**，不是直接对手。`
+    ? `你的直接对手是「${scaleLabelBy(segSelf)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : '，<b>该段全部无高德人均数据</b>，分段依据是店名与品类而非人均实证'}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是<b>协同或弱竞争</b>，不是直接对手。`
     : ''
 
   const segRows = Array.isArray(d.segments) && d.segments.length > 0
@@ -979,7 +987,19 @@ ${data.veto.major_risks.map((r) => `<tr><td>风险 ${esc(r.rule_id)}</td><td>${e
           max_rent_breakeven: '极限租金·保本（元/月）', max_rent_target: '极限租金·目标回本（元/月）',
           max_rent_ratio: '极限租金占营业额',
         }
-        return `<h2>6. 财务测算</h2><table><tr><th>指标</th>${order.map((k) => `<th>${label[k]}</th>`).join('')}</tr>
+        const sfHtml = data.finance.scenario_factors
+        const sfTableHtml = !sfHtml ? '' : `<h3 style="font-size:15px;margin:18px 0 6px">三档情景参数（报告据此可复算每一档）</h3>
+<table><tr><th>情景</th><th>营收乘数</th><th>成本乘数</th><th>说明</th></tr>
+${['base', 'pessimistic', 'optimistic'].map((k) => {
+          const x = sfHtml[k]
+          if (!x) return ''
+          const note = k === 'base' ? '用户给定值直接测算'
+            : k === 'pessimistic' ? '营收下调、成本上调（压力测算）'
+              : '营收上调、成本下调（乐观假设）'
+          return `<tr><td>${esc(x.label ?? k)}</td><td>×${x.revenue}</td><td>×${x.cost}</td><td>${note}</td></tr>`
+        }).join('')}</table>
+<p style="color:#666;font-size:13px">保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此<b>不相同</b>，差异全部来自成本乘数。</p>`
+        return `<h2>6. 财务测算</h2>${sfTableHtml}<table><tr><th>指标</th>${order.map((k) => `<th>${label[k]}</th>`).join('')}</tr>
 ${keys.map((key) => `<tr><td>${esc(metric[key] ?? key)}</td>${order.map((k) => {
           const v = sc[k]?.[key]
           if (key === 'roi' && typeof v === 'number') return `<td>${(v * 100).toFixed(1)}%</td>`
@@ -1007,11 +1027,17 @@ ${(() => {
   return `<h3 style="font-size:15px;margin:18px 0 6px">回本周期判读（餐饮重资产大店实操标尺）</h3>
 ${(() => {
   const tgt = data.finance?.rent_ceiling?.target_payback_months ?? data.finance?.space_model?.target_payback_months
+  const bmkH = data.benchmark ?? {}
+  const bmMed = typeof bmkH.payback_median === 'number' ? bmkH.payback_median : null
+  const bmMin = typeof bmkH.payback_min === 'number' ? bmkH.payback_min : null
+  const bmMax = typeof bmkH.payback_max === 'number' ? bmkH.payback_max : null
+  const ratioTxt = (bmMed !== null && tgt > 0) ? (bmMed / tgt).toFixed(1) : '—'
   if (typeof tgt !== 'number' || tgt <= 0) return ''
   return `<p style="color:#555;background:#f5f5f5;padding:8px 10px;border-left:3px solid #999;font-size:13px">`
     + `📐 <b>两套标尺</b>：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
-    + `而行业基准库里同类业态的回本月数中位约 <b>51.7 个月</b>、高端中餐酒楼约 <b>90.7 个月</b>（19 城估算值）。`
-    + `两者差 1.4~2.5 倍——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
+    + `而行业基准库里高端中餐酒楼的回本中位是 <b>${bmMed} 个月</b>`
+    + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，19 城估算值）` : '（19 城估算值）')
+    + `。两者差 <b>${ratioTxt} 倍</b>——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
 })()}
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>会计口径回本（基准档）</td><td><b>${num(b.accounting_payback_months)} 个月</b> → <b>${mk(pv.level, pv.label)}</b></td></tr>
@@ -1039,6 +1065,7 @@ ${data.finance.recommendation ? (() => {
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>谈判锚点</td><td>${rec.anchor_unreachable ? '<b>不可达</b>（即便零租金，压力测试档也达不到目标回本）' : `<b>${num(rec.target_rent)}</b> 元/月（取自 ${rec.based_on_scenario} 档）`}</td></tr>
 <tr><td>保本红线</td><td>${num(rec.ceiling_rent)} 元/月</td></tr>
+${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保守档）</td><td>锚点 ${num(rec.target_rent_conservative)} 元/月 ｜ 保本 ${num(rec.ceiling_rent_conservative)} 元/月 —— 「营收降 15% 且成本涨 5%」时的最坏情况，<b>不作为谈判出价</b></td></tr>` : ''}
 <tr><td>距锚点</td><td>${gapCell}</td></tr>
 <tr><td>当前租售比</td><td>${(rec.current_rent_ratio * 100).toFixed(1)}%（${esc(rec.rent_ratio_label)}健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）→ <b>${esc({ healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict)}</b></td></tr>
 </table>
