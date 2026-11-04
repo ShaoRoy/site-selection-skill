@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.14
+version: 2.10.15
 author: "RoyShao"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -199,7 +199,7 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 | `scripts/grid-scan.py` | 城市网格扫描，锚点 → 候选点位排序 | 是 |
 | `scripts/grid-registry.py` | 网格编号与覆盖管理 | 否 |
 | `scripts/demand-fetch.py` | 需求侧代理指标（POI 密度） | 是 |
-| `scripts/walk-matrix.py` | 步行距离矩阵 | 是 |
+| `scripts/walk-matrix.py` | 步行距离（腾讯默认 / 高德可选；direction 带过街设施，matrix 批量） | 是 |
 | `scripts/import-benchmarks.py` | Excel 底稿 → 基准数据（需 openpyxl，**仅此脚本需要**） | 否 |
 | `scripts/worldpop-clip.py` | 裁城市人口栅格 | 否 |
 | `scripts/worldpop-sample.py` | 栅格采样（自动 GCJ-02 → WGS84） | 否 |
