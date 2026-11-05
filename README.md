@@ -1,8 +1,9 @@
 # 选址智能分析 Skill
 
 <p>
-  <a href="https://github.com/ShaoRoy/site-selection-skill">
-  <img alt="Skills" src="https://img.shields.io/badge/Skills-latest-black?style=for-the-badge&logo=vercel&logoColor=white">
+<a href="https://www.skills.sh/ShaoRoy/site-selection-skill/site-report">
+  <img alt="skills.sh installs" src="https://www.skills.sh/skills/installs/ShaoRoy/site-selection-skill/site-report.svg">
+</a>
 </a>
 </a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
