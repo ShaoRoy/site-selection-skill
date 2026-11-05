@@ -9,7 +9,7 @@
   <a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-234%20passing-brightgreen?style=flat-square">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
-  <a href="https://site-selection-skill-git-main-yingshao113113-7094.vercel.app"><img alt="vercel" src="https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square&logo=vercel"></a>
+  
 </p>
 
 
