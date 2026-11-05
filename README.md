@@ -334,7 +334,7 @@ zip -r ../02-expert.zip site-selection-analyst -x "*.git*"
 
 ```
 .codebuddy-plugin/plugin.json   ← 专家配置（16 个必填字段）
-agents/site-selection.md        ← Agent 人设 + frontmatter
+agents/site-selection-analyst.md ← Agent 人设 + frontmatter
 avatars/expert.png              ← 头像 512×512
 ```
 
