@@ -1,3 +1,35 @@
+## 2.10.31
+
+### 同步用户手动优化的 README（徽章 + 关键词层）
+
+用户在 GitHub 上直接改了 README，加了面向检索的展示层。本版把它同步进包。
+
+**改动内容**（相对 v2.10.30，README 34028 → 35844 字节、643 → 656 行）：
+
+| 层 | 内容 |
+|---|---|
+| ① 动态徽章 | 原有 5 个（release / downloads / CI / tests / license）保持不变 |
+| ② 主题小标签 | **新增 10 个静态徽章**：Agent Skill·WorkBuddy、AI Agent·LLM ready、Python 3.9+、GIS·高德/腾讯、License MIT、Benchmark 19城×48业态、Finance 三档测算、Rent 极限租金反推、Offline 零 Key 可跑、Evidence 可复核 |
+| ③ 关键词纯文本 | **新增一行可被搜索引擎与大模型直接抓取的文本**：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告 |
+
+关键词口径与 v2.10.30 收敛后的「19 城 × 48 个餐饮业态」一致，没有回到「全品类」的过度承诺。
+
+### 同步范围
+
+README 三份源码副本全部同步（哈希 `2dfa33617cb8`）：`dist/site-selection/`、`dist/site-selection-skill/`、`dist/wb-expert/skills/site-selection/`。
+
+01 技能包与 03 源码包重打；**02 专家包继续冻结在 v2.10.28**（用户手动维护）。
+
+### 验证
+
+```
+README 三份哈希唯一 = 1，与 GitHub 一致
+10 个新徽章 + 关键词段落全部落位
+selftest 48/48｜parity 78/78｜冒烟 13/13
+```
+
+---
+
 ## 2.10.30
 
 修审计报告（v2.10.29）发现的 3 项 P1 与 4 项 P2。**全是文案与发布一致性，运行架构未动。**
