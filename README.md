@@ -8,7 +8,7 @@
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.17
+> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.22
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -18,8 +18,8 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.17.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.17.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.22.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.22.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1` | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -82,20 +82,65 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 数据源 | 用途 | 状态 |
 |---|---|---|
-| **高德开放平台 POI** | 周边业态、竞品、交通配套采集 | ✅ 已接入（个人 Key，须选「Web 服务」类型） |
-| **高德步行路径规划** | 动线阻断（点位 → 地铁口 / 竞品 / 小区大门） | ✅ 已接入 |
+| **高德开放平台 POI** | 周边业态、竞品、交通配套采集（**全量主力**） | ✅ 已接入（个人 Key，须选「Web 服务」类型） |
+| **高德步行路径规划** | 动线阻断初判（点位 → 地铁口 / 竞品 / 小区大门） | ✅ 已接入，供第 1/1.5 筛使用 |
+| **腾讯位置服务 POI** | 竞品交叉校验（第 2 筛，抽样） | ✅ 已接入；四个 POI 接口各 200/日 |
+| **腾讯步行路径规划** | 动线阻断精算，`steps[].type` 给结构化过街设施 | ✅ 已接入，供第 2 筛使用 |
 | **行业基准库（19 城 × 48 业态）** | 财务结论的现实性对标 | ✅ 已内置 `data/benchmarks.json` |
+| **WorldPop 2020 人口栅格（93m）** | 交叉校验：栅格常住人口 vs POI 代理密度 | ✅ 已接入（`worldpop-clip.py` + `worldpop-sample.py`，需 QGIS 提供 GDAL） |
 | **OSM 开源路网** | 本地 Valhalla / OSRM 等时圈 | ⚠️ 需自行部署引擎；未部署时降级为直线估算并标注【估算】 |
 | **七普人口、城市规划公开矢量** | 人口结构、片区规划参考 | ⚠️ 人工查阅，未做程序化接入 |
-
-### 规划中（尚未实现）
-
-| 数据源 | 计划用途 | 当前状态 |
-|---|---|---|
-| **开源人口栅格**（WorldPop 2020, 93m） | 交叉校验：栅格常住人口 vs POI 代理密度 | ✅ 已接入（`worldpop-clip.py` + `worldpop-sample.py`，需 QGIS 提供 GDAL） |
 | **商用客流接口**（慧眼 / 位置服务等） | 客群画像、到访洞察 | ⛔ 个人开发者无法采购；仅预留结果字段，未做接入 |
 
-> **关于「替换数据源」**：目前各采集脚本（`demand-fetch.py` / `grid-scan.py` / `walk-matrix.py`）的高德调用是**直接写在各脚本内部**的，没有统一适配层。将来接入商业数据源时，需要先抽出 `datasource/` 适配层再替换实现——**不是改一行配置就能完成**。
+### 数据源分工：按筛次，不按偏好
+
+**为什么不是「哪家好用就用哪家」**：腾讯四个 POI 接口（`place/search`、`place/detail`、
+`place/here`、`place/explore`）**各 200 次/日，合计 800/日**——只够少数点位做深度校验。
+高德那边没有这个限制，所以全量采集必须走高德。
+
+| 筛次 | POI 采集 | 步行距离 |
+|---|---|---|
+| 第 1 筛 商圈初选 | **高德** | 不算（网格级不算步行） |
+| 第 1.5 筛 单点评估 | **高德**（单源） | **高德**——初判参考值 |
+| **第 2 筛（带租金）** | **腾讯 + 高德双源** | **腾讯**——带 `steps.type`，决策值 |
+| 第 3 筛 财务锁盘 | 不采集 | 不采集 |
+
+**为什么步行用腾讯**：高德只给 `instruction` 中文描述，要数过街设施得匹配文字；
+腾讯 `steps[].type` 是数值枚举（`0` 普通道路 / `1` 过街天桥 / `2` 地下通道 / `3` 人行横道），
+直接数，且在报告里能写成「人行横道×1、过街天桥×1」这种明细。
+
+**同一项目不要中途换源**——换源等于换口径，历史报告不可比。
+报告《数据质量》段会写明本次是单源还是双源；单源时不会声称「双源交叉验证」。
+
+### 配额实测（2026-11-05 控制台核对 + 接口实测）
+
+| 接口 | 日额度 | 并发 | 实测有效规模 |
+|---|---|---|---|
+| 腾讯距离矩阵 `matrix?mode=walking` | 6000/日 | 5 对/秒 | **1×5 对/请求**（1×6 就 120） |
+| 腾讯步行路线 `direction/v1/walking` | 6000/日 | 5 次/秒 | 1 对/请求 |
+| 腾讯 `place/search` | **200/日** | 5 次/秒 | 1 关键词/请求（每点位约 3 次） |
+| 腾讯 `place/detail` / `here` / `explore` | **各 200/日** | 5 次/秒 | 同上 |
+
+三条必须知道：
+
+1. **限额单位是 OD 对数，不是请求次数**——1×6 只是一次请求，照样超限。
+   官方文档写的「一对多 1×200」是**企业认证后**额度，个人 Key 实测只有 5 对/批。
+2. **三处 duration 单位各不相同**：腾讯 direction = 分钟、腾讯 matrix = **秒**、高德 direction = **秒**。
+   混用就是 60 倍误差；脚本内置 `plausible_walk()`（步行速度 2~7 km/h 自检）会当场报警。
+3. **一次第 2 筛只比单源多花 3 次腾讯请求**（500m 半径、44 家实测），占日额度 1.5%。
+   日额度可支撑约 66 个双源点位。
+
+### 拿不到的能力（需商业授权）
+
+| 接口 | 影响 |
+|---|---|
+| `/ws/indoor/direction/walking` 室内外一体化步行 | **商场/综合体铺位的室内动线无法计算，必须现场实测** |
+| `/ws/place/v1/search_by_polygon` 多边形搜索 | 商圈边界只能圆形近似，不能贴合不规则地块 |
+| `/ws/snaptoroads/v1` 路网吸附 | 「点位是否临可通行道路」只能人工判断 |
+
+> **关于「替换数据源」**：各采集脚本（`demand-fetch.py` / `grid-scan.py` / `walk-matrix.py`）
+的调用目前是**直接写在各脚本内部**的，没有统一适配层。将来接入商业数据源时，
+需要先抽出 `datasource/` 适配层再替换实现——**不是改一行配置就能完成**。
 
 ## 设计原则
 
@@ -103,7 +148,9 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 - **每个数字可追溯**：公式 + 代入值 + 结果
 - **缺省必须披露**：用了默认值就写进台账
 - **不用可刷的数据验证模型**（点评评分 / 月售一律不采）
-- 人口数据无公开免费接口，当前用 POI 代理指标；人口栅格交叉校验尚未接入
+- **人口数据无公开免费接口**，当前用 POI 代理指标 + WorldPop 栅格交叉校验
+- **报告必须写明数据源模式**：本次是单源还是双源；单源时不声称「双源交叉验证」
+- **不用眼看判租金**：从对话识别金额交给 `site_core.py rent`，含面积/营业额防误触
 
 ## 依赖与环境
 
@@ -275,30 +322,54 @@ Agent 应该会：读 `SKILL.md` → 调 `scripts/site_core.py` 算财务口径 
 ## 快速开始
 
 ```bash
-# 扫一片区域，找候选点位
+# ── 先自检：引擎能不能跑（零网络、零 Key）─────────────────────────
+python scripts/site_core.py selftest          # 48 条断言
+
+# ── 判断该进哪一筛：从口语里识别月租金 ────────────────────────────
+python scripts/site_core.py rent --text "租金2万一个月"
+# → {"hit": true, "monthly_rent": 20000, "advice": "enter_stage2"}
+#   认出 20000元/月 / 2w/月租 / 月租两万 / 租金三万五 / 一年租金24万（自动折月）
+#   不认 租金两百五（<1000）/ 面积1200㎡ / 一天卖2万 / 转让费30万
+
+# ── 扫一片区域，找候选点位（第 1 筛，只用高德）─────────────────────
 python scripts/grid-scan.py --city 广州 --district 天河 --execute
 
-# 给某点位算需求侧指标
+# ── 给某点位算需求侧指标 ─────────────────────────────────────────
 python scripts/demand-fetch.py "广州白鹅潭万象城" --radius 3000 --out demand.json
 
-# 算动线阻断（点位到地铁口 / 竞品 / 小区大门的步行距离）
-python scripts/walk-matrix.py --origin "23.1035,113.2361" --targets targets.csv --out barriers.csv
+# ── 算动线阻断（第 1.5 筛用高德初判 / 第 2 筛用腾讯精算）───────────
+# 腾讯带 steps.type，能数天桥/地道/人行横道；高德只有文本描述
+python scripts/walk-matrix.py --origin "23.1035,113.2361" \
+  --targets targets.csv --out barriers.csv --provider tencent          # 第 2 筛
+python scripts/walk-matrix.py --origin "23.1035,113.2361" \
+  --targets targets.csv --out barriers.csv --provider amap             # 第 1.5 筛
 
-# 看网格覆盖进度
+# 大批量粗筛用矩阵（1×5 对/请求，比逐条快 5 倍，但拿不到 steps）
+python scripts/walk-matrix.py --origin "23.1035,113.2361" \
+  --targets targets.csv --out barriers.csv --method matrix
+
+# ── 跑完整流程（自动判定筛次；带租金才启用双源）───────────────────
+node tools/run-site.mjs --profile=test-500m \
+  --address="广州市荔湾区扬韬广场" --survey="survey/xxx.csv"
+# 输出会明确写：
+#   筛次判定：第 2 筛（检出月租金 290000 元）→ 腾讯+高德双源校验
+#   源模式：双源（高德 + 腾讯交叉校验）
+
+# ── 看网格覆盖进度 ──────────────────────────────────────────────
 python scripts/grid-registry.py --city 广州 --summary
 
-# 财务测算
+# ── 财务测算 ───────────────────────────────────────────────────
 python scripts/site_core.py finance --format large_yuecai --area 1200 --catchment L2 \
   --params params.json --space space.json --out finance.json
 
-# 行业基准对标
+# ── 行业基准对标 ────────────────────────────────────────────────
 python scripts/site_core.py benchmark --city 广州 --format 粤式茶楼早茶 --area 1200 \
   --investment-wan 320 --rent-wan 12 --ticket 230 --revenue-wan 99 --payback 15.5 --margin 0.208
 
-# 看当前生效的业态规则（自定义规则改了先跑这个）
+# ── 看当前生效的业态规则（自定义规则改了先跑这个）──────────────────
 python scripts/site_core.py formats
 
-# 人口栅格：按城市裁切（一次性，之后复用；需 QGIS 的 GDAL）
+# ── 人口栅格：按城市裁切（一次性，之后复用；需 QGIS 的 GDAL）──────
 "QGIS/bin/python-qgis-ltr.bat" scripts/worldpop-clip.py \
   --src "D:/下载/chn_ppp_2020.tif" --city 广州 --outdir data/worldpop
 
@@ -306,9 +377,32 @@ python scripts/site_core.py formats
 "QGIS/bin/python-qgis-ltr.bat" scripts/worldpop-sample.py \
   --tif data/worldpop/gz_pop_2020_100m.tif --center "23.1035,113.2361" --proxy-intensity 42.3
 
-# 导出 GeoJSON 给 QGIS（自动做 GCJ-02 → WGS84，偏移约 621m）
+# ── 导出 GeoJSON 给 QGIS（自动做 GCJ-02 → WGS84，偏移约 621m）──────
 python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 ```
+
+## 报告里有什么
+
+生成的 `report.md` / `report.html` 两版内容一致，主要包含：
+
+| 段 | 内容 |
+|---|---|
+| **结论** | 一句话定性 + 三个支撑数字；下方附**术语白话速查表** |
+| **数据质量** | 原始/去重/剔除条数、双源覆盖率、**数据源模式（单源还是双源）** |
+| **竞品分布** | 势力份额 Top20、截流两轴、三级分层 |
+| **交通可达** | 最近地铁、停车场 |
+| **需求侧** | POI 代理指标 + WorldPop 人口交叉校验 |
+| **场地核查** | 待核实清单（**提醒，不裁决**） |
+| **财务测算** | **三档情景参数**（基准 ×1/×1、保守 ×0.85/×1.05、乐观 ×1.15/×0.97，报告可据此复算每一档）· 极限租金 · 租期现金流 · 空间容量 · 比值校验 · 假设台账 · 敏感度 |
+| **行业基准对标** | 逐项偏离 + 数据性质警示 |
+| **附录** | 每个数字的公式与本次代入值 |
+
+**术语有白话注解**：报告里行业口径较多（截流、势力份额、翻台、坪效、极限租金…），
+对不熟悉这行的人不易读。所以：
+
+- 「结论」段内有一张 **24 条术语白话速查表**（`### 看不懂的话先看这里`）
+- 关键表格行就地注成 `原说明 —— 大白话`，例如
+  `第二轴·竞争截流压力 | **重度截流**（heavy）—— 抢客的店太多，客人还没走到你门口就被别人截走了`
 
 ## 目录结构
 
@@ -368,10 +462,13 @@ site-selection-skill/
 |---|---|---|
 | 计算（财务、基准、去重、空间、人口） | ✅ 调 `scripts/*.py` | ✅ 原生工具 |
 | 采集（POI、需求侧、动线、栅格） | ✅ 调 `scripts/*.py` | ✅ 同左 |
-| **7 段式报告渲染** | **由 Agent 自己组织**（读脚本书出 JSON，按 `SKILL.md` 的报告结构写） | `run-site.mjs` + `report.mjs` 自动出 md/html |
+| **九段式报告渲染** | **由 Agent 自己组织**（读脚本书出 JSON，按 `SKILL.md` 的报告结构写） | `run-site.mjs` + `report.mjs` 自动出 md/html |
 
 `run-site.mjs` 与 `report.mjs` 是 DSH 侧的渲染器，**不在本包内**（依赖 DSH 的运行时与本地缓存）。
 任意 Agent 模式下，报告由模型依据 `SKILL.md` 的「报告结构」一节自行组织——所以那份结构说明必须严格遵守。
+
+**九段结构**：结论 / 数据质量 / 竞品分布 / 交通可达 / 需求侧 / 场地核查 / 财务测算 / 行业基准对标 / 附录。
+每段都可以暂时缺席，但**缺席必须写明原因与补齐方式**。
 
 ## 在其他城市 / 地区使用
 
