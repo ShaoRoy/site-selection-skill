@@ -1,3 +1,98 @@
+## 2.10.28
+
+承接 v2.10.27 工单 §8 的两项追加。**与 2.10.27 分开记，不混入该版验证记录。**
+
+### 🔴 追加项 A：报错给的修复命令不完备
+
+v2.10.27 的依赖缺失提示写「在本目录执行 `pnpm install`」——但这条命令**跑不通**：
+
+| 事实 | 值 |
+|---|---|
+| `dist/site-selection/package.json` | `dependencies` 空，`devDependencies` 只有 `typescript` |
+| TS 引擎 L16 | `import { defineTool } from '@deepseek-ai/dsh-tools'` —— **值导入，运行时必需** |
+| `types/dsh-shims.d.ts` | 仅类型桩，明确「由宿主提供、不随发布包分发」 |
+| 结论 | `pnpm install` 只装 typescript，装完照样 `ERR_MODULE_NOT_FOUND` |
+
+下一任维护者照提示执行会被当成「修了没用」。
+
+**修法（采 A1）**：只改 `tools/test-parity.mjs` 的报错文案，给出真正可执行的命令，
+并保留「或到已有完整依赖的工作区运行」这一路径：
+
+```
+修复（二选一）：
+  1) 在本目录装运行时依赖：
+     npm install -D @deepseek-ai/dsh-tools@^0.1.0-rc.7 @deepseek-ai/cordis@^4.0.1
+     （官方 registry 有；npmmirror 镜像滞后，只有 0.0.1-rc.1，装不到 0.1.0-rc.x）
+  2) 或：到已有完整依赖的工作区（如 scratch-plugin/）运行 node tools/test-parity.mjs
+```
+
+**实测验证该命令真能跑通**（这是本项的核心验收点）：
+
+```
+npm install --no-save --registry=https://registry.npmjs.org   @deepseek-ai/dsh-tools@^0.1.0-rc.7 @deepseek-ai/cordis@^4.0.1 typescript@^5.6.0
+→ added 18 packages, 0 vulnerabilities
+→ node tools/test-parity.mjs  →  parity: 78/78 PASS
+→ 装的版本：dsh-tools@0.1.0-rc.8 / cordis@4.1.0
+→ package.json 未被改写（--no-save 生效）
+```
+
+顺带否掉一个顾虑：`@deepseek-ai/dsh-tools` 在**官方 npmjs 是公开包**（有 0.1.0-rc.8，
+repository 指向 `deepseek-ai/deepseek-harness`），不是私有源。所以给发布包补 devDependency
+（A2 方案）风险比工单预估的低——本版仍采 A1，保持发布包零运行时依赖清单。
+
+### 🔴 追加项 B：CI 完全不跑 `npm test` / parity
+
+工单 §0 承诺「任何口径漂移在 CI 阶段自动暴露」，但三份 `.github/workflows/ci.yml`
+哈希全同（`e67cdd8b7665…`），步骤只有 Python 侧：**无 Node setup、无 `npm test`、无 parity**。
+契约测试实际只在本地手动跑时存在。
+
+**并且 CI 内嵌断言已过时**：v2.10.27 代码上原样实跑，**7 PASS / 1 FAIL**：
+
+```
+PASS  营收 990000
+PASS  现金净流 259250
+PASS  会计净利 205916.67
+PASS  现金回本 12.3 月
+PASS  会计回本 15.5 月
+PASS  极限租金保本 379250
+FAIL  锚点 186165.34          ← 实际 target_rent = 290361.11
+PASS  座位 278
+```
+
+`186165.34` 是 v2.10.26 改回基准档之前的保守档值，现在对应 `target_rent_conservative`。
+CI 一旦运行必红。
+
+**修法**：
+
+1. 断言改为 `("锚点（基准档） 290361.11", …)`，并**增补两条**避免旧值被直接删掉后失去回归保护：
+   `("保守档压力下限 186165.34", …)`（`target_rent_conservative`）、
+   `("保本红线（基准档） 379250", …)`（`ceiling_rent`）
+2. 步骤名「核心计算自检（20 条断言）」→「（48 条断言）」
+3. **新增 `cross-chain-parity` job**：`setup-node@v4`（Node 24）+ 显式装运行时依赖 +
+   `node tools/test-parity.mjs`。单独成 job 的理由写在注释里——Python 侧不需要 Node，
+   分开跑能让失败原因一眼可辨（口径分裂 vs 依赖装不上）
+4. 三份 ci.yml 同步，哈希一致（`e869b0f6580b`）
+
+**抽 yml 里的断言块实跑**（不是另写一份）：10/10 PASS，退出码 0。
+
+### 验证
+
+```
+CI 断言（从 yml 抽取执行）        10/10 PASS，exit 0
+dist 内 parity                   78/78 PASS（装完依赖后，不再只能靠 scratch-plugin）
+scratch-plugin parity            78/78 PASS
+selftest 48/48 ｜ TS 236 断言 ｜ typecheck 0 error ｜ 冒烟 13/13
+test-parity.mjs 哈希            4 份唯一哈希 = 1（7e26377b7bcb）
+ci.yml 哈希                     3 份唯一哈希 = 1（e869b0f6580b）
+```
+
+### 边界
+
+未动 `anchor_key="base"`、`SCENARIO_FACTORS`、三档公式、报告已修文案（§6 边界继续有效）。
+§7 的 `spec.json` 单源重构仍属独立重构，不在本单范围。
+
+---
+
 ## 2.10.27
 
 ### 统一 TS / Python 双引擎口径，并新增跨链路契约测试
@@ -66,6 +161,10 @@ rent_ratio_verdict="healthy"  current_rent_ratio=0.0967
 
 已接入 `package.json` 的 `test`（4 份），`npm test` 现输出：
 冒烟 `13/13` + `parity: 78/78 PASS`。
+
+> **前提**：TS 侧的 `@deepseek-ai/dsh-tools` 是**运行时**依赖（值导入，不是类型档），
+> 本包 `package.json` 未声明它。所以在 `dist/` 下跑需先装运行时依赖，
+> 或在已有完整依赖的工作区（`scratch-plugin/`）下运行。详见 [2.10.28]。
 
 ### P1-4 顺带修掉的两处
 

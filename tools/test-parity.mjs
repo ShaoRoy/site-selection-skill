@@ -125,9 +125,17 @@ async function loadTsTool() {
   } catch (err) {
     if (String(err?.message ?? err).includes('@deepseek-ai/dsh-tools')) {
       console.error(
-        '❌ TS 引擎依赖缺失（@deepseek-ai/dsh-tools）。\n'
+        '❌ TS 引擎依赖缺失。本包的 package.json 只声明了 typescript，'
+        + '`pnpm install` 安不到 dsh-tools（它是 TS 引擎的**运行时**依赖，'
+        + '不是类型档）。\n'
         + `   入口：${entry}\n`
-        + '   修复：在本目录执行 pnpm install，或从 scratch-plugin 目录运行本测试。\n'
+        + '   修复（二选一）：\n'
+        + '     1) 在本目录装运行时依赖：\n'
+        + '        npm install -D @deepseek-ai/dsh-tools@^0.1.0-rc.7 @deepseek-ai/cordis@^4.0.1\n'
+        + '        （官方 registry 有；npmmirror 镜像滞后，只有 0.0.1-rc.1，'
+        + '装不到 0.1.0-rc.x。网络可用时加 --registry=https://registry.npmjs.org）\n'
+        + '     2) 或：到已有完整依赖的工作区（如 scratch-plugin/）运行：\n'
+        + '        node tools/test-parity.mjs\n'
         + '   契约测试必须两边都真跑，不允许静默跳过。',
       )
       process.exit(1)
