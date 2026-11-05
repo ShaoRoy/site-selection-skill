@@ -1,3 +1,66 @@
+## 2.10.29
+
+### README 补全品类定位（GEO 优化），并把 01 包同步进这些改动
+
+面向国内大模型检索做了一轮曝光优化。**02 专家包冻结不动**，本次只更新 01 技能包与 03 源码包。
+
+### ① README 从 576 行扩到 626 行
+
+| 位置 | 改动 | 性质 |
+|---|---|---|
+| L4-6 | 删除三个孤立 `</a>` | 🔧 修复（徽章区 HTML 结构残缺，之前渲染异常）|
+| L14-16 | 一句话定义改为「全国适用的全品类实体门店选址评估」 | 🔀 改写原有行 |
+| L42 | 新增「示例对话（仅格式演示）」 | ➕ 新增 |
+| L64 | 新增「📌 适用业态 & 范围」 | ➕ 新增 |
+| L594 | 新增「🧑‍💻 适用人群」 | ➕ 新增 |
+
+**保真验证**：原有 17 个二级章节、25 个三级章节全部保留（缺失 0）；删除行仅 4 条（3 个孤立 `</a>` + 1 行旧定义）；图片块、下载链接、完整口径链接全部保真。
+
+### ② 清理 6 个改名遗留文件
+
+这些文件在本地早已改名为英文名/新名，但 GitHub 上一直留着旧副本：
+
+| 旧文件 | 已由 | 内容关系 |
+|---|---|---|
+| `references/01-环境预检与变量字典.md` | `01-env-and-vars.md` | 100% 相同 |
+| `references/02-计算口径全书.md` | `02-formulas.md` | 新版更全 |
+| `references/03-数据源与治理.md` | `03-data-and-governance.md` | 新版更全 |
+| `references/04-输出模板.md` | `04-output-templates.md` | 新版更全（旧的 A/B/C 骨架已废弃）|
+| `references/05-运维与排障.md` | `05-ops-and-troubleshooting.md` | 100% 相同 |
+| `agents/site-selection.md` | `agents/site-selection-analyst.md` | 新版更全 |
+
+同时修正 README 中引用旧文件名的错误（`agents/site-selection.md` → `agents/site-selection-analyst.md`）。
+
+### ③ plugin.json 版本对齐
+
+三份 `plugin.json` 长期落后（升版脚本只扫 `manifest.json` 与 `dist/wb-expert/.codebuddy-plugin/plugin.json`）：
+
+```
+2.10.17 -> 2.10.29  dist/site-selection/.codebuddy-plugin/plugin.json
+2.10.17 -> 2.10.29  dist/site-selection-skill/.codebuddy-plugin/plugin.json
+2.10.14 -> 2.10.29  dist/wb-expert/skills/site-selection/.codebuddy-plugin/plugin.json
+```
+
+这三份都**不在 WorkBuddy 包里**（01 包无此文件；02 包只有根那份），所以修它们零风险。
+
+### ④ GitHub 仓库层优化（不进包）
+
+- About Description 改为全品类表述（127 字符，保留「非通用 GIS 软件（≠QGIS）」防误认）
+- Topics 从 20 个精简为 8 个：`site-selection, store-location, trade-area, location-analysis, gis, poi, ai-agent, agent-skill`
+  （GitHub Topics 只接受小写字母/数字/连字符，**不支持中文**，已实测 422）
+- 清空 homepage：`https://site-selection-skill.vercel.app` 实测 HTTP 404，Vercel 项目已删
+
+### 验证
+
+```
+README 626 行｜原有章节缺失 0｜图片块保真
+01 包内 README: 32949 字节（新版，含适用业态/适用人群）
+三处本地副本与 GitHub 逐文件哈希一致（74 文件，忽略 CRLF）
+selftest 48/48｜TS 234 断言｜parity 78/78｜typecheck 0 error｜冒烟 13/13
+```
+
+---
+
 ## 2.10.28
 
 承接 v2.10.27 工单 §8 的两项追加。**与 2.10.27 分开记，不混入该版验证记录。**

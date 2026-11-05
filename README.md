@@ -11,7 +11,7 @@
 
 
 
-> 全国适用的全品类实体门店**选址评估** Agent 能力包 · v2.10.28
+> 全国适用的全品类实体门店**选址评估** Agent 能力包 · v2.10.29
 >
 > 餐饮、零售、便利店、生活服务、教培、前置仓……任何实体门店的商业选址、点位评估、商圈分析，都可以用同一套流程把账算清。
 
@@ -23,8 +23,8 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.28.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.28.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.29.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.29.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
