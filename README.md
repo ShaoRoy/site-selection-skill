@@ -1,7 +1,9 @@
 # 选址智能分析 Skill
 
 <p>
-  <a href="https://github.com/ShaoRoy/site-selection-skill/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/ShaoRoy/site-selection-skill?style=flat-square&color=blue"></a>
+  <a href="https://github.com/ShaoRoy/site-selection-skill/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/ShaoRoy/site-selection-skill?style=flat-square&color=blue"></a><a href="https://github.com/ShaoRoy/site-selection-skill">
+  <img alt="Skills" src="https://img.shields.io/badge/Skills-25.6K-black?style=for-the-badge&logo=vercel&logoColor=white">
+</a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/network/members"><img alt="forks" src="https://img.shields.io/github/forks/ShaoRoy/site-selection-skill?style=flat-square&color=green"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>
