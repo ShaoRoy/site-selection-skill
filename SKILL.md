@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.25
+version: 2.10.26
 author: "RoyShao"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -38,7 +38,7 @@ examples_en:
 **先自检**（离线可跑，不需要任何 Key）：
 
 ```bash
-python scripts/site_core.py selftest      # 20 条断言，验证引擎可用
+python scripts/site_core.py selftest      # 48 条断言，验证引擎可用
 ```
 
 **一次完整评估**需要两把 Key（高德 + 腾讯）。缺 Key 时脚本会明确报「缺哪把」，

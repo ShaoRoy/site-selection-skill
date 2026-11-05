@@ -1,3 +1,77 @@
+## 2.10.26
+
+### 🔴 Python 链路锚点未修：两条链路结论差 1.56 倍
+
+v2.10.25 声称「改 5 个文件，口径统一」，其中 `scripts/site_core.py:422` **只改了注释，没改实现**：
+
+```python
+# 建议锚点：取基准档（保守档并列作压力下限，不参与取值）   ← 注释已改
+anchor_key = min(tgt_rents, key=tgt_rents.get)              ← 实现仍取保守档
+```
+
+实测同一组参数：
+
+| 档 | max_rent_target |
+|---|---|
+| base | **290,361.11** ← 应为锚点 |
+| pessimistic | 186,165.34 ← Python 实际取的 |
+| optimistic | 393,245.99 |
+
+**TS 链路给 290,361.11，Python 链路给 186,165.34，差 1.56 倍。**
+而 `manifest.targets.workbuddy.core = scripts/site_core.py`、`finance` 在 `offlineCapable` 里
+——WorkBuddy 导入技能走的就是这条错的链路。
+
+### 更糟的是断言把错误行为固化了
+
+`site_core.py:811` 写着 `chk("锚点取保守档 186165.34", ...)`，
+所以 **selftest 48/48 全绿反而掩盖了分裂**——测试在保护 bug。
+
+### 已改
+
+| 位置 | 改动 |
+|---|---|
+| `site_core.py:424` | `anchor_key = min(...)` → `anchor_key = "base"`，并注释说明为何不取 min |
+| `site_core.py:465` | 台账 formula 改「基准档的极限租金·目标回本（保守档另列作压力下限，不参与取值）」，substituted 只列 base 与保守档用途 |
+| `site_core.py:811` | 断言改 `chk("锚点取基准档 290361.11", ...)` |
+| `ceiling_rent` | **不动**——红线本就该取全档最保守（270,821.43），这部分原本是对的 |
+
+修后实测：
+
+```
+Python target_rent = 290,361.11 = base 档  ✅ 与 TS 一致
+Python ceiling_rent = 270,821.43 = min(三档 breakeven)  ✅ 红线仍最保守
+台账：base 档 = 290361.11；保守档 186165.34 仅作压力下限 → 290361.11  ✅ 数学成立
+selftest 48/48（断言已改基准档）
+```
+
+### 顺带清掉的四类残留
+
+**① 解释语 5 处**：「高于这个价，压力测试下回本就不成立」是旧保守档锚点的解释，
+基准档口径下不成立（压力下限是 65,238，当前租金 290,000 高于它却判「健康、无需降」）。
+已全部改为「高于它，按常规经营预期就回不了本（压力下限另列，不是出价依据）」。
+涉及 `references/02-formulas.md`、`tools/report.mjs` ×4（md/html 白话表与建议租金说明）、
+`docs/SKILL-FULL.md` ×2。
+
+**② 数字滞后**：`06-regression` 的 234→236（4 处）；`SKILL.md` 的「20 条断言」→ 48。
+
+**③ `scratch-plugin/src/site-tools.ts:2585`** 未在上一轮同步范围内，仍写「取自 … 档，跨档最保守」。
+已修，现四处 `site-tools.ts`（src / 两个 dist / 02 内嵌）SHA256 完全一致。
+
+**④ 项目根 `docs/` 7 份文档**仍是旧口径（DECISIONS / DEV / FEATURES / REPORT-REVIEW /
+TEST-REPORT-v2.6.1 / TEST-REPORT-模拟数据实测 / 项目模块清单），已逐一更正。
+
+### 验证
+
+```
+两条链路对齐：Python target_rent = base 档 ✅
+台账数学成立 ✅
+全仓扫描「跨档取最保守」：除 CHANGELOG 历史与明确标注「当时取保守档」的历史实测报告外，残留 0 处
+回归：TS 236 全绿｜typecheck 0 error｜selftest 48/48｜冒烟 13/13
+四处 site-tools.ts SHA256 一致
+```
+
+---
+
 ## 2.10.25
 
 审核发现 v2.10.23 的锚点口径「只修了文档，没修代码与报告」。核实后更严重：

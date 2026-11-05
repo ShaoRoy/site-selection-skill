@@ -3,7 +3,7 @@
 > 用途：改完任何口径、模板、脚本后，照这份跑一遍确认没改坏。
 > 这是「评估-反馈闭环」的落点——每次踩过的坑都记在这里，不靠记忆。
 
-## 一、自动化基线（当前 v2.10.25）
+## 一、自动化基线（当前 v2.10.26）
 
 ```bash
 # 技能包内可直接跑（零依赖、离线）
@@ -12,7 +12,7 @@ node tools/test-tools-smoke.mjs             # 13/13（仅源码包，技能包�
 
 # 源码包内跑全量
 cd <源码包>
-pnpm test && pnpm typecheck                 # 234 + 0 error
+pnpm test && pnpm typecheck                 # 236 + 0 error
 ```
 
 | 组 | 条数 | 覆盖 |
@@ -27,9 +27,9 @@ pnpm test && pnpm typecheck                 # 234 + 0 error
 | test-grid | 16 | 网格编号公式 |
 | registry --self-test | 12 | 网格注册表自检 |
 | test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归） |
-| **合计** | **234** | |
+| **合计** | **236** | |
 
-**基线：234/234 通过 + typecheck 0 error + Python selftest 48/48。**
+**基线：236/236 通过 + typecheck 0 error + Python selftest 48/48。**
 
 数字变了不是坏事，但**必须能解释为什么变**。解释不了就是改坏了。
 

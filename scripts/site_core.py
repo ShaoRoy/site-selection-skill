@@ -420,8 +420,11 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     base = per["base"]
 
     # 建议锚点：取基准档（保守档并列作压力下限，不参与取值）
+    # 与 TS 链路（site-tools.ts）保持一致。
+    # 为何不取 min：旧口径取最保守档会报「需降 77%」，
+    # 但同一份报告里租售比判健康、回本判优秀——自相矛盾（见 CHANGELOG 2.10.8）。
     tgt_rents = {k: per[k]["max_rent_target"] for k in SCENARIOS}
-    anchor_key = min(tgt_rents, key=tgt_rents.get)
+    anchor_key = "base"
     target_rent = tgt_rents[anchor_key]
     ceiling = min(per[k]["max_rent_breakeven"] for k in SCENARIOS)
     h, w, label = rent_line(code)
@@ -462,7 +465,7 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
         {"group": "财务", "metric": "回本（会计·月）", "formula": "初始投入 ÷ 会计净利", "substituted": f"{p['initial_investment']} ÷ {base['net_profit']}", "result": str(base["accounting_payback_months"])},
         {"group": "租金", "metric": "极限租金·保本", "formula": "(毛利 − 税费) ÷ 成本因子 − 人力 − 其他", "substituted": "见上", "result": str(base["max_rent_breakeven"])},
         {"group": "租金", "metric": "极限租金·目标回本", "formula": "(毛利 − 税费 − 投入÷目标月数) ÷ 成本因子 − 人力 − 其他", "substituted": f"目标 {target} 月", "result": str(base["max_rent_target"])},
-        {"group": "租金", "metric": "建议锚点", "formula": "min(各档极限租金·目标回本)", "substituted": f"base={tgt_rents['base']}，pess={tgt_rents['pessimistic']}，opt={tgt_rents['optimistic']}", "result": str(target_rent)},
+        {"group": "租金", "metric": "建议锚点", "formula": "基准档的极限租金·目标回本（保守档另列作压力下限，不参与取值）", "substituted": f"base 档 = {tgt_rents['base']:.2f}；保守档 {tgt_rents['pessimistic']:.2f} 仅作压力下限，不参与取值", "result": str(target_rent)},
         {"group": "租金", "metric": "租售比", "formula": "月租金 ÷ 月营业额", "substituted": f"{p['monthly_rent']} ÷ {r2(rev)}", "result": f"{r2(cur_ratio*100,1)}%"},
     ]
 
@@ -808,7 +811,7 @@ def selftest():
     chk("现金回本 12.3", abs(b["payback_static_months"] - 12.3) < 0.05)
     chk("会计回本 15.5", abs(b["accounting_payback_months"] - 15.5) < 0.05)
     chk("极限租金保本 379250", abs(b["max_rent_breakeven"] - 379250) < 1)
-    chk("锚点取保守档 186165.34", abs(r["recommendation"]["target_rent"] - 186165.34) < 1)
+    chk("锚点取基准档 290361.11", abs(r["recommendation"]["target_rent"] - 290361.11) < 1)
     chk("距锚点为负（无需降）", r["recommendation"]["gap_to_target"] < 0)
     chk("座位数 278", r["space_model"]["seats"] == 278)
     chk("面积产能校验触发 revenue_too_low", r["space_model"]["input_consistency"] == "revenue_too_low")
