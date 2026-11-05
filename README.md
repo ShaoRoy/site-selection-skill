@@ -1,8 +1,6 @@
 # 选址智能分析 Skill
 
 <p>
-<a href="https://www.skills.sh/ShaoRoy/site-selection-skill/site-report">
-  <img alt="skills.sh installs" src="https://www.skills.sh/skills/installs/ShaoRoy/site-selection-skill/site-report.svg">
 </a>
 </a>
 </a>
