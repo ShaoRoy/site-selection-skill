@@ -2464,7 +2464,11 @@ function runFinancials(
     formulaTrace.push(
       { group: '空间', metric: '厨房面积', formula: '建筑面积 × 厨房占比', substituted: `${n2(spaceModel.area_sqm)} × ${spaceModel.kitchen_ratio}`, result: n2(spaceModel.kitchen_area_sqm) },
       { group: '空间', metric: '营业面积', formula: '建筑面积 − 厨房面积', substituted: `${n2(spaceModel.area_sqm)} − ${n2(spaceModel.kitchen_area_sqm)}`, result: n2(spaceModel.operating_area_sqm) },
-      { group: '空间', metric: '座位数', formula: '营业面积 ÷ 每座面积（向下取整）', substituted: `${n2(spaceModel.operating_area_sqm)} ÷ ${spaceModel.seat_area_sqm}`, result: `${spaceModel.seats}` },
+      { group: '空间', metric: '座位数',
+        // seat_area_sqm = -1 表示座位数是调研表直接给的，不能展示成「÷ -1」
+        formula: spaceModel.seat_area_sqm > 0 ? '营业面积 ÷ 每座面积（向下取整）' : '由调研表直接输入',
+        substituted: spaceModel.seat_area_sqm > 0 ? `${n2(spaceModel.operating_area_sqm)} ÷ ${spaceModel.seat_area_sqm}` : '调研表 seats 字段',
+        result: `${spaceModel.seats}` },
       { group: '空间', metric: '日均客流', formula: '日营业额 ÷ 客单价', substituted: `${n2(values.daily_revenue)} ÷ ${ticket}`, result: `${spaceModel.daily_customers}` },
       { group: '空间', metric: '翻台率（次/日）', formula: '日均客流 ÷ 座位数', substituted: `${spaceModel.daily_customers} ÷ ${spaceModel.seats}`, result: `${spaceModel.turnover_per_day}` },
       { group: '空间', metric: '应有日营收', formula: '座位数 × 业态常规翻台 × 客单价', substituted: `${spaceModel.seats} × ${spaceModel.normal_turnover_per_day} × ${ticket}`, result: n2(spaceModel.implied_daily_revenue_normal) },

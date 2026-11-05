@@ -1,43 +1,33 @@
 {
-  "_说明": "网格扫描参数。改这里不用改代码；改完用 --rescore 重排（0 次接口调用）。",
-
+  "_说明": "网格扫描参数（**仅供 DSH 链路 tools/run-site.mjs 读取**；纯 Python 脚本 scripts/grid-scan.py 不读此文件，它的参数是脚本内常量）。改 quota 不生效，见 _quota 说明。",
   "grid_size_deg": 0.005,
   "_grid_size_deg": "网格边长（度）。0.005 ≈ 500m。改大→格少调用省，改小→更细但调用翻倍",
-
   "anchor_radius_m": 1000,
   "_anchor_radius_m": "以锚点为中心统计 POI 的半径。大店建议 1500，小店 800",
-
   "top_n": 30,
   "_top_n": "输出候选数量。太多跑不完现场，20~30 合适",
-
   "cell_deg": 0.05,
   "_cell_deg": "采集切片边长（度）。0.05 ≈ 5.5km。切得越细越准，调用量按片数线性涨",
-
   "cell_radius_m": 4000,
   "_cell_radius_m": "每片检索半径，需 ≥ cell_deg 对应的对角线的一半",
-
   "max_pages_per_cell": 3,
   "_max_pages_per_cell": "每片每关键词最多翻几页（每页 25 条）。3 页 = 75 条上限",
-
   "weights": {
-    "residential_density": 0.30,
-    "job_housing_ratio": 0.20,
+    "residential_density": 0.3,
+    "job_housing_ratio": 0.2,
     "coffee_density": 0.25,
     "amenity": 0.25
   },
   "_weights": "需求分权重，四项相加应为 1。改完 rescore 看排序变化",
-
   "competition_k": 0.8,
   "_competition_k": "竞争惩罚系数：大店 0.8（更怕竞争），小店 0.4",
-
   "competitor_keywords": "粤菜,茶楼,烧腊",
   "_competitor_keywords": "竞品检索关键词，逗号分隔。按业态改，太宽会把小档口也算进来",
-
   "quota": {
     "daily_limit": 5000,
     "warn_threshold": 500,
     "hard_limit": 1500,
     "min_interval_s": 0.6
   },
-  "_quota": "预估 >warn 要 --yes；>hard 直接拒绝；min_interval 是 QPS 节流"
+  "_quota": "daily_limit 是账户日总配额（高德个人 Key 约 5000），hard_limit 是单次扫描预估上限（超了直接拒绝），warn_threshold 是提醒线（超了要 --yes 确认），min_interval_s 是请求间隔节流。注意：scripts/grid-scan.py 里这几个值是**硬编码**的，改这里不会生效——要改请同步改脚本顶部常量，或改完用 --rescore 重排（0 次接口调用）。"
 }

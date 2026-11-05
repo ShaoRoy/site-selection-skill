@@ -4,11 +4,11 @@
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-200%20passing-brightgreen?style=flat-square">
+  <img alt="tests" src="https://img.shields.io/badge/tests-234%20passing-brightgreen?style=flat-square">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.22
+> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.23
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -18,22 +18,22 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.22.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.22.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
-| **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1` | — |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.23.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.23.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
 > 传到 WorkBuddy「导入技能」会报「所选文件夹中未找到 SKILL.md」。用上面的 Release 附件。
 
-> 本文件是**精简入口**。完整计算口径（十节口径规范 + 22 条公式）见 [`docs/SKILL-FULL.md`](docs/SKILL-FULL.md)。
+> 本文件是**精简入口**。完整计算口径（十节口径规范 + 22 条公式）见 [`docs/SKILL-FULL.md`](https://github.com/ShaoRoy/site-selection-skill/blob/main/docs/SKILL-FULL.md)。
 
 ---
 
 ## 报告示例
 
-![选址报告 - 商圈步行圈与竞品分布](assets/report-sample-2.jpg)
+![选址报告 - 商圈步行圈与竞品分布](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-2.jpg)
 
-![选址报告 - 地图竞品分析](assets/report-sample-1.jpg)
+![选址报告 - 地图竞品分析](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-1.jpg)
 
 ---
 
@@ -197,6 +197,9 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 - **高德开放平台 Web 服务 Key**（POI / 地理编码 / 步行路径必需；无 Key 时脚本会报缺凭证，但 Skill 方法论本身可读）
 
 ### 方式 A：一键脚本（推荐，Windows）
+
+> `install.ps1` 在**源码包**（`03-github-仓库源码.zip`）里；
+> 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
 # 1. clone 或下载本仓库
@@ -406,6 +409,10 @@ python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 
 ## 目录结构
 
+> 下表是**源码仓库**的完整结构。「导入技能」包只带
+> `SKILL.md` / `references/` / `scripts/` / `data/` / `params/` / `templates/`——
+> `dsh/`、`tools/`、`docs/`、`assets/`、`install.ps1`、`PROMPT.md` 都不在技能包里。
+
 ```
 site-selection-skill/
 ├── SKILL.md              # 方法论、六条硬纪律、公式全书、报告结构
@@ -475,7 +482,7 @@ site-selection-skill/
 > 本项目开发与验证以**广州（广东）**为主。换到其他地区（例如上海、山东、川渝、江浙），
 > 下面分三类说清楚：哪些直接能用、哪些必须替换、没替换会发生什么。
 >
-> **完整改造手册见 [docs/CUSTOMIZE.md](docs/CUSTOMIZE.md)**（含上海本帮菜、山东鲁菜的完整示例）。
+> **完整改造手册见 [docs/CUSTOMIZE.md](https://github.com/ShaoRoy/site-selection-skill/blob/main/docs/CUSTOMIZE.md)**（含上海本帮菜、山东鲁菜的完整示例）。
 
 ### 一、直接可用（与地区无关）
 

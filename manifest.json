@@ -1,7 +1,7 @@
 {
   "name": "restaurant-location-analysis",
   "displayName": "选址智能分析",
-  "version": "2.10.22",
+  "version": "2.10.23",
   "description": "连锁餐饮选址评估：城市网格扫描、竞品格局、截流两轴、财务双口径、行业基准对标。输出证据链报告，不做能否开店的判断。",
   "author": "RoyShao",
   "license": "MIT",
@@ -20,12 +20,6 @@
         "geo",
         "benchmark"
       ]
-    },
-    "dsh": {
-      "entry": "SKILL.md",
-      "plugin": "dsh/site-tools.ts",
-      "mount": "dsh/cordis.patch.yml",
-      "tools": 6
     }
   },
   "dependencies": {
@@ -69,20 +63,14 @@
     "import-benchmarks": "scripts/import-benchmarks.py"
   },
   "params": "params/",
-  "docs": [
-    "docs/FEATURES.md",
-    "docs/GRID.md",
-    "docs/COMPLIANCE-CHECKLIST.md",
-    "docs/DECISIONS.md",
-    "docs/LAUNCH.md"
-  ],
-  "prompt": "PROMPT.md",
   "homepage": "https://github.com/ShaoRoy/site-selection-skill",
   "references": [
-    "references/01-环境预检与变量字典.md",
-    "references/02-计算口径全书.md",
-    "references/03-数据源与治理.md",
-    "references/04-输出模板.md",
-    "references/05-运维与排障.md"
+    "references/01-env-and-vars.md",
+    "references/02-formulas.md",
+    "references/03-data-and-governance.md",
+    "references/04-output-templates.md",
+    "references/05-ops-and-troubleshooting.md",
+    "references/06-regression-and-failure-modes.md",
+    "references/07-preferences.md"
   ]
 }

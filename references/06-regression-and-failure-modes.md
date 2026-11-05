@@ -3,16 +3,16 @@
 > 用途：改完任何口径、模板、脚本后，照这份跑一遍确认没改坏。
 > 这是「评估-反馈闭环」的落点——每次踩过的坑都记在这里，不靠记忆。
 
-## 一、自动化基线（当前 v2.10.17）
+## 一、自动化基线（当前 v2.10.23）
 
 ```bash
 # 技能包内可直接跑（零依赖、离线）
-python scripts/site_core.py selftest        # 20/20
-node tools/test-tools-smoke.mjs             # 13/13
+python scripts/site_core.py selftest        # 48/48
+node tools/test-tools-smoke.mjs             # 13/13（仅源码包，技能包不含 tools/）
 
 # 源码包内跑全量
 cd <源码包>
-pnpm test && pnpm typecheck                 # 246 + 0 error
+pnpm test && pnpm typecheck                 # 234 + 0 error
 ```
 
 | 组 | 条数 | 覆盖 |
@@ -27,9 +27,9 @@ pnpm test && pnpm typecheck                 # 246 + 0 error
 | test-grid | 16 | 网格编号公式 |
 | registry --self-test | 12 | 网格注册表自检 |
 | test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归） |
-| **合计** | **246** | |
+| **合计** | **234** | |
 
-**基线：246/246 通过 + typecheck 0 error + Python selftest 20/20。**
+**基线：234/234 通过 + typecheck 0 error + Python selftest 48/48。**
 
 数字变了不是坏事，但**必须能解释为什么变**。解释不了就是改坏了。
 
@@ -59,7 +59,7 @@ pnpm test && pnpm typecheck                 # 246 + 0 error
 | 症状 | 根因 | 判据 |
 |---|---|---|
 | 冒烟在受限沙箱 12/13，完整权限 13/13 | `execFileSync` 默认 `pipe` 捕获 stdout 会 EPERM | 改 `stdio:['ignore', fd, 'ignore']` 重定向到文件 |
-| `python site_core.py` 无参数退出码 2 | argparse 用法错误 | 这是预期行为；调用必须带子命令（`selftest` / `finance` …） |
+| `python site_core.py` 无参数 | 旧版返回用法错误退出 2 | **v2.10.14 起已改**：无参数打印用法并退出 0（查帮助不是错误）；错子命令仍退出 2 |
 
 ### 打包发布
 
