@@ -30,7 +30,10 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 ---
 
 ## 报告示例
-<img width="954" height="8387" alt="QQ浏览器截图20261105082024" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
+<p align="center">
+<img width="840" alt="选址智能分析报告示例" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
+</p>
+
 
 ---
 
