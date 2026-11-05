@@ -1,9 +1,6 @@
 # 选址智能分析 Skill
 
 <p>
-</a>
-</a>
-</a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>
   <a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>
@@ -14,7 +11,9 @@
 
 
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.28
+> 全国适用的全品类实体门店**选址评估** Agent 能力包 · v2.10.28
+>
+> 餐饮、零售、便利店、生活服务、教培、前置仓……任何实体门店的商业选址、点位评估、商圈分析，都可以用同一套流程把账算清。
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -40,6 +39,47 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 <img width="840" alt="选址智能分析报告示例" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
 </p>
 
+### 示例对话（仅格式演示）
+
+> ⚠️ **下面只是演示输出长什么样**，不限定业态和城市。换成任何城市、任何实体业态都成立。
+
+**你**：帮我评估一下这个铺位，月租 2 万，120㎡，做便利店
+
+**Agent**：
+
+```text
+筛次判定：第 2 筛（检出月租金 20000 元）→ 腾讯+高德双源校验
+商圈：步行 8 分圈内同段竞品 12 家，最近一家 210 米
+财务：保本日营业额 3200 元 ｜ 会计口径回本 28 个月
+极限租金：保本上限 26500 元/月 ｜ 目标回本上限 19800 元/月
+当前租金 20000 元/月，距目标上限还有 200 元/月余量
+整份报告里每个数字都能在 probe.json 找到出处
+```
+
+---
+
+
+---
+
+## 📌 适用业态 & 范围
+
+### 适用业态（不限于以下）
+
+| 大类 | 典型业态 |
+|---|---|
+| 餐饮 | 正餐酒楼、茶楼早茶、火锅、快餐、茶饮咖啡、烘焙 |
+| 零售 | 便利店、生鲜超市、专卖店、社区团购自提点 |
+| 生活服务 | 美容美发、洗衣、维修、宠物服务、健身 |
+| 教培 | 素质教育、职业技能、托育 |
+| 仓配 | 前置仓、网格仓、末端驿站 |
+
+> 业态通过 `params/` 与 `data/formats.json` 配置，**新增业态不需要改代码**——填一套参数档即可。
+
+### 适用范围
+
+- **全国通用**：不绑定任何单一城市。基准库收录 19 城 × 48 业态；未收录城市会**明确告知**并按需推算，不会静默套用其他城市数据（见下方[在其他城市 / 地区使用](#在其他城市--地区使用)）。
+- **全流程覆盖**：商圈初选（第 1 筛）→ 单点评估（第 1.5 筛）→ 双源校验（第 2 筛）→ 财务锁盘（第 3 筛）。
+- **判断留给你**：系统只列证据与缺口，不替你决定「能不能开」。
 
 ---
 
@@ -550,6 +590,16 @@ cp params/_template.json params/lu_cai.json
 | 业态关键词未命中 | 落到通用默认值（中式正餐 24 月 / 租售比 11~17%），**报告须标注「业态参数未校准」** |
 | 行政区名写错 | 高德返回空，网格扫描 0 锚点，直接报错而不是静默返回空表 |
 | 人口栅格 | 全国覆盖，与地区无关（**当前尚未接入**） |
+
+## 🧑‍💻 适用人群
+
+- **开店创业者**：第一次选址，想知道这个铺位到底值多少钱
+- **连锁拓展**：批量评估候选点位，需要统一口径、可横向对比
+- **商业地产 / 招商**：给商户做点位可行性说明
+- **GIS / 数据分析师**：需要一套可复核、可接入自己数据源的选址计算框架
+- **AI Agent 开发者**：想给自己的 Agent 挂一个选址能力
+
+---
 
 ## 局限
 
