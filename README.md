@@ -1,3 +1,4 @@
+<img width="954" height="8387" alt="QQ浏览器截图20261105082024" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
 # 选址智能分析 Skill
 
 <p>
@@ -31,9 +32,6 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 ## 报告示例
 
-![选址报告 - 商圈步行圈与竞品分布](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-2.jpg)
-
-![选址报告 - 地图竞品分析](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-1.jpg)
 
 ---
 
