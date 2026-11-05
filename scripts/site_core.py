@@ -426,10 +426,14 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     tgt_rents = {k: per[k]["max_rent_target"] for k in SCENARIOS}
     anchor_key = "base"
     target_rent = tgt_rents[anchor_key]
-    ceiling = min(per[k]["max_rent_breakeven"] for k in SCENARIOS)
+    # 主红线与锚点同口径（基准档）；全档最保守值另列，仅作压力提示。
+    # 理由同 v2.10.8：若主红线取全档最保守值，当前租金会被判「已超红线」，
+    # 但报告同时又判租售比健康、回本优秀——同一类自相矛盾。
+    ceiling = per["base"]["max_rent_breakeven"]
+    ceiling_conservative = min(per[k]["max_rent_breakeven"] for k in SCENARIOS)
     h, w, label = rent_line(code)
     cur_ratio = p["monthly_rent"] / base["revenue"] if base["revenue"] > 0 else 0
-    verdict = "ok" if cur_ratio <= h else ("watch" if cur_ratio <= w else "breach")
+    verdict = "healthy" if cur_ratio <= h else ("watch" if cur_ratio <= w else "breach")
 
     space_model = build_space(p, code or "mid_dining", area, space, base["breakeven_revenue_daily"], target, overrides)
     lease_model = simulate_lease(p, area, lease, target, code, target is not None)
@@ -487,6 +491,10 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
         "low_confidence_params": [], "param_defaults_used": defaulted,
         "recommendation": {
             "target_rent": target_rent, "ceiling_rent": r2(ceiling), "based_on_scenario": anchor_key,
+            # 与 TS 链路字段同构：保守档值单列作压力提示
+            "target_rent_conservative": r2(tgt_rents["pessimistic"]),
+            "ceiling_rent_conservative": r2(ceiling_conservative),
+            "conservative_scenario": "pessimistic",
             "gap_to_target": r2(p["monthly_rent"] - target_rent),
             "gap_to_ceiling": r2(p["monthly_rent"] - ceiling),
             "current_rent_ratio": r2(cur_ratio, 4),
@@ -1062,7 +1070,7 @@ site_core.py —— 实体门店选址评估核心引擎（纯标准库，无需
 用法：python site_core.py <命令> [参数]
 
 命令（前 6 个不需要任何 API Key，可离线跑）：
-  selftest     引擎自检，20 条断言
+  selftest     引擎自检，48 条断言
   finance      财务三档测算：保本 / 回本 / 极限租金 / 租期现金流
   crs          坐标系转换与偏移量
   veto         场地条件核查（只提醒，不裁决）
@@ -1103,7 +1111,18 @@ def main():
     ap.add_argument("--formats", help="自定义业态规则路径（默认 data/formats.json）")
     ap.add_argument("--text", help="rent 子命令：待识别的口语文本")
     a = ap.parse_args()
-    j = lambda p: json.load(open(p, encoding="utf-8-sig")) if p and os.path.exists(p) else {}
+    def j(v):
+        """参数入口：既接受文件路径，也接受内联 JSON 字符串。
+        原实现只认文件，内联 JSON 会静默返回 {}，
+        导致参数全部回退到默认值而不报错——跨链路契约测试时被抓到。"""
+        if not v:
+            return {}
+        if os.path.exists(v):
+            return json.load(open(v, encoding="utf-8-sig"))
+        try:
+            return json.loads(v)
+        except (ValueError, TypeError):
+            return {}
 
     if a.cmd == "selftest":
         sys.exit(selftest())

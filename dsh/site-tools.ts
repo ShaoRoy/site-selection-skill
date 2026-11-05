@@ -608,7 +608,7 @@ export interface RentCeiling {
   above_ceiling_at_breakeven: number
 }
 
-/** 建议租金：**谈判锚点取基准档**（不是跨档最保守）；保守档仅作压力下限并列展示；保本红线取全档最保守。 */
+/** 建议租金：**谈判锚点取基准档**（不是跨档最保守）；保本红线同取基准档（与锚点同口径）；保守档值单列作压力提示。 */
 export interface RentRecommendation {
   /** 谈判锚点：**基准档**的目标回本租金上限（常规经营预期下可接受的价格上限） */
   target_rent: number
@@ -2966,7 +2966,7 @@ export const financialCalcTool = defineTool({
           required: true,
           additionalProperties: false,
           description:
-            '建议租金。target_rent 是谈判锚点（按基准档），target_rent_conservative 是压力测试下限（保守档，仅作风险提示），ceiling_rent 是不可越过的保本红线（取全档最保守）。',
+            '建议租金。target_rent 是谈判锚点（按基准档），target_rent_conservative 是压力测试下限（保守档，仅作风险提示），ceiling_rent 是保本红线（取基准档，与谈判锚点同口径），ceiling_rent_conservative 取全档最保守（仅作压力提示）。',
           properties: {
             target_rent: {
               type: 'number', required: true,

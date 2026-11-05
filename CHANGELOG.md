@@ -1,3 +1,98 @@
+## 2.10.27
+
+### 统一 TS / Python 双引擎口径，并新增跨链路契约测试
+
+前 5 轮反复出问题的共同结构：**同一口径在 N 份副本 + 2 套引擎 + 十几处自然语言里各写一遍，靠人工同步**。
+逐处改文本无法收敛——每轮审查换一个观察角度就照见新的一层。本版用一条自动化契约测试把它钉住。
+
+### P0-1 `ceiling_rent` 同名不同义，风险结论符号相反
+
+同一组参数（扬韬广场 CASE-A）：
+
+| 字段 | Python（旧） | TS | 后果 |
+|---|---|---|---|
+| `ceiling_rent` | **184,285.71**（`min(三档)`） | **490,000**（base 档） | 差 2.66 倍 |
+| `gap_to_ceiling` | **+105,714.29**（租金已超红线） | **−200,000**（尚有 20 万空间） | **符号相反** |
+| `rent_ratio_verdict` | `ok` | `healthy` | 枚举串不同 |
+| `ceiling_rent_conservative` | 不存在 | 184,285.71 | 结构不同 |
+| `target_rent_conservative` | 不存在 | 65,238.1 | 结构不同 |
+
+**修法（方案 A，主红线与主锚点同口径取基准档）**：
+
+v2.10.8 把谈判锚点从保守档改为基准档，理由是「旧口径报需降 77%，与同报告租售比健康、回本优秀自相矛盾」。
+同理，若主保本红线取全档最保守 184,286，则当前租金 290,000 已超红线，报告却判「健康、无需降」——**同一类自相矛盾**。
+因此主 `ceiling_rent` 与主锚点一致取 **base 档**，保守情景值以 `ceiling_rent_conservative` 单列作风险提示。
+
+`scripts/site_core.py` 改动：
+
+```python
+ceiling = per["base"]["max_rent_breakeven"]
+ceiling_conservative = min(per[k]["max_rent_breakeven"] for k in SCENARIOS)
+```
+
+`recommendation` 新增 `target_rent_conservative` / `ceiling_rent_conservative` / `conservative_scenario`，
+租售比枚举 `ok` → `healthy`（与 TS 对齐）。
+
+修后 CASE-A 两边完全一致：
+
+```
+target_rent=365000  based_on_scenario="base"
+ceiling_rent=490000  ceiling_rent_conservative=184285.71
+gap_to_ceiling=-200000  gap_to_target=-75000
+rent_ratio_verdict="healthy"  current_rent_ratio=0.0967
+```
+
+### P0-2 修 TS 注释（计算一行未动）
+
+`site-tools.ts:2969` 原写「`ceiling_rent` 是不可越过的保本红线（取全档最保守）」，
+但 2215 行取的是 base 档——注释与实现矛盾。已改为「取基准档，与谈判锚点同口径；
+`ceiling_rent_conservative` 取全档最保守，仅作压力提示」。`site-tools.ts:611` 接口注释同步。
+
+### P0-3 新增跨链路契约测试 `tools/test-parity.mjs`（本版最关键）
+
+两组用例：CASE-A（扬韬真实参数）、CASE-B（selftest 内置参数）。
+两边各真跑一遍，逐字段比对 **78 项**：
+
+- `recommendation` 12 个字段（数值 + 枚举）
+- `per_scenario.{base,pessimistic,optimistic}` × 9 个字段
+
+设计要点：
+
+- 纯展示字段（`rent_ratio_hint`、`formula_trace`、`assumption_ledger` 等）**允许单边存在**，不误报
+- 数值容差 `0.02`
+- **不拿 `probe.json` 当基准**——那是渲染链序列化后的舍入值，会误报
+- TS 入口探测 `src/` 与 `dsh/` 两种布局；Python 入口探测 `scripts/` 与回退到 peer dist
+- TS 依赖缺失时**明确报错并给出修复命令**，不静默跳过
+
+已接入 `package.json` 的 `test`（4 份），`npm test` 现输出：
+冒烟 `13/13` + `parity: 78/78 PASS`。
+
+### P1-4 顺带修掉的两处
+
+**① CLI 的 `--params` 只认文件路径**：原实现 `j = lambda p: json.load(open(p)) if os.path.exists(p) else {}`
+——传内联 JSON 会静默返回 `{}`，参数全部回退默认值，**不报错**。
+契约测试第一次跑就撞上（Python 侧 revenue 240,000 vs TS 3,000,000）。已改为同时支持文件与内联 JSON。
+
+**② 帮助文本滞后**：`site_core.py` CLI 帮助「selftest 引擎自检，20 条断言」→ 48。
+
+**③ 更正 v2.10.26 的错误结论**：该版写「`ceiling_rent` 不动——红线本就该取全档最保守，这部分原本是对的」，
+当时仅核对 Python 链路、未与 TS 交叉验证。已更正。
+
+### 验证
+
+```
+parity: 78/78 PASS（TS ↔ Python 口径一致）
+selftest 48/48 ｜ TS 236 断言 ｜ typecheck 0 error ｜ 冒烟 13/13
+哈希校验：site_core.py ×3 / site-tools.ts ×4 / report.mjs ×3 / test-parity.mjs ×3 / package.json ×3 全部一致
+```
+
+### 为什么这样能终结循环
+
+契约测试把「两套引擎同名数值字段必须相等」变成机器可判定的不变量。
+今后任何一处口径漂移会在第一次 `npm test` 就红，不再依赖人工逐轮发现。
+
+---
+
 ## 2.10.26
 
 ### 🔴 Python 链路锚点未修：两条链路结论差 1.56 倍
@@ -33,7 +128,7 @@ anchor_key = min(tgt_rents, key=tgt_rents.get)              ← 实现仍取保�
 | `site_core.py:424` | `anchor_key = min(...)` → `anchor_key = "base"`，并注释说明为何不取 min |
 | `site_core.py:465` | 台账 formula 改「基准档的极限租金·目标回本（保守档另列作压力下限，不参与取值）」，substituted 只列 base 与保守档用途 |
 | `site_core.py:811` | 断言改 `chk("锚点取基准档 290361.11", ...)` |
-| `ceiling_rent` | **不动**——红线本就该取全档最保守（270,821.43），这部分原本是对的 |
+| `ceiling_rent` | 当时仅核对 Python 链路，未与 TS 交叉验证；**v2.10.27 统一为基准档** |
 
 修后实测：
 
