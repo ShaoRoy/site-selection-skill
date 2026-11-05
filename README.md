@@ -8,7 +8,7 @@
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
 
-> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.24
+> 给 AI Agent 用的连锁餐饮 / 实体门店选址评估能力包 · v2.10.25
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
 
@@ -18,8 +18,8 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.24.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.24.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.25.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.2 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.25.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 1.1 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -30,10 +30,10 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 ---
 
 ## 报告示例
-<p align="center">
-<img width="840" alt="选址智能分析报告示例" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
-</p>
 
+![选址报告 - 商圈步行圈与竞品分布](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-2.jpg)
+
+![选址报告 - 地图竞品分析](https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-1.jpg)
 
 ---
 

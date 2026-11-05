@@ -409,7 +409,9 @@ function financeSection(md) {
   if (rec) {
     const verdict = { healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict
     out.push('**建议租金（供谈判使用）**', '')
-      out.push('> 取值方式：基准/保守/乐观三档各算一遍，取其中**最保守**的那个——即使按最差情况算，也不会亏。', '')
+      out.push('> 取值方式：**谈判锚点取基准档**。保守档不参与取锚点，'
+        + '它只是压力测试下的下限，单独列出供风险参考——'
+        + '拿压力测试值出价等于按最坏情况要价，谈不成。', '')
     out.push('| 项 | 值 |', '| --- | --- |')
     if (rec.anchor_unreachable) {
       out.push(`| 谈判锚点 | **不可达**（即便零租金，${rec.based_on_scenario} 档也达不到目标回本） |`)
@@ -618,6 +620,10 @@ export function buildReport(data, profile) {
     for (const w of dq.warnings ?? []) md.push(`> - ${w}`)
     md.push('')
   }
+
+  // 指引：白话表排在最下方，必须让读者在开头就知道它存在
+  md.push('> 看不惯行业黑话的话，**文末《附：白话版》**有 24 条术语对照表；'
+    + '内文重要行也已就地注成「原说法 —— 大白话」。', '')
 
   md.push('## 1. 数据质量', '', '| 项 | 值 |', '| --- | --- |')
   md.push(`| 原始 POI | ${num(d.raw)} |`)
@@ -875,7 +881,7 @@ export function buildReport(data, profile) {
     md.push('## 附录：计算口径（每个数字怎么来的）', '')
     md.push('> 参数搞错时，看这张表最快——每行都给了公式和本次代入的数值。', '')
   md.push('> 表里的术语：**成本因子**＝保守/乐观档对成本的缩放倍数（基准档就是 1，不放不缩）；'
-    + '**跨档取最保守**＝基准/保守/乐观三档各算一遍，取其中最难过的那个当结论，'
+    + '**为何锚点用基准档**＝三档各算一遍，但谈判只能拿基准档出价；保守档是风险提醒，'
     + '宁可按最差情况准备。', '')
     md.push('| 组 | 指标 | 计算口径 | 本次代入 | 结果 |', '| --- | --- | --- | --- | --- |')
     for (const r of trace) {
@@ -1061,7 +1067,7 @@ ${data.finance.recommendation ? (() => {
           ? `（当前租金 ${num(data.finance.rent_ceiling.current_rent)} 元/月，锚点 ${num(rec.target_rent)} 元/月，`
             + `安全余量占锚点 ${(Math.abs(rec.rent_headroom_pct) * 100).toFixed(0)}%）`
           : '')
-  return `<h3 style="font-size:15px;margin:18px 0 6px">建议租金（跨档取最保守，供谈判使用）</h3>
+  return `<h3 style="font-size:15px;margin:18px 0 6px">建议租金（锚点取基准档，保守档仅作压力下限）</h3>
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>谈判锚点</td><td>${rec.anchor_unreachable ? '<b>不可达</b>（即便零租金，压力测试档也达不到目标回本）' : `<b>${num(rec.target_rent)}</b> 元/月（取自 ${rec.based_on_scenario} 档）`}</td></tr>
 <tr><td>保本红线</td><td>${num(rec.ceiling_rent)} 元/月</td></tr>
@@ -1070,6 +1076,7 @@ ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保
 <tr><td>当前租售比</td><td>${(rec.current_rent_ratio * 100).toFixed(1)}%（${esc(rec.rent_ratio_label)}健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）→ <b>${esc({ healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict)}</b></td></tr>
 </table>
 <p style="color:#666">${esc(rec.rent_ratio_hint)}</p>
+<p style="color:#666"><b>取值方式</b>：谈判锚点取<b>基准档</b>。保守档不参与取锚点，它只是压力测试下的下限，单独列出供风险参考——拿压力测试值出价等于按最坏情况要价，谈不成。</p>
 <p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555">锚点不是「砍到这个价就签」，而是「高于这个价，压力测试下回本就不成立」。${(() => {
       const cur = rec.target_rent + rec.gap_to_target
       const pct = cur > 0 ? rec.gap_to_target / cur : 0
@@ -1394,6 +1401,8 @@ ${data._staticMapSvg
 ${data._staticMapSvg ? '<p style="color:#777;font-size:12px;margin:6px 0 0">地图已内嵌瓦片，<b>打印 / 存 PDF 会一并保留</b>；圈层按主圈绘制。</p>' : ''}
 
 
+<p style="color:#666;font-size:13px;margin:10px 0 0">看不惯行业黑话的话，<b>文末《附：白话版》</b>有 24 条术语对照表；内文重要行也已就地注成「原说法 —— 大白话」。</p>
+
 <h2>1. 数据质量</h2><table>
 <tr><td>原始 POI</td><td>${num(d.raw)}</td></tr>
 <tr><td>去重后有效</td><td>${num(d.effective)}</td></tr>
@@ -1453,6 +1462,8 @@ ${auditHtml}
 ${bmHtml}
 ${traceHtml}
 <blockquote>${(inner.source === 'valhalla' || inner.source === 'osrm') ? '等时圈为本地路网计算，已去除沿主干道走廊的细长尖刺' : '等时圈为直线估算【估算】，遇江面/快速路会高估可达范围'}；外圈因范围过大不报份额。<br>
+
+<p style="color:#666;font-size:13px">表里的术语：<b>成本因子</b>＝保守/乐观档对成本的缩放倍数（基准档就是 1，不放不缩）；<b>为何锚点用基准档</b>＝三档各算一遍，但谈判只能拿基准档出价；保守档是风险提醒，不是出价依据。</p>
 
 <h2>附：看不懂的话先看这里（白话版）</h2>
 <p style="color:#666;font-size:13px;margin:6px 0 10px">这节不用记，遇到不懂的词回来查一眼就行。</p>

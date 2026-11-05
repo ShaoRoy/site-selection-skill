@@ -419,7 +419,7 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     per = {k: compute_scenario(p, k, target) for k in SCENARIOS}
     base = per["base"]
 
-    # 建议锚点：跨档取最保守
+    # 建议锚点：取基准档（保守档并列作压力下限，不参与取值）
     tgt_rents = {k: per[k]["max_rent_target"] for k in SCENARIOS}
     anchor_key = min(tgt_rents, key=tgt_rents.get)
     target_rent = tgt_rents[anchor_key]

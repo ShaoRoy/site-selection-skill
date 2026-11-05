@@ -65,7 +65,7 @@ const rev = await tool.execute({
 })
 check('反算：租金设为极限值后回本 = 36 月', near(rev.per_scenario.base.payback_static_months, 36, 0.15))
 
-// ── 3. 建议锚点：跨档取最保守（保守档最低）
+// ── 3. 建议锚点：取基准档；保守档仅作压力下限（v2.10.8 改）
 const rec = base.recommendation
 // 口径变更（v2.10.17）：锚点与红线按**基准档**，最保守档另作压力下限并列。
 // 理由：保守档是「营收↓15% 且 成本↑5%」双杀压力测试，拿它当谈判出价会让健康生意也报「需降 70%+」。

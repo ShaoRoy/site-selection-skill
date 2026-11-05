@@ -608,7 +608,7 @@ export interface RentCeiling {
   above_ceiling_at_breakeven: number
 }
 
-/** 建议租金：跨档取最保守值，作为谈判锚点与不可越过的红线。 */
+/** 建议租金：**谈判锚点取基准档**（不是跨档最保守）；保守档仅作压力下限并列展示；保本红线取全档最保守。 */
 export interface RentRecommendation {
   /** 谈判锚点：**基准档**的目标回本租金上限（常规经营预期下可接受的价格上限） */
   target_rent: number
@@ -633,7 +633,7 @@ export interface RentRecommendation {
   rent_vs_anchor_pct: number
   /** 当前租金 − 红线；正数 = 已越过保本线 */
   gap_to_ceiling: number
-  /** 锚点取自哪个情景（最保守的那个） */
+  /** 锚点取自哪个情景（当前固定为 base；保守档不参与取锚点） */
   based_on_scenario: string
   /** 当前租售比 = 当前租金 ÷ 基准档月营业额 */
   current_rent_ratio: number
@@ -2168,7 +2168,7 @@ function runFinancials(
     above_ceiling_at_breakeven: roundTo(values.monthly_rent - ceilingScenario.max_rent_breakeven, 2),
   }
 
-  // 建议租金：跨档取最保守值 —— 谈判不能拿基准档的乐观值当锚点，
+  // 建议租金：谈判锚点取**基准档** —— 压力测试键不能拿来当出价（拿最坏情况谈不成），
   // 否则一遇到「营收 -15%、成本 +5%」的悲观情景就全盘推翻。
   const computed = requested.map((key) => ({ key, result: perScenario[key]! }))
   // 锚点按基准档：除非没算基准档，才退回首个情景
@@ -2453,7 +2453,7 @@ function runFinancials(
     { group: '财务', metric: '年化 ROI', formula: '月净利 × 12 ÷ 初始投入', substituted: `${n2(baseScene.net_profit)} × 12 ÷ ${n2(values.initial_investment)}`, result: pc(baseScene.roi) },
     { group: '租金', metric: '极限租金·保本', formula: '(月毛利 − 税费) ÷ 成本因子 − 人力 − 其他固定', substituted: `(${n2(grossProfitV)} − ${n2(taxV)}) ÷ ${costF} − ${n2(values.monthly_labor)} − ${n2(values.monthly_other_fixed)}`, result: n2(baseScene.max_rent_breakeven) },
     { group: '租金', metric: '极限租金·目标回本', formula: '(月毛利 − 税费 − 初始投入 ÷ 目标月数) ÷ 成本因子 − 人力 − 其他', substituted: `(${n2(grossProfitV)} − ${n2(taxV)} − ${n2(values.initial_investment)} ÷ ${target}) ÷ ${costF} − ${n2(values.monthly_labor)} − ${n2(values.monthly_other_fixed)}`, result: n2(baseScene.max_rent_target) },
-    { group: '租金', metric: '建议锚点', formula: 'min(各档极限租金·目标回本)，跨档取最保守', substituted: (['base', 'pessimistic', 'optimistic'] as const).filter((k) => perScenario[k] !== undefined).map((k) => `${k}=${n2(perScenario[k]!.max_rent_target)}`).join('，'), result: n2(recommendation.target_rent) },
+      { group: '租金', metric: '建议锚点', formula: '基准档的极限租金·目标回本（保守档另列作压力下限，不参与取值）', substituted: perScenario.base !== undefined ? `base 档 = ${n2(perScenario.base.max_rent_target)}`  + (perScenario.pessimistic !== undefined     ? `；保守档 ${n2(perScenario.pessimistic.max_rent_target)} 仅作压力下限，不参与取值` : '') : '—', result: n2(recommendation.target_rent) },
     { group: '租金', metric: '租售比', formula: '月租金 ÷ 月营业额', substituted: `${n2(values.monthly_rent)} ÷ ${n2(monthlyRevenueV)}`, result: pc(recommendation.current_rent_ratio) },
     { group: '租金', metric: '租期回本（月）', formula: '租金按年递增后，累计现金首次 ≥ 0 的月份', substituted: `租期 ${leaseModel.term_years} 年，年递增 ${pc(leaseModel.rent_escalation_pct)}，首次投入 −${n2(values.initial_investment)}`, result: leaseModel.payback_month > 0 ? `${leaseModel.payback_month}` : '租期内未回本' },
     { group: '比率', metric: '人力占营收', formula: '月人力 ÷ 月营业额', substituted: `${n2(values.monthly_labor)} ÷ ${n2(monthlyRevenueV)}`, result: pc(values.monthly_labor / (monthlyRevenueV || 1)) },
@@ -2582,7 +2582,7 @@ function formatFinancialReport(header: FinancialHeader, result: FinancialCalcRes
     rec.anchor_unreachable
       ? `建议租金：**锚点不可达**——即便租金为零，${rec.based_on_scenario} 档也达不到 ${ceiling.target_payback_months} 个月回本。`
         + `问题不在租金，在营收或初始投入，必须先重核参数或改变交易结构。`
-      : `建议租金：谈判锚点 ${fmt(rec.target_rent)} 元/月（取自 ${rec.based_on_scenario} 档，跨档最保守）`
+      : `建议租金：谈判锚点 ${fmt(rec.target_rent)} 元/月（取自 ${rec.based_on_scenario} 档；保守档另列作压力下限）`
         + `｜保本红线 ${fmt(rec.ceiling_rent)} 元/月`,
   )
   lines.push(
