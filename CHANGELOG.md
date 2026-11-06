@@ -1,3 +1,33 @@
+## 2.10.32
+
+### 开源协议变更：MIT → CC BY-NC 4.0（并同步最新 README）
+
+本项目由宽松的 MIT 协议改为**知识共享 署名-非商业性使用 4.0 国际（CC BY-NC 4.0）**，
+明确「可自由复制/分发/改编，但不得用于商业目的」。同时把 GitHub 上的最新 README 下拉同步进三包，
+版本号由 2.10.31（02 专家包为 2.10.28）统一收敛至 **2.10.32**。
+
+### 开源协议变更：MIT → CC BY-NC 4.0
+
+本项目由宽松的 MIT 协议改为**知识共享 署名-非商业性使用 4.0 国际（CC BY-NC 4.0）**，
+明确「可自由复制/分发/改编，但不得用于商业目的」。
+
+**改动清单**
+
+| 层 | 改动 |
+|---|---|
+| LICENSE | 全文替换为 CC BY-NC 4.0 官方法律文本（含中文要点摘要与署名/非商业/免责说明） |
+| README 徽章 | license-MIT-blue → license-CC%20BY--NC%204.0-ef9421；License-MIT-lightgrey → License-CC%20BY--NC%204.0 |
+| README 段落 | 文末 [MIT](LICENSE) → [CC BY-NC 4.0](LICENSE) + 四条可/须/不可/商业授权说明 |
+| 元数据 | manifest.json / package.json / .codebuddy-plugin/plugin.json 的 "license" 统一为 "CC-BY-NC-4.0" |
+| 同步范围 | 01 技能包（dist/site-selection-skill/）、03 源码包（dist/site-selection/）、02 专家包技能副本（dist/wb-expert/skills/site-selection/）+ 仓库根；**02 专家包 plugin.json 版本仍冻结在 2.10.28** |
+
+**README 同步**
+
+本次同时把 GitHub 上的最新 README（徽章压成单行 <p>、关键词层、v2.10.31 版本标记）下拉覆盖三份源码副本，
+三份 README 哈希唯一 = 1（37024 字节）。
+
+> 注意：MIT 的历史条目（2.10.31 及以前）保留原文不改，作为变更留痕。
+> 商业使用需另行取得作者书面授权。
 ## 2.10.31
 
 ### 同步用户手动优化的 README（徽章 + 关键词层）

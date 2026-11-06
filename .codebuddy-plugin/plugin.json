@@ -1,6 +1,6 @@
 {
   "name": "site-selection-analyst",
-  "version": "2.10.31",
+  "version": "2.10.32",
   "description": "Structured site selection analyst for chain restaurants: competitive landscape, catchment grading, rent ceiling, payback and industry benchmark.",
   "author": {
     "name": "YG",
@@ -58,7 +58,7 @@
       "zh": "这个租金贵不贵？帮我算极限租金和回本周期"
     }
   ],
-  "license": "MIT",
+  "license": "CC-BY-NC-4.0",
   "keywords": [
     "选址",
     "餐饮",
