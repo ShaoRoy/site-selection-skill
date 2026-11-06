@@ -570,28 +570,7 @@ site-selection-skill/
 | 城市系数不同 | 上海相对广州：投资 ×1.15、租金 **×1.30**、客单价 ×1.20、客流 ×1.10。用广州参数套上海会低估租金压力 |
 | 本帮菜无专属参数 | 默认落到「中型正餐」24 月，需在 data/formats.json 加规则（见 CUSTOMIZE.md） |
 
-### 四、山东用户：基准库里只有青岛
-
-`ash
-# 1) 先查基准库有没有你的城市
-python scripts/site_core.py benchmark --city 济南 --format 鲁菜 --area 800 --rent-wan 8 --ticket 60
-# 返回 city_in_benchmark: false → 说明没有该城市数据，程序不会套用其他城市
-
-# 山东目前只有「青岛」在基准库里
-python scripts/site_core.py benchmark --city 青岛 --format 鲁菜 --area 800 --rent-wan 8 --ticket 60
-
-# 2) 网格扫描：行政区名用高德原名
-python scripts/grid-scan.py --city 济南 --district 历下 --dry-run
-
-# 3) 新增当地业态参数
-cp params/_template.json params/lu_cai.json
-# 改 payback_months / rent_ratio 区间 / gross_margin 区间
-`
-
-**基准库已覆盖的 19 个城市**：
-上海、广州、深圳、佛山、重庆、成都、杭州、武汉、苏州、西安、南京、长沙、天津、青岛、宁波、东莞、郑州、合肥、昆明
-
-### 五、未覆盖时的行为（明确告知，不静默兜底）
+### 四、未覆盖时的行为（明确告知，不静默兜底）
 
 | 情况 | 程序行为 |
 |---|---|
