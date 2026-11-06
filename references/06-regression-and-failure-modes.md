@@ -3,13 +3,18 @@
 > 用途：改完任何口径、模板、脚本后，照这份跑一遍确认没改坏。
 > 这是「评估-反馈闭环」的落点——每次踩过的坑都记在这里，不靠记忆。
 
-## 一、自动化基线（当前 v2.10.34）
+## 一、自动化基线（当前 v2.10.35）
 
 ```bash
 # 技能包内可直接跑（零依赖、离线）
 python scripts/site_core.py selftest        # 48/48
 python scripts/grid-scan.py --self-test     # 17/17（评分纯函数，不联网、不需要 Key）
-node tools/test-grid.mjs                    # 30/30（仅源码包，技能包不含 tools/）
+
+# 源码包内：网格链路要按顺序自举（含测试夹具，0 次接口调用）
+node tools/fixtures/make-grid-pool.mjs                                    # 生成 out/grid 夹具
+python scripts/grid-scan.py --city 广州 --district 天河 --rescore          # 生成候选表 + sidecar
+node tools/test-grid.mjs                                                  # 30/30
+node tools/check-text.mjs                                                 # 发布文本控制字符 = 0
 
 # 源码包内跑全量
 cd <源码包>

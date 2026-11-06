@@ -1,3 +1,57 @@
+## 2.10.35
+
+### P0-1 发布文档控制字符污染修复
+
+v2.10.34 的 `CHANGELOG.md`（三包 + 线上）与主 `README.md`（三包 + 项目根 + 线上）里混入了不可见控制字符，
+来源是生成时 `x 被当成转义序列：`` `f `` → U+000C、`` `t `` → TAB、`` `a `` → U+0007、`` `r `` → 孤立 CR。
+后果是行内代码被吃掉首字符——`fin-v2` 显示成 `in-v2`、`total` 显示成 `otal`、`adname` 显示成 `dname`。
+
+**修复范围**
+
+| 文件 | 命中 | 处理 |
+|---|---|---|
+| `CHANGELOG.md` × 4 份 | 12 处（FF 1 / 孤立 CR 5 / TAB 6，含历史段 1 处） | 逐处还原为「反引号 + 字母」，2.10.34 段按原意重建行内代码标记与 ``` 围栏 |
+| 主 `README.md` × 5 份 | 2 处（BEL 1 / TAB 1） | `adname`、`tea_house.json` 恢复代码标记 |
+| `docs/TEST-REGRESSION.md` × 2 份 | 2 处（BEL 1 / TAB 1） | `arg()`、`tiles/` 恢复代码标记 |
+
+> 复核工单只列了 CHANGELOG 与主 README；实测 `docs/TEST-REGRESSION.md` 也有同类污染（BEL + TAB），一并修掉。
+
+**新增护栏**：`tools/check-text.mjs`（仅 03 源码包）扫描全部 `.md/.json/.py/.mjs/.ts/.yml`，
+命中 `U+0000–0008 / 000B / 000C / 000E–001F / 007F` 或孤立 CR 即打印路径+offset 并 `exit 1`；
+TAB 单独列出数量供人工核对。已接入 CI，未设 `continue-on-error`。
+
+### P0-2 网格测试链路自举 + CI 覆盖补齐
+
+**问题**：`06-regression` 与 `TEST-REPORT` 都把 `test-grid.mjs 30/30` 列为基线，
+但 CI 从未执行过它；且干净检出下 `index-dashboard.mjs` 写 `out/index.md` 前不建目录，必报 ENOENT。
+
+**修复**
+
+1. `tools/index-dashboard.mjs`：写文件前 `mkdirSync(OUT, { recursive: true })`（补 import）。
+   看板是首屏产物，不能因为 `out/` 没建就崩。
+2. 新增测试夹具 `tools/fixtures/make-grid-pool.mjs`（TEST-ONLY，仅 03 源码包）：
+   生成 `out/grid/_pool-广州-天河.json` 与 `registry.json`，锚点间距 > 2.5km、POI 撒在 500m 圆周，
+   自带「1km 内计数 == 设计值」自校验，不符即 `exit 1`。纯 Node 内建模块，不联网、不需要 Key。
+3. CI `test` job 按显式顺序接入三步（新增 `actions/setup-node`）：
+   ```
+   node tools/fixtures/make-grid-pool.mjs
+   python scripts/grid-scan.py --city 广州 --district 天河 --rescore
+   node tools/test-grid.mjs
+   ```
+   任一步非零即整 job 失败，无 `continue-on-error`、无 `|| true`。
+4. **不弱化断言**：`test-grid.mjs` 的 5 个 `check(..., false)`（缺数据时必须显式失败）保持原样，
+   末尾 `process.exitCode = 1` 保留。缺依赖就该红，这是设计。
+
+**验证**：从 03 包解压到全新空目录，按上述顺序执行 → `30/30 通过`、`exit 0`；
+候选分数与改前逐字节一致（岗顶 `rank_score=43.0808`），证明只动测试链、未动评分公式。
+
+### 版本
+
+2.10.34 → **2.10.35**（发布物修复 + CI/脚本变更，按发布硬规则递增）。
+
+> 遗留项：敏感度表按保守档取锚点（与主表 base 档锚点不一致）属财务口径问题，
+> 涉及双引擎 + parity，**未在本版处理**，待单独立项。
+
 ## 2.10.34
 
 ### 协议变更：CC BY-NC 4.0 → 作者自定义非商业许可
@@ -24,71 +78,72 @@ Skill / 专家包并免费分发」留有解释空间，自定义许可把这一
 
 ### 网格候选评分：三项缺陷修复 + 分数可回溯
 
-FORMULA_VERSION = grid-v1（财务侧 in-v2 未动）。
+`FORMULA_VERSION = grid-v1`（财务侧 `fin-v2` 未动）。
 
 **1. 量纲混用 → 双口径**
 
-原式把密度项（个/km²）、绝对计数项 (cof+ban)、无量纲比值项（职住比）直接加权相加，
-导致「只改半径，实际权重就漂移」：同一组原始计数下 adius=800 时配套项占 23.5%，
-adius=2000 时占 65.1%。
+原式把密度项（个/km²）、绝对计数项 `(cof+ban)`、无量纲比值项（职住比）直接加权相加，
+导致「只改半径，实际权重就漂移」：同一组原始计数下 `radius=800` 时配套项占 23.5%，
+`radius=2000` 时占 65.1%。
 
 现拆成两套口径：
 
-- **绝对口径** d_abs / p_abs：四项统一为密度后加权求和，不含任何批次统计量，
+- **绝对口径** `d_abs` / `p_abs`：四项统一为密度后加权求和，不含任何批次统计量，
   可跨批次、跨城市比较
-- **相对口径** demand_rel / pressure_rel / ank_score：本批 min-max 到 0~100，
-  仅用于本批排名。CSV 列名已从 	otal/demand/pressure 改为 ank_score/demand_rel/pressure_rel，
-  避免再被当成绝对值引用
+- **相对口径** `demand_rel` / `pressure_rel` / `rank_score`：本批 min-max 到 0~100，
+  仅用于本批排名。CSV 列名已从 `total/demand/pressure` 改为
+  `rank_score/demand_rel/pressure_rel`，避免再被当成绝对值引用
 
-职住比（写字楼÷住宅）是无量纲比值，降级为报告参考字段 job_housing_ratio，不再参与打分。
+职住比（写字楼÷住宅）是无量纲比值，降级为报告参考字段 `job_housing_ratio`，不再参与打分。
 
-**2. 	o100 退化分支符号错误**
+**2. `to100` 退化分支符号错误**
 
-全场同值时原返回 50，导致「所有候选都没有竞品」时 pressure=50 → 统一扣 `0.8×50=40 分，
-零竞争反被罚。现返回 `0。
+全场同值时原返回 `50`，导致「所有候选都没有竞品」时 `pressure=50` → 统一扣 `0.8×50=40` 分，
+零竞争反被罚。现返回 `0`。
 
 **3. 权重双份 → 单一来源**
 
-params/grid.json 此前"脚本不读"，实际权重是脚本内硬编码。现：
+`params/grid.json` 此前「脚本不读」，实际权重是脚本内硬编码。现：
 
-- grid-scan.py 新增 --params（默认指向 params/grid.json）
+- `grid-scan.py` 新增 `--params`（默认指向 `params/grid.json`）
 - 优先级：CLI 显式传值 > 配置文件；输出打印每项参数的实际来源
-- 文件缺失、JSON 非法、字段缺失、取值越界、weights 之和 ≠ 1 → **exit 1**，不静默回退
-- quota 段（daily_limit / warn_threshold / hard_limit / min_interval_s）同步打通
-- grid.json 升到 schema_version = 2，weights 四项改为密度口径键名
+- 文件缺失、JSON 非法、字段缺失、取值越界、`weights` 之和 ≠ 1 → **`exit 1`**，不静默回退
+- `quota` 段（`daily_limit` / `warn_threshold` / `hard_limit` / `min_interval_s`）同步打通
+- `grid.json` 升到 `schema_version = 2`，`weights` 四项改为密度口径键名
 
 **4. 分数可回溯**
 
-- CSV 新增 d_abs / p_abs / 四项密度 / 竞品密度 / job_housing_ratio / score_formula_version
-- 新增 sidecar candidates-<城市>-<区>.score.json：参数快照与来源、归一化基准（本批 min/max）、
+- CSV 新增 `d_abs` / `p_abs` / 四项密度 / 竞品密度 / `job_housing_ratio` / `score_formula_version`
+- 新增 sidecar `candidates-<城市>-<区>.score.json`：参数快照与来源、归一化基准（本批 min/max）、
   逐候选的密度值与加权贡献分解、公式文本
-- 文档 docs/GRID.md §4 给出真实候选的手算示例，与当次 CSV 逐位一致
+- 文档 `docs/GRID.md` §4 给出真实候选的手算示例，与当次 CSV 逐位一致
 - 统一标注 PROXY：POI 密度是代理指标，不是实测人流
 
 **5. 台账与测试收敛**
 
-- 02 专家包 CHANGELOG.md 缺失 2.10.29 / 2.10.30 / 2.10.31 三段 → 补齐，三份哈希唯一
-- eferences/06-regression-and-failure-modes.md 三份版本标注不一致（2.10.28 / 2.10.31）→
+- 02 专家包 `CHANGELOG.md` 缺失 `2.10.29` / `2.10.30` / `2.10.31` 三段 → 补齐，三份哈希唯一
+- `references/06-regression-and-failure-modes.md` 三份版本标注不一致（2.10.28 / 2.10.31）→
   统一为 v2.10.34，新增「网格候选评分」失败模式 6 条
-- 	ools/test-grid.mjs：
-  - 修 python 脚本路径（原从 	ools/ 找 grid-registry.py，实际在 scripts/，A/B 段恒失败）
+- `tools/test-grid.mjs`：
+  - 修 python 脚本路径（原从 `tools/` 找 `grid-registry.py`，实际在 `scripts/`，A/B 段恒失败）
   - E 段断言按新口径改写（不再锁死「存在 100」），新增零竞争与逐行复算断言
   - 新增 F 段 sidecar 断言：density×weight 复算、contrib 求和复算、按基准复算 rank_score
   - 看板断言兼容空态（不再要求本机必须有点位数据）
   - 断言总数 16 → **30**
-- scripts/grid-scan.py 新增 --self-test：17 条纯函数断言（退化分支 / 半径不漂移 /
+- `scripts/grid-scan.py` 新增 `--self-test`：17 条纯函数断言（退化分支 / 半径不漂移 /
   跨批次恒定 / 零竞争 / 复算 / 参数来源 / 旧缓存兼容），不联网、不需要 Key
-- CI 	est job 增加一条 python scripts/grid-scan.py --self-test
+- CI `test job` 增加一条 `python scripts/grid-scan.py --self-test`
 
 ### 验证
 
-`
+```
 grid-scan --self-test    17/17
 test-grid.mjs            30/30
 site_core.py selftest    48/48
 py_compile               0 错误
 三包副本哈希             逐文件唯一值 = 1（CHANGELOG / 06 已收敛）
-`
+```
+
 ## 2.10.33
 
 ### 同步用户手改的 README（两轮）+ 重打三包
@@ -1998,7 +2053,7 @@ CSV **必须存为 UTF-8**；GBK/UTF-16 会整表解析为空**且不报错**，
 - **.gitignore 同步进三个包**：原包内的忽略规则只有 13 行，缺 
 ode_modules/、
   dist/、secrets/；与项目根的同名文件不一致。现统一为一份 27 行的规则，
-  实测验证：survey/、secrets/、dist/upload/ 被忽略，	ools/、scripts/、SKILL.md 正常入库。
+  实测验证：survey/、secrets/、dist/upload/ 被忽略，`tools/`、scripts/、SKILL.md 正常入库。
 
 ---
 

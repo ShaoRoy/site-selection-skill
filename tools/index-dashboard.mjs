@@ -10,7 +10,7 @@
  *   node tools/index-dashboard.mjs --city 广州
  */
 
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const OUT = new URL('../out/', import.meta.url)
@@ -125,5 +125,7 @@ if (rows.length === 0) {
 md.push('')
 
 const target = new URL('index.md', OUT)
+// 干净检出（无 out/ 目录）时这里原本会 ENOENT —— 看板是首屏产物，不能因为目录没建就崩。
+mkdirSync(OUT, { recursive: true })
 writeFileSync(target, md.join('\n'), 'utf8')
 console.log(`已生成 ${fileURLToPath(target)}（${rows.length} 个点位${coverage ? '，含网格覆盖' : ''}）`)

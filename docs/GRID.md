@@ -137,8 +137,9 @@ rank_score   = 60.8586 − 22.2222 × 0.8                               = 43.080
 CSV 该行实测：`rank_score=43.0808, demand_rel=60.8586, pressure_rel=22.2222, d_abs=20.212678`
 —— 逐位一致；同样数字完整落在 sidecar `candidates-<城市>-<区>.score.json` 里。
 
-（上例用的是 `--rescore` 对合成快照的实跑结果，合成数据由 `_gen_synthetic_pool.py` 生成、
-自带「1km 内计数 == 设计值」自校验，用于在没有 Key 的环境里复现。）
+（上例用的是 `--rescore` 对合成快照的实跑结果，合成数据由 `tools/fixtures/make-grid-pool.mjs` 生成、
+自带「1km 内计数 == 设计值」自校验，用于在没有 Key 的环境里复现。顺序：
+`node tools/fixtures/make-grid-pool.mjs` → `python scripts/grid-scan.py --city 广州 --district 天河 --rescore` → `node tools/test-grid.mjs`。）
 
 ### 4.4 落盘与可回溯
 

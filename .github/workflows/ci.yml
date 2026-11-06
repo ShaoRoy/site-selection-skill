@@ -20,6 +20,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: 安装 Node（网格链路断言需要）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
@@ -28,11 +33,25 @@ jobs:
       - name: 语法检查（9 个脚本）
         run: python -m py_compile scripts/*.py
 
+      - name: 文本控制字符检查（防止行内代码被转义吃掉首字符）
+        run: node tools/check-text.mjs
+
       - name: 核心计算自检（48 条断言）
         run: python scripts/site_core.py selftest
 
       - name: 网格评分自检（17 条纯函数断言，不联网）
         run: python scripts/grid-scan.py --self-test
+
+      # 网格链路端到端：夹具 → 打分 → 30 条断言。
+      # 三步显式串起来，任一步非零即整 job 失败；不设 continue-on-error、不设 || true。
+      - name: 网格测试夹具（生成 out/grid，0 次接口调用）
+        run: node tools/fixtures/make-grid-pool.mjs
+
+      - name: 网格候选评分（--rescore，0 次接口调用）
+        run: python scripts/grid-scan.py --city 广州 --district 天河 --rescore
+
+      - name: 网格链路断言（30 条）
+        run: node tools/test-grid.mjs
 
       - name: 业态规则可加载
         run: python scripts/site_core.py formats

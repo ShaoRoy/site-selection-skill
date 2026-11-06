@@ -167,9 +167,9 @@ pnpm test && pnpm typecheck
 
 | 坑 | 症状 | 判据 |
 |---|---|---|
-| rg() 默认值是 
+| `arg()` 默认值是 
 ull 不是 undefined | 用 !== undefined 判参数是否传入 → 永远成立 → 默认路径变成 <cwd>/null，**底图全丢且不报错** | 跑一次不传 --tiles 的 render-static-map，看「N 张命中」是否 > 0 |
-| 瓦片目录约定 | 	iles/ 是 **probe 所在目录的兄弟**，不是 probe 的兄弟：out/点位/probe.json → out/tiles/ | 同上 |
+| 瓦片目录约定 | `tiles/` 是 **probe 所在目录的兄弟**，不是 probe 的兄弟：out/点位/probe.json → out/tiles/ | 同上 |
 | 自动缩放会换 zoom | 同一份数据，圈层跨度一变，zoom 从 16 变 17，缓存里没这层就等于没图 | 看「瓦片 N 张命中」是否为 0 |
 | CSV 编码 | GBK/UTF-16 整表解析为空**不报错** | 财务参数是否全回落默认值 |
 | 业态码来源 | 从调研表 meta.format_code 读，**不是**从 profiles 读 | 只换档案不换表 → 业务判读完全不变 |
