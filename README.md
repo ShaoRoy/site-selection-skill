@@ -16,8 +16,8 @@
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.32.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.19 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.32.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB（02 专家包已同步至 2.10.32）|
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.33.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.19 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.33.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB（02 专家包已同步至 2.10.33）|
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -585,7 +585,7 @@ site-selection-skill/
 <p>
   <strong>关键词</strong>：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告
 </p>
-> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.32
+> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.33
 >
 > 内置 **19 城 × 48 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。
