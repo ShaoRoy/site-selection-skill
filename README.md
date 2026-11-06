@@ -1,11 +1,11 @@
 # 选址智能分析 Skill
 
-<p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<img alt="tests" src="https://img.shields.io/badge/tests-234%20passing-brightgreen?style=flat-square">&nbsp;<a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-CC%20BY--NC%204.0-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="#安装"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="LICENSE"><img alt="License CC BY-NC 4.0" src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey?style=flat-square"></a>&nbsp;<a href="data/benchmarks.json"><img alt="Benchmark 19城 × 48业态" src="https://img.shields.io/badge/Benchmark-19%E5%9F%8E%20%C3%97%2048%E4%B8%9A%E6%80%81-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<img alt="Offline 零 Key 可跑" src="https://img.shields.io/badge/Offline-%E9%9B%B6%20Key%20%E5%8F%AF%E8%B7%91-4c1?style=flat-square">&nbsp;<a href="references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
+<p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<img alt="tests" src="https://img.shields.io/badge/tests-234%20passing-brightgreen?style=flat-square">&nbsp;<a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="#安装"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="LICENSE"><img alt="License Custom NonCommercial" src="https://img.shields.io/badge/License-Custom%20NonCommercial-lightgrey?style=flat-square"></a>&nbsp;<a href="data/benchmarks.json"><img alt="Benchmark 19城 × 48业态" src="https://img.shields.io/badge/Benchmark-19%E5%9F%8E%20%C3%97%2048%E4%B8%9A%E6%80%81-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<img alt="Offline 零 Key 可跑" src="https://img.shields.io/badge/Offline-%E9%9B%B6%20Key%20%E5%8F%AF%E8%B7%91-4c1?style=flat-square">&nbsp;<a href="references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
 
 ## 🧑‍💻 适用人群
 
 - **开店创业者**：第一次选址，想知道这个铺位到底值多少钱
-- **连锁拓展**：批量评估候选点位，需要统一口径、可横向对比
+- **连锁拓展**：批量评估候选点位，需要统一口径——跨批次/跨城市比绝对密度分 `d_abs`，同批排名看 `rank_score`（后者只在本批有效）
 - **商业地产 / 招商**：给商户做点位可行性说明
 - **GIS / 数据分析师**：需要一套可复核、可接入自己数据源的选址计算框架
 - **AI Agent 开发者**：想给自己的 Agent 挂一个选址能力
@@ -16,8 +16,8 @@
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.33.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.19 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.33.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB（02 专家包已同步至 2.10.33）|
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.34.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.19 MB |
+| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.34.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB（02 专家包已同步至 2.10.34）|
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -585,7 +585,7 @@ site-selection-skill/
 <p>
   <strong>关键词</strong>：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告
 </p>
-> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.33
+> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.34
 >
 > 内置 **19 城 × 48 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。
@@ -615,10 +615,10 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 ## License
 
-[CC BY-NC 4.0](LICENSE) · Creative Commons Attribution-NonCommercial 4.0 International
+[Custom NonCommercial License](LICENSE) · 作者自定义非商业许可（**非 OSI 开源许可**，不适用任何 Creative Commons 许可）
 
-- **可以**：复制、分发、改编、二次开发（含修改后发布）
-- **必须**：署名（注明来源本项目与作者 YG）+ 附协议链接 + 说明是否修改
-- **不可**：任何商业用途（付费产品、商业 SaaS、外包/项目交付、企业内部经营性系统）
-- 商业授权请联系作者另行协商
-- 协议全文：https://creativecommons.org/licenses/by-nc/4.0/legalcode
+- **可以**：阅读、学习、本地运行、修改与二次开发；分享原仓库链接或原样转发原始发布包；把本作品重新打包成 Skill / 插件 / 专家包 / 模板并**免费**分发
+- **必须**：完整保留 LICENSE 全文、版权声明与联系方式；署名 Copyright (c) 2026 ShaoRoy 并注明来源项目与原始仓库链接；如作过修改须标注「已修改」
+- **禁止**：一切商业性使用——出售、付费产品、付费 Skill / 专家包 / 插件、订阅服务、商业 SaaS、对外 API、收费咨询 / 外包 / 项目交付、企业内部经营性系统、广告或流量变现
+- 商业授权须事先取得作者**书面**许可（另有协商条款）
+- 协议全文见 [LICENSE](LICENSE)

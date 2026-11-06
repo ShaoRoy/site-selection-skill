@@ -31,6 +31,9 @@ jobs:
       - name: 核心计算自检（48 条断言）
         run: python scripts/site_core.py selftest
 
+      - name: 网格评分自检（17 条纯函数断言，不联网）
+        run: python scripts/grid-scan.py --self-test
+
       - name: 业态规则可加载
         run: python scripts/site_core.py formats
 

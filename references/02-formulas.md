@@ -175,3 +175,68 @@
 2. 任何公式改动必须升 `FORMULA_VERSION`（当前 `fin-v2`）
 3. 缺省参数必须进 `assumption_ledger`，不许静默兜底
 4. 代理指标必须标「代理」，不得当成实测
+
+---
+
+## 9. 网格候选评分（`GRID_FORMULA_VERSION = grid-v1`）
+
+> 本节只覆盖「第 1 筛：网格扫描给候选排序」这条链路。
+> **财务侧的 `FORMULA_VERSION = fin-v2` 不受本节影响，两套版本号分别演进，不要互相覆盖。**
+
+网格评分是**双口径**，各有边界，不可混用。
+
+### 9.1 绝对口径 `d_abs` / `p_abs`（可跨批次、跨城市比较）
+
+四项统一为密度（个/km²）后各自乘权重求和；公式里不含任何批次统计量。
+
+```
+area_km2     = π × (radius_m / 1000)²
+住宅密度 d1  = 住宅区 POI 数 ÷ area_km2
+办公密度 d2  = 写字楼 POI 数 ÷ area_km2
+咖啡密度 d3  = 咖啡   POI 数 ÷ area_km2
+配套密度 d4  = (咖啡 + 银行) POI 数 ÷ area_km2
+
+d_abs = w1×d1 + w2×d2 + w3×d3 + w4×d4     （默认 w = 0.30 / 0.20 / 0.25 / 0.25，Σw = 1）
+p_abs = 竞品 POI 数 ÷ area_km2
+```
+
+**为什么不用职住比**：职住比（写字楼 ÷ 住宅）是无量纲比值。与三个密度项直接相加，
+权重会随半径漂移——同一组原始计数下，`radius=800` 时配套项占 23.5%，
+`radius=2000` 时占 65.1%。改半径本应只改统计范围，不该改模型。
+故 `grid-v1` 起职住比降级为报告参考字段（`job_housing_ratio` 仍输出），不进 `d_abs`。
+
+### 9.2 相对口径 `demand_rel` / `pressure_rel` / `rank_score`（仅供本批排名）
+
+```
+demand_rel   = (d_abs - min(d_abs)) / (max(d_abs) - min(d_abs)) × 100
+pressure_rel = (p_abs - min(p_abs)) / (max(p_abs) - min(p_abs)) × 100
+rank_score   = demand_rel - pressure_rel × k        （k 默认 0.8，小店 0.4）
+```
+
+- `demand_rel` / `pressure_rel` 的 `min` / `max` 取自**本批次**，因此 `rank_score` 只能同批比较。
+  跨批次、跨城市比较请用 `d_abs` / `p_abs`。
+- **退化分支**：本批全场同值（含「所有候选竞品数都是 0」）时返回 `0`，不返回 `50`。
+  旧版返回 50 会让零竞争统一扣 `0.8×50=40` 分，属符号错误。
+- 分档按排名：Top 10% = A，Top 33% = B，其余 C。
+
+### 9.3 可回溯要求（缺一条即视为未完成）
+
+每个候选必须能在**不看脚本**的前提下纸上复算还原 `rank_score`：
+
+| 必需项 | 落点 |
+|---|---|
+| 四项原始计数 + 竞品计数 | CSV 列 `residential/office/coffee/bank/competitor` |
+| 四项密度 + 竞品密度 | CSV 列 `*_density` |
+| 四项加权贡献 | sidecar `candidates[].contrib` |
+| `d_abs` / `p_abs` | CSV 列 + sidecar |
+| 归一化基准（本批 min/max） | sidecar `normalization` |
+| 生效参数快照与来源（radius / k / weights） | sidecar `param_sources` + 终端输出 |
+| 公式版本 | CSV 列 `score_formula_version` + sidecar |
+
+### 9.4 版本纪律
+
+- 改权重、改密度项定义、改归一化方式、改退化分支 → **必须升 `grid-v1` 到下一版**，
+  并同步 `params/grid.json` 的 `schema_version`（当前 2）。
+- `params/grid.json` 字段缺失、取值非法、`weights` 之和不等于 1 → 脚本 `exit 1`。
+  禁止静默回退硬编码默认值。
+- 手算示例与实测输出必须落在 `docs/GRID.md` §4.3，且与当次 CSV 逐位一致。

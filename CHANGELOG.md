@@ -1,3 +1,94 @@
+## 2.10.34
+
+### 协议变更：CC BY-NC 4.0 → 作者自定义非商业许可
+
+MIT → CC BY-NC 4.0 之后，进一步改为**作者自定义的「非商业许可」**（非 OSI 开源许可，
+不适用任何 Creative Commons 许可）。改动理由：CC 系列许可对「能否把本作品重新打包成
+Skill / 专家包并免费分发」留有解释空间，自定义许可把这一条明确写死。
+
+**授权口径**
+
+| 类别 | 内容 |
+|---|---|
+| 可以 | 阅读、学习、本地运行、修改与二次开发；分享原仓库链接或原样转发原始发布包；重新打包成 Skill / 插件 / 专家包 / 模板并**免费**分发 |
+| 必须 | 完整保留 LICENSE 全文、版权声明与联系方式；署名 `Copyright (c) 2026 ShaoRoy` 并注明来源项目与仓库链接；如作过修改须标注「已修改」 |
+| 禁止 | 一切商业性使用：出售、付费产品、付费 Skill / 专家包 / 插件、订阅、商业 SaaS、对外 API、收费咨询 / 外包 / 项目交付、企业内部经营性系统、广告或流量变现 |
+| 例外 | 商业授权须事先取得作者书面许可 |
+
+**落位**
+
+- `LICENSE` 换为自定义非商业许可全文（含中文条款与英文摘要），四份副本哈希唯一
+- README 两处徽章改为 `license-Custom NonCommercial`，文末 `## License` 段重写
+- `manifest.json` / `package.json` / `.codebuddy-plugin/plugin.json` 的 `license`
+  统一为 SPDX 自定义标识 `LicenseRef-Custom-NonCommercial`
+
+### 网格候选评分：三项缺陷修复 + 分数可回溯
+
+FORMULA_VERSION = grid-v1（财务侧 in-v2 未动）。
+
+**1. 量纲混用 → 双口径**
+
+原式把密度项（个/km²）、绝对计数项 (cof+ban)、无量纲比值项（职住比）直接加权相加，
+导致「只改半径，实际权重就漂移」：同一组原始计数下 adius=800 时配套项占 23.5%，
+adius=2000 时占 65.1%。
+
+现拆成两套口径：
+
+- **绝对口径** d_abs / p_abs：四项统一为密度后加权求和，不含任何批次统计量，
+  可跨批次、跨城市比较
+- **相对口径** demand_rel / pressure_rel / ank_score：本批 min-max 到 0~100，
+  仅用于本批排名。CSV 列名已从 	otal/demand/pressure 改为 ank_score/demand_rel/pressure_rel，
+  避免再被当成绝对值引用
+
+职住比（写字楼÷住宅）是无量纲比值，降级为报告参考字段 job_housing_ratio，不再参与打分。
+
+**2. 	o100 退化分支符号错误**
+
+全场同值时原返回 50，导致「所有候选都没有竞品」时 pressure=50 → 统一扣 `0.8×50=40 分，
+零竞争反被罚。现返回 `0。
+
+**3. 权重双份 → 单一来源**
+
+params/grid.json 此前"脚本不读"，实际权重是脚本内硬编码。现：
+
+- grid-scan.py 新增 --params（默认指向 params/grid.json）
+- 优先级：CLI 显式传值 > 配置文件；输出打印每项参数的实际来源
+- 文件缺失、JSON 非法、字段缺失、取值越界、weights 之和 ≠ 1 → **exit 1**，不静默回退
+- quota 段（daily_limit / warn_threshold / hard_limit / min_interval_s）同步打通
+- grid.json 升到 schema_version = 2，weights 四项改为密度口径键名
+
+**4. 分数可回溯**
+
+- CSV 新增 d_abs / p_abs / 四项密度 / 竞品密度 / job_housing_ratio / score_formula_version
+- 新增 sidecar candidates-<城市>-<区>.score.json：参数快照与来源、归一化基准（本批 min/max）、
+  逐候选的密度值与加权贡献分解、公式文本
+- 文档 docs/GRID.md §4 给出真实候选的手算示例，与当次 CSV 逐位一致
+- 统一标注 PROXY：POI 密度是代理指标，不是实测人流
+
+**5. 台账与测试收敛**
+
+- 02 专家包 CHANGELOG.md 缺失 2.10.29 / 2.10.30 / 2.10.31 三段 → 补齐，三份哈希唯一
+- eferences/06-regression-and-failure-modes.md 三份版本标注不一致（2.10.28 / 2.10.31）→
+  统一为 v2.10.34，新增「网格候选评分」失败模式 6 条
+- 	ools/test-grid.mjs：
+  - 修 python 脚本路径（原从 	ools/ 找 grid-registry.py，实际在 scripts/，A/B 段恒失败）
+  - E 段断言按新口径改写（不再锁死「存在 100」），新增零竞争与逐行复算断言
+  - 新增 F 段 sidecar 断言：density×weight 复算、contrib 求和复算、按基准复算 rank_score
+  - 看板断言兼容空态（不再要求本机必须有点位数据）
+  - 断言总数 16 → **30**
+- scripts/grid-scan.py 新增 --self-test：17 条纯函数断言（退化分支 / 半径不漂移 /
+  跨批次恒定 / 零竞争 / 复算 / 参数来源 / 旧缓存兼容），不联网、不需要 Key
+- CI 	est job 增加一条 python scripts/grid-scan.py --self-test
+
+### 验证
+
+`
+grid-scan --self-test    17/17
+test-grid.mjs            30/30
+site_core.py selftest    48/48
+py_compile               0 错误
+三包副本哈希             逐文件唯一值 = 1（CHANGELOG / 06 已收敛）
+`
 ## 2.10.33
 
 ### 同步用户手改的 README（两轮）+ 重打三包
