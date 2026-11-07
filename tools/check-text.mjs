@@ -47,11 +47,11 @@ const EXPECTED_BADGES = 14
  */
 const DOCS_WHITELIST = new Set([
   'docs/SKILL-FULL.md@L33',
-  'docs/未处理事项.md@L12',
-  'docs/未处理事项.md@L13',
-  'docs/未处理事项.md@L23',
-  'docs/未处理事项.md@L33',
-  'docs/未处理事项.md@L55',
+  'docs/未处理事项.md@L29',
+  'docs/未处理事项.md@L30',
+  'docs/未处理事项.md@L40',
+  'docs/未处理事项.md@L50',
+  'docs/未处理事项.md@L72',
 ])
 
 function walk(dir, acc = []) {
