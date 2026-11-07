@@ -168,5 +168,5 @@ jobs:
             @deepseek-ai/dsh-tools@^0.1.0-rc.7 \
             @deepseek-ai/cordis@^4.0.1
 
-      - name: 契约测试（78 项字段比对）
+      - name: 契约测试（136 项字段比对）
         run: node tools/test-parity.mjs
