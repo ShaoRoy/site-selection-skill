@@ -40,6 +40,20 @@ const FATAL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
 const BADGE_HOST = 'img.shields.io'
 const EXPECTED_BADGES = 14
 
+/**
+ * 已知历史存档豁免（docs/ 下实测存在的 6 处表格列数不齐）。
+ * 这些文件按约定不改写（历史存档），但**除这 6 处之外** docs/ 的结构问题一律致命。
+ * key 格式：归一化为 / 分隔的路径 + @L行号。
+ */
+const DOCS_WHITELIST = new Set([
+  'docs/SKILL-FULL.md@L33',
+  'docs/未处理事项.md@L12',
+  'docs/未处理事项.md@L13',
+  'docs/未处理事项.md@L23',
+  'docs/未处理事项.md@L33',
+  'docs/未处理事项.md@L55',
+])
+
 function walk(dir, acc = []) {
   let entries
   try {
@@ -110,9 +124,10 @@ function checkBadges(rel, raw) {
  */
 function checkMarkdown(rel, raw) {
   const lines = raw.split('\n')
-  const isArchiveDoc = /(^|[\\/])docs[\\/]/.test(rel)
-  const report = (msg) => {
-    if (isArchiveDoc) warnHits.push(msg)
+  const relKey = rel.replace(/\\/g, '/')
+  const report = (msg, lineNo) => {
+    const key = `${relKey}@L${lineNo}`
+    if (DOCS_WHITELIST.has(key)) warnHits.push(msg)
     else fatalHits.push(msg)
   }
 
@@ -129,7 +144,7 @@ function checkMarkdown(rel, raw) {
         blockStart = i + 1
         blockPipeCount = pipes
       } else if (pipes !== blockPipeCount) {
-        report(`${rel} @L${i + 1} 表格行竖线数 ${pipes}，表头为 ${blockPipeCount}（表格被改坏或断行）`)
+        report(`${rel} @L${i + 1} 表格行竖线数 ${pipes}，表头为 ${blockPipeCount}（表格被改坏或断行）`, i + 1)
       }
     } else {
       blockStart = -1
@@ -151,7 +166,7 @@ function checkMarkdown(rel, raw) {
     if (m) {
       const level = l.match(/^(#{1,6})/)[1].length
       if (prevLevel > 0 && level > prevLevel + 1) {
-        report(`${rel} @L${i + 1} 标题跳级 H${prevLevel} → H${level}`)
+        report(`${rel} @L${i + 1} 标题跳级 H${prevLevel} → H${level}`, i + 1)
       }
       prevLevel = level
     }
@@ -203,7 +218,7 @@ if (tabReport.length) {
 }
 
 if (warnHits.length) {
-  console.log(`\n⚠️ 历史文档（docs/）格式提示 ${warnHits.length} 处（不判失败，按约定不改写存档）：`)
+  console.log(`\n⚠️ 已知历史存档豁免 ${warnHits.length}/${DOCS_WHITELIST.size} 处（docs/ 下仅这 ${DOCS_WHITELIST.size} 处放行，其余一律致命）：`)
   for (const w of warnHits) console.log('  ' + w)
 }
 
