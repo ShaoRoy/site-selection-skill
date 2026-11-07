@@ -66,6 +66,13 @@ const SCEN_FIELDS = [
 ]
 const SCENARIOS = ['base', 'pessimistic', 'optimistic']
 
+/**
+ * sensitivity 每行里必须相等的数值字段。
+ * 敏感度的基准列曾经在 TS 侧整表取 pessimistic、Python 侧两端扰动取 pessimistic
+ * 而基准列取 base，两个引擎各自测试全绿却互相不一致 —— 只有跨引擎逐行比对能抓。
+ */
+const SENS_NUM_FIELDS = ['delta_pct', 'anchor_low', 'anchor_base', 'anchor_high', 'gap_base']
+
 // ───────────────────────── 测试用例 ─────────────────────────
 /**
  * CASE-A：扬韬广场真实参数（工单 §2）
@@ -221,6 +228,40 @@ function compare(c, ts, py) {
     }
     for (const f of SCEN_FIELDS) {
       record(`${c.name} · per_scenario.${s}.${f}`, near(a[f], b[f]), { ts: a[f], py: b[f] })
+    }
+  }
+
+  // ── sensitivity：4 行 × 7 字段（param / delta_pct / 三个锚点 / gap_base / conclusion_flips）──
+  // 缺任一侧 → 明确失败（不 SKIP）；行数不等 → 失败；param 按行对齐；布尔必须严格相等。
+  const tsSens = ts.sensitivity
+  const pySens = py.sensitivity
+  const tsOk = Array.isArray(tsSens) && tsSens.length > 0
+  const pyOk = Array.isArray(pySens) && pySens.length > 0
+  if (!tsOk || !pyOk) {
+    record(`${c.name} · sensitivity 两侧均存在`, false, {
+      ts: tsOk ? `rows=${tsSens.length}` : 'missing/empty',
+      py: pyOk ? `rows=${pySens.length}` : 'missing/empty',
+    })
+  } else if (tsSens.length !== pySens.length) {
+    record(`${c.name} · sensitivity 行数一致`, false, { ts: tsSens.length, py: pySens.length })
+  } else {
+    record(`${c.name} · sensitivity 行数一致`, true, { ts: tsSens.length, py: pySens.length })
+    for (let i = 0; i < tsSens.length; i += 1) {
+      const a = tsSens[i] ?? {}
+      const b = pySens[i] ?? {}
+      record(`${c.name} · sensitivity[${i}].param`, a.param === b.param, { ts: a.param, py: b.param })
+      record(
+        `${c.name} · sensitivity[${i}].conclusion_flips`,
+        a.conclusion_flips === b.conclusion_flips,
+        { ts: a.conclusion_flips, py: b.conclusion_flips },
+      )
+      for (const f of SENS_NUM_FIELDS) {
+        record(
+          `${c.name} · sensitivity[${i}].${f}`,
+          near(a[f], b[f]),
+          { ts: a[f], py: b[f] },
+        )
+      }
     }
   }
 }

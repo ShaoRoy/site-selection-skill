@@ -1,10 +1,10 @@
 {
   "name": "site-selection-skill",
-  "version": "2.10.35",
+  "version": "2.10.36",
   "private": true,
   "description": "连锁餐饮选址评估：双源 POI · 空间分析 · 财务三档 · 报告生成",
   "scripts": {
-    "test": "node tools/test-tools-smoke.mjs && node tools/test-parity.mjs",
+    "test": "node tools/check-text.mjs && node tools/test-tools-smoke.mjs && node tools/test-parity.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "check": "npm run typecheck && npm test"
   },

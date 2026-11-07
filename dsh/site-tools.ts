@@ -2326,7 +2326,9 @@ function runFinancials(
   }
 
   // ---- 敏感度：把关键参数各扰动 ±20%，看「租金是否高于锚点」这个结论会不会翻 ----
-  const anchorOf = (v: FinancialParams): number => computeScenario(v, 'pessimistic', target).max_rent_target
+  // 口径：整表（含基准列）统一走 base 档，与 recommendation.based_on_scenario 一致。
+  // 曾经用 pessimistic 会让同一张表出现两个基准锚点，跨引擎比对也抓不到。
+  const anchorOf = (v: FinancialParams): number => computeScenario(v, 'base', target).max_rent_target
   const baseAnchor = anchorOf(values)
   const rentNow = values.monthly_rent
   const baseSign = Math.sign(baseAnchor - rentNow)

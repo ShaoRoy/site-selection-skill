@@ -1,3 +1,56 @@
+## 2.10.36
+
+### P1 财务敏感度锚点口径统一
+
+报告里「敏感度：各参数 ±20% 对谈判锚点的影响」这张表**同一张表用了两把尺子**：
+基准列取 base 档锚点（365000），两端扰动却取 pessimistic 档（65238.1）。
+结果是主表写「谈判锚点 365000（base）」、敏感度表四行写「锚点基准 65238.1（保守档）」，
+同一份报告出现两个基准。
+
+**根因**
+
+| 引擎 | 位置 | 问题 |
+|---|---|---|
+| TS | `dsh/site-tools.ts` L2329 `anchorOf` | 整表（含基准列）走 `pessimistic`，自洽但与主表不一致 |
+| Python | `scripts/site_core.py` L482–483 | 两端扰动走 `pessimistic`、基准列/差值/翻转判定走 `base`，**自己就混档** |
+| 测试 | `tools/test-parity.mjs` | `sensitivity` 出现 0 次，78 项比对完全没覆盖这张表 |
+
+**修复**
+
+- TS：`computeScenario(v, 'pessimistic', target)` → `computeScenario(v, 'base', target)`（1 行，L2330/2342/2343/2348/2350/2352 自动跟随）
+- Python：L482 / L483 的 `"pessimistic"` → `"base"`（2 行，L484–487 本就是 base，未重写）
+- `test-parity.mjs` 新增 `SENS_NUM_FIELDS` 与逐行比对：4 行 × 7 字段（`param` / `delta_pct` / `anchor_low` / `anchor_base` / `anchor_high` / `gap_base` / `conclusion_flips`）。
+  缺任一侧 `sensitivity` → 明确失败；行数不等 → 失败；布尔严格相等。断言总数 **78 → 136**（+58）
+- CI 财务回归新增一条：`finance.sensitivity[*].anchor_base == recommendation.target_rent`（四行全等）
+
+**样例报告对照**（同一组参数，`target=36`）
+
+| 参数 | 改前（保守档） | 改后（base 档） | 会翻转 |
+|---|---|---|---|
+| 日营业额 | −194619.05 / 65238.10 / 325095.24 | **44000 / 365000 / 686000** | True → True |
+| 毛利率 | −216476.19 / 65238.10 / 346952.38 | **17000 / 365000 / 713000** | True → True |
+| 人力成本 | 221238.10 / 65238.10 / −90761.90 | **521000 / 365000 / 209000** | False → **True** |
+| 初始投入 | 89047.62 / 65238.10 / 41428.57 | **390000 / 365000 / 340000** | False → False |
+
+**结论变化说明**：「人力成本」由「不变」改为「会翻转」——改后 +20% 时锚点 209000 跌破当前租金 290000。
+这是修正后的真实结论：旧口径用保守档算绝对值，反而看不出这个参数能把结论打翻。
+主表「压力下限 65238.1（不作为谈判出价）」保留单列，未塞回敏感度表基准列。
+
+**未动**：`SCENARIO_FACTORS` 三档乘数、极限租金公式、租期现金流、保本额、`FORMULA_VERSION = fin-v2`、
+`tools/report.mjs`（文案只渲染 `sensitivity` 字段，口径改后措辞仍成立，哈希未变）。
+
+### 验证
+
+```
+三档复算        base -20%=44000.00  基准=365000.00  +20%=686000.00
+敏感度四行      anchor_base 全等于 recommendation.target_rent
+test-parity     136/136 PASS
+反证            把 TS 改回 pessimistic → parity FAIL 且 exit 1，已改回
+npm test        check-text 0 命中 → smoke 13/13 → parity 136/136
+selftest        48/48
+py_compile      0 错误
+```
+
 ## 2.10.35
 
 ### P0-1 发布文档控制字符污染修复

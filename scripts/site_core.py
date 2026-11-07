@@ -479,8 +479,9 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
         lo = dict(p); hi = dict(p)
         lo[key] = p[key] * 0.8
         hi[key] = p[key] * 1.2
-        a_lo = compute_scenario(lo, "pessimistic", target)["max_rent_target"]
-        a_hi = compute_scenario(hi, "pessimistic", target)["max_rent_target"]
+        # 口径：两端扰动与基准列同走 base 档（与 recommendation.based_on_scenario 一致）
+        a_lo = compute_scenario(lo, "base", target)["max_rent_target"]
+        a_hi = compute_scenario(hi, "base", target)["max_rent_target"]
         base_sign = target_rent - p["monthly_rent"]
         sens.append({"param": label_cn, "delta_pct": 20, "anchor_low": a_lo, "anchor_base": target_rent,
                      "anchor_high": a_hi, "gap_base": r2(p["monthly_rent"] - target_rent),

@@ -101,6 +101,18 @@ jobs:
               ("保本红线（基准档） 379250", abs(r["recommendation"]["ceiling_rent"] - 379250) < 1),
               ("座位 278", r["space_model"]["seats"] == 278),
           ]
+
+          # 敏感度档位一致：四行 anchor_base 必须都等于 recommendation.target_rent（同走 base 档）。
+          # v2.10.36 之前两端扰动取 pessimistic、基准列取 base，同一张表混两个档，跨引擎比对才抓得到。
+          sens = r.get("sensitivity") or []
+          if not sens:
+              print("FAIL  敏感度表缺失：finance().sensitivity 为空")
+              sys.exit(1)
+          anchor_base_vals = [row.get("anchor_base") for row in sens]
+          tgt = r["recommendation"]["target_rent"]
+          checks.append(("敏感度 4 行 anchor_base 均等于 target_rent",
+                         all(v is not None and abs(v - tgt) < 0.01 for v in anchor_base_vals)))
+
           fail = [n for n, ok in checks if not ok]
           for n, ok in checks:
               print(('PASS  ' if ok else 'FAIL  ') + n)
