@@ -8,7 +8,9 @@
 # 2026-11-08 更新：死链已由用户替换为仓库自指 URL
 # `https://github.com/ShaoRoy/site-selection-skill#readme`。
 # 本工作流的目标随之收敛为「阻止 vercel.app 死链复发 + 阻止未登记的新值」，
-# 不再要求 homepage 必须为空。仓库实测为 public，GitHub Pages 未启用。
+# 不再要求 homepage 必须为空。仓库实测为 public。
+# 2026-11-08：GitHub Pages 已启用（https://shaoroy.github.io/site-selection-skill/），
+# 该站点地址与仓库自指 URL 并列加入白名单。
 #
 # 说明：Actions 自带的 GITHUB_TOKEN 没有 `administration` 权限，无法修改
 # 仓库设置（homepage 属此类）。本工作流只做**只读哨兵**：周期性（每小时）
@@ -41,6 +43,8 @@ jobs:
           set -euo pipefail
           URL="https://api.github.com/repos/ShaoRoy/site-selection-skill"
           ALLOW="https://github.com/ShaoRoy/site-selection-skill#readme"
+          # 2026-11-08：GitHub Pages 已启用，站点地址加入白名单
+          ALLOW2="https://shaoroy.github.io/site-selection-skill/"
           if [ -n "${GH_TOKEN:-}" ]; then
             RESP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Cache-Control: no-cache" "$URL")
           else
@@ -52,8 +56,8 @@ jobs:
             echo "::error::homepage 仍是已失效的 vercel.app 死链（=$HP）。请到仓库 About 改为白名单值；任何 agent 不得 PATCH 该字段。"
             exit 1
           fi
-          if [ -n "$HP" ] && [ "$HP" != "$ALLOW" ]; then
-            echo "::error::homepage 非白名单值（=$HP）。若是有意更换主页，请同步更新本工作流 ALLOW、verify-release.mjs 白名单与索引登记。"
+          if [ -n "$HP" ] && [ "$HP" != "$ALLOW" ] && [ "$HP" != "$ALLOW2" ]; then
+            echo "::error::homepage 非白名单值（=$HP）。当前白名单：$ALLOW 或 $ALLOW2。若有意更换主页，请同步更新本工作流 ALLOW/ALLOW2、verify-release.mjs 白名单与索引登记。"
             exit 1
           fi
-          echo "OK: homepage 合规（为空或白名单值，且无 vercel.app 死链）。"
+          echo "OK: homepage 合规（为空或白名单值之一，且无 vercel.app 死链）。"
