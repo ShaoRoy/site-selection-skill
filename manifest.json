@@ -3,7 +3,7 @@
   "displayName": "选址智能分析",
   "version": "2.10.36",
   "description": "连锁餐饮选址评估：城市网格扫描、竞品格局、截流两轴、财务双口径、行业基准对标。输出证据链报告，不做能否开店的判断。",
-  "author": "RoyShao",
+  "author": "ShaoRoy",
   "license": "LicenseRef-Custom-NonCommercial",
   "entry": "SKILL.md",
   "targets": {
@@ -72,5 +72,18 @@
     "references/05-ops-and-troubleshooting.md",
     "references/06-regression-and-failure-modes.md",
     "references/07-preferences.md"
-  ]
+  ],
+  "nameMap": {
+    "_说明": "本项目在四处使用不同标识，各司其职；不要为了「统一」去改 name 字段——会牵动平台识别与安装路径。",
+    "skill.name": "site-report",
+    "skill.name_用途": "SKILL.md frontmatter 的技能标识，DSH 侧按此加载",
+    "manifest.name": "restaurant-location-analysis",
+    "manifest.name_用途": "WorkBuddy 技能包标识；01 README 的安装路径写死 ~/.dsh/skills/restaurant-location-analysis，改名会断链",
+    "plugin.name": "site-selection-analyst",
+    "plugin.name_用途": "02 专家包的 expertType/agentName，与 agents/site-selection-analyst.md 对应",
+    "package.name": "site-selection-skill",
+    "package.name_用途": "03 源码包的 npm 包名，仅本地构建用",
+    "expert_skill_path": "skills/site-selection",
+    "expert_skill_path_用途": "02 包内技能副本所在目录（目录名 site-selection 与上述三个 name 均不同，属既定结构）"
+  }
 }

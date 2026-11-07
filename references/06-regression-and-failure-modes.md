@@ -32,7 +32,7 @@ pnpm test && pnpm typecheck                 # 250 + 0 error
 | test-benchmark | 20 | 19 城 × 48 业态对标 |
 | test-grid | 30 | 网格编号公式 + 候选评分双口径 + sidecar 可复算（v2.10.34 由 16 增至 30，+14） |
 | registry --self-test | 12 | 网格注册表自检 |
-| test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归） |
+| test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归）· **仅源码包（03）可执行**，技能包不含 `tools/` |
 | **合计** | **250** | 其余组条数不变，本轮只记 test-grid 的增量 |
 
 **基线：250/250 通过 + typecheck 0 error + Python selftest 48/48 + grid-scan self-test 17/17。**
@@ -111,6 +111,6 @@ pnpm test && pnpm typecheck                 # 250 + 0 error
 
 ## 四、改完必须做的三件事
 
-1. **跑基线**：`selftest` + `grid-scan --self-test` + `test-tools-smoke` + （源码包）`pnpm test && pnpm typecheck`
+1. **跑基线**：`selftest` + `grid-scan --self-test` + （源码包）`test-tools-smoke` / `pnpm test` / `pnpm typecheck`
 2. **核对断言数**：变了就要能解释
 3. **写进本文件**：新踩的坑补进第二节对应表格，别靠记忆

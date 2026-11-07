@@ -6,7 +6,7 @@ description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉�
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
 version: 2.10.36
-author: "RoyShao"
+author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
   - "这个租金贵不贵？帮我算极限租金和回本周期"
@@ -41,17 +41,6 @@ examples_en:
 python scripts/site_core.py selftest      # 48 条断言，验证引擎可用
 ```
 
-**一次完整评估**需要两把 Key（高德 + 腾讯）。缺 Key 时脚本会明确报「缺哪把」，
-不会静默返回空数据。Key 从环境变量或 `~/.dsh/secrets/*.key` 读，两者都支持。
-
-```bash
-#  1) 采集：地址 → POI + 空间分析
-# 采集 + 渲染需源码包（03-github）里的 tools/ Node 工具；技能包只带 Python 侧
-node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="survey/<调研表>.csv"
-
-#  2) 产出：report.html（地图内嵌，自包含单文件）
-```
-
 **没有 Key 也能做的事**：`finance` / `crs` / `veto` / `dedupe` / `geo` / `benchmark`
 全部是本地纯计算，零网络依赖。采集类（`grid-scan` / `demand-fetch` / `walk-matrix`）才需要 Key。
 
@@ -66,6 +55,23 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 `--format` 要传 `data/formats.json` 里的名字（`large_yuecai` / `tea_house` /
 `mid_dining` / `fast_food` / `tea_drink` / `convenience` / `鲁菜正餐` / `本帮正餐`
 等），传不存在的名字会返回 `matched:false` 并列出候选项——这是设计行为，不是报错。
+
+---
+
+# 源码包扩展能力（03-github，可选）
+
+> **技能包只带 Python 侧。以下命令需在 03 源码包内执行**（本包不含 `tools/`，也不含 Node 渲染链）。
+
+**一次完整评估**需要两把 Key（高德 + 腾讯）。缺 Key 时脚本会明确报「缺哪把」，
+不会静默返回空数据。Key 从环境变量或 `~/.dsh/secrets/*.key` 读，两者都支持。
+
+```bash
+#  1) 采集：地址 → POI + 空间分析
+# 采集 + 渲染需源码包（03-github）里的 tools/ Node 工具；技能包只带 Python 侧
+node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="survey/<调研表>.csv"
+
+#  2) 产出：report.html（地图内嵌，自包含单文件）
+```
 
 ---
 
@@ -124,7 +130,7 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
 
 ## 【阶段一：商圈初选】
 - **触发条件**：仅有城市/区域，无具体铺位坐标。
-- **执行**：地理编码转坐标 → 高德扫 POI 密度与交通枢纽（`keywords=地铁站`）→ 若 MCP 可用，顺带取该区域 1000m 实时人口做粗筛。
+- **执行**：地理编码转坐标 → 高德扫 POI 密度与交通枢纽（`keywords=地铁站`）→ 需要人口时用 POI 代理 + WorldPop 栅格，标注「常住人口，非客流」；不取实时人口 / 客流热力。
 - **拦截**：无坐标不做空间分析、不算财务。
 - **数据源**：仅高德，不动腾讯额度。
 
@@ -134,7 +140,7 @@ python scripts/site_core.py veto --fields '{"exhaust":false}'    # 否决核查
   1. `veto_check`（`store_id`/`format_code`/`fields`：`exhaust`、`power_kw`、`rent`、`frontage_m`、`area_sqm`）排硬伤；
   2. **高德探路 + 去重**：`{gis_radius}` + `{competitor_keywords}` 取原始 POI → 传给 `poi_dedupe` → 用 `effective` 作为**有效竞品数**、`brand_groups` 作为品牌集中度；报告中竞品数一律用 `effective`，**不得用原始条数**；
   3. **是否加腾讯**：看上面「第 2 筛触发条件」。无租金 → 单源高德，报告**不得**声称「双源交叉验证」；有租金 → 加腾讯，竞品数差异 > 30% 必须说明口径（半径上限 1000m、分类粒度、关键词），不得只取其一；
-  4. **预警判定**：竞品 ≥ `{warning_threshold}` → 【截流预警】；人口「低」→ 【需求不足预警】；T ≥ 3 → 【业态时段错配风险】；画像不匹配 → 【客群结构错配】。
+  4. **预警判定**：竞品 ≥ `{warning_threshold}` → 【截流预警】；其余条件只输出「待核实 N 项」，不使用人口档位 / 潮汐 T 值 / 客群画像等本包不提供的判据。
 - **拦截**：无财务参数不输出回本周期。
 
 ## 【阶段三：最终锁盘】

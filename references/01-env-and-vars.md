@@ -9,7 +9,7 @@
 | 数据源 | 角色 | 环境变量（优先） | 密钥文件（本机固定路径） |
 | --- | --- | --- | --- |
 | 高德 | **探路**：POI/竞品/交通 | `AMAP_API_KEY` | `C:\Users\Administrator\.dsh\secrets\amap.key` |
-| 腾讯位置服务 | 周边 POI 交叉校验（不做人口测算） | `TENCENT_MAP_KEY` |
+| 腾讯位置服务 | 周边 POI 交叉校验（不做人口测算） | `TENCENT_MAP_KEY` | `C:\Users\Administrator\.dsh\secrets\tencent.key` |
 
 读取规则（两文件相同）：**跳过空行与 `#` 注释，取第一条有效行并去首尾空白**；仍是 `PUT_YOUR_AMAP_KEY_HERE` / `TENCENT_KEY_HERE` 或没有有效行 = 未配置。
 

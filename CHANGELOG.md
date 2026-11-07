@@ -69,6 +69,55 @@ py_compile      0 错误
   传 `{"homepage": ""}` 清空，API 回读 `homepage == ""`。
 - 徽章总数 15 → 14；三包因 README 变更重新打包，**tag 与版本号保持 v2.10.36 不变**。
 
+### 发布物修订（2026-11-07，不升版本号）
+
+本轮为**内容一致性修订**，四个文件在 01 / 02 / 03 三包同步，版本号保持 `2.10.36` 不变。
+
+**R1 · 口径冲突（`SKILL.md` 阶段一执行行 + 阶段二预警行）**
+
+- 阶段一「执行」原写「若 MCP 可用，顺带取该区域 1000m 实时人口做粗筛」，
+  与 `references/07-preferences.md` 第一条已定口径（人口只用 POI 代理 + WorldPop 栅格，
+  且须标「常住人口，非客流」）冲突。改为「需要人口时用 POI 代理 + WorldPop 栅格，
+  标注『常住人口，非客流』；不取实时人口 / 客流热力」。
+- 阶段二「预警判定」原含「人口『低』→【需求不足预警】/ T ≥ 3 →【业态时段错配风险】/
+  画像不匹配 →【客群结构错配】」，这三类判据本包并不提供（无人口档位、无潮汐 T 值、
+  无客群画像管道），且与「只提醒不裁决」的定位冲突。改为只保留竞品截流预警，
+  其余条件统一输出「待核实 N 项」。
+
+**R2 · 闭环清单可执行性（`references/06-regression-and-failure-modes.md`）**
+
+- 基线表 `test-tools-smoke` 行补「仅源码包（03）可执行，技能包不含 `tools/`」归属标注。
+- 「改完必须做的三件事」第 1 条把 `test-tools-smoke` 归入「（源码包）」括号段，
+  与同文件 L13–L20 的标注口径一致。
+- 未向技能包补 `tools/`：01 包 `tools/` 条目为 0，补入会破坏「零依赖离线可跑」的设计；
+  该脚本实际存在于 03 源码包。
+
+**R3 · 快速开始里的跑不通命令（`SKILL.md`）**
+
+- 原「快速开始」包含 `node tools/run-site.mjs …`，但技能包不含 `tools/`，照抄必然失败。
+  该段移出，收进新小节「# 源码包扩展能力（03-github，可选）」并注明
+  「技能包只带 Python 侧，以下命令需在 03 源码包内执行」。
+- 「快速开始」只保留 `python scripts/site_core.py selftest` 与本地纯计算子命令。
+
+**R4 · 署名与标识符**
+
+- `SKILL.md` L9 `author: "RoyShao"` → `"ShaoRoy"`；`manifest.json` 的 `author` 同步为 `"ShaoRoy"`
+  （`LICENSE` 与 02 `plugin.json` 早已是 `ShaoRoy`）。`README.md` 的「作者」行一并统一。
+- 名称四处并存，**一律不改 name 字段**，只在 `manifest.json` 增加 `nameMap` 段，写清四个名字
+  各指什么（`skill.name` = `site-report` / `manifest.name` = `restaurant-location-analysis` /
+  `plugin.name` = `site-selection-analyst` / `package.name` = `site-selection-skill`，
+  02 内嵌路径 `skills/site-selection`）。改名会牵动 01 README 写死的安装路径
+  `~/.dsh/skills/restaurant-location-analysis` 与平台识别，属未实机验证的高风险动作。
+
+**README 格式守卫（`tools/check-text.mjs`，仅 03 源码包）**
+
+在既有控制字符检查之外新增四类断言，`npm test` 仍保持 `check-text → smoke → parity` 顺序：
+
+1. 徽章区必须是单个物理行的 `<p>…</p>`、`<img` 计数 = 14、徽章之间无换行、`href` 全为 `https://` 开头；
+2. `Markdown 表格`同一表格块内 `|` 数一致、无物理断行；标题层级不跳级（覆盖 `docs/`、`references/`）；
+3. 发布目录纳入扫描：`dist` 不再整目录跳过，改为精确跳过 `release/` / `_backup-*` / `_archive-*` / `node_modules/`；
+4. 换行归一后才做内容比对（包内 CRLF / 线上 LF 不算分叉）。
+
 ## 2.10.35
 
 ### P0-1 发布文档控制字符污染修复

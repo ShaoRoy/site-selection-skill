@@ -608,7 +608,7 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 
 ## 作者 / 联系方式
 
-**作者：** RoyShao
+**作者：** ShaoRoy
 **Email：** yingshao113113@gmail.com
 
 如有问题、建议或合作交流，欢迎邮件联系。
