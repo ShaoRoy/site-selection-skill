@@ -51,6 +51,24 @@ selftest        48/48
 py_compile      0 错误
 ```
 
+### 发布物修订（2026-11-07，不升版本号）
+
+- **README 徽章区清理**：删除与橙色 `license` 徽章完全重复的灰色 `License Custom NonCommercial` 徽章
+  （整块浅灰，视觉上像失效徽章，且与橙色那个指向同一个 `LICENSE`）。
+  徽章内所有相对链接（`LICENSE` / `data/benchmarks.json` / `references/03-data-and-governance.md` / `#安装`）
+  改为 `https://github.com/ShaoRoy/site-selection-skill/blob/main/...` 绝对地址，避免 raw HTML 相对链接
+  在 GitHub 与其他渲染环境下解析不一致。
+- **两个失真徽章改口径**（能复核就改，不能复核就删——本次可复核，故改）：
+  - `tests-234 passing`：`234` 是 v2.10.29 时代的旧数字且未标口径；改为 `tests-136 parity`，
+    并链接到 `tools/test-parity.mjs`（136 为 `test-parity.mjs` 实跑项数，可逐位复核）。
+  - `Benchmark 19城 × 48业态`：改为 `基准库 19城×48业态·估算`，与 `data/benchmarks.json` 的
+    `data_basis_note`「本库不是 19 城实测样本，实质是 1 列行业基数 × 城市系数缩放得到的估算值」保持一致。
+- **GitHub homepage 死链清理（本次真正执行）**：v2.10.29 段曾记录
+  「清空 homepage：`https://site-selection-skill.vercel.app` 实测 HTTP 404，Vercel 项目已删」，
+  但仓库 About 字段至今仍填着该地址。本次通过 `PATCH /repos/ShaoRoy/site-selection-skill`
+  传 `{"homepage": ""}` 清空，API 回读 `homepage == ""`。
+- 徽章总数 15 → 14；三包因 README 变更重新打包，**tag 与版本号保持 v2.10.36 不变**。
+
 ## 2.10.35
 
 ### P0-1 发布文档控制字符污染修复
