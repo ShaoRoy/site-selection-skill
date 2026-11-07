@@ -53,7 +53,7 @@ KEY_FILE = os.path.join(os.path.expanduser("~"), ".dsh", "secrets", "amap.key")
 GRID_DIR = os.path.join(ROOT, "out", "grid")
 
 # ── 版本标识：公式或参数结构一改就必须升 ─────────────────────────────
-# FIN 侧 FORMULA_VERSION = fin-v2（references/02-formulas.md §8），本文件只动 grid-v1。
+# FIN 侧 FORMULA_VERSION 见 site_core.py（不在此写死，避免版本漂移）；本文件只动 grid-v1。
 FORMULA_VERSION = "grid-v1"
 PARAMS_SCHEMA_VERSION = 2
 DEFAULT_PARAMS = os.path.join(ROOT, "params", "grid.json")
