@@ -1,49 +1,51 @@
-# Homepage 守卫（读取 + 复发自动清空，仅置空）
+# Homepage 守卫（只读监控，不写字段）
 #
 # 背景：GitHub 仓库 About 的 homepage 字段曾反复被回填死链
 # `https://site-selection-skill.vercel.app`（Vercel 项目已删，实测 404）。
 # 经排查，仓库内任何脚本 / CI / package.json 都不会写该字段——
 # 回填来自 GitHub 网页端（About 框残留值被重放保存 / 浏览器自动填充）。
 #
-# 本工作流是「自愈哨兵」：周期性（每小时）与每次 push / 手动触发时，
-# 以 no-cache 方式读取仓库元数据；若 homepage 非空，则**仅将其置空**
-# （不写其他任何字段），并在日志留 warning，使 CI 保持绿色、无需人工干预。
-# 若为空，则直接通过。
+# 说明：Actions 自带的 GITHUB_TOKEN 没有 `administration` 权限，无法修改
+# 仓库设置（homepage 属此类），因此本工作流只做**只读哨兵**：周期性
+# （每小时）与每次 push / 手动触发时，以 no-cache 方式读取仓库元数据，
+# 若 homepage 非空（或含 vercel.app）则令 job 失败、CI 变红，第一时间提醒
+# 人工或外部定时任务清空。它不修改任何仓库字段。
+# 真正清空由带 `repo` 权限的 PAT 定时任务（仓库外）负责。
 
 name: Homepage 守卫
 
 on:
   schedule:
-    # 每小时第 17 分钟跑一次，尽早发现回填并自愈
+    # 每小时第 17 分钟跑一次，尽早发现回填
     - cron: '17 * * * *'
   push:
     branches: [main]
   workflow_dispatch:
 
-# 读取仓库元数据 + 复发时仅置空 homepage（administration: write 仅用于清空该字段）
+# 只读：仅需读取仓库元数据的权限
 permissions:
   contents: read
-  administration: write
 
 jobs:
   homepage-guard:
-    name: 校验并自愈 GitHub homepage 必须为空
+    name: 校验 GitHub homepage 必须为空
     runs-on: ubuntu-latest
     steps:
-      - name: 读取仓库元数据（no-cache），若被回填则自动清空
+      - name: 读取仓库元数据（no-cache）并校验 homepage
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           URL="https://api.github.com/repos/ShaoRoy/site-selection-skill"
-          RESP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Cache-Control: no-cache" "$URL")
+          if [ -n "${GH_TOKEN:-}" ]; then
+            RESP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Cache-Control: no-cache" "$URL")
+          else
+            RESP=$(curl -s -H "Cache-Control: no-cache" "$URL")
+          fi
           HP=$(printf '%s' "$RESP" | python3 -c "import sys,json;print((json.load(sys.stdin).get('homepage') or ''))")
           echo "homepage = [$HP]"
           if [ -n "$HP" ]; then
-            echo "::warning::检测到 homepage 被回填（=$HP）。按项目约定 homepage 必须为空，现自动清空（仅置空，不写其他字段）。"
-            curl -s -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$URL" -d '{"homepage":""}' -o /dev/null -w "clear_http=%{http_code}\n"
-            echo "已自动清空 homepage。"
-          else
-            echo "OK: homepage 为空，符合预期。"
+            echo "::error::GitHub homepage 非空（=$HP）。疑似被回填死链——请到仓库 About 手动清空，或由外部定时任务清空；不要再填入 vercel.app。任何 agent 按禁令不得 PATCH 该字段（Actions 令牌也无此权限）。"
+            exit 1
           fi
+          echo "OK: homepage 为空，符合预期。"
