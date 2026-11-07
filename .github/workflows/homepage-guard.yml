@@ -1,0 +1,49 @@
+# Homepage 守卫（只读检测，不写字段）
+#
+# 背景：GitHub 仓库 About 的 homepage 字段曾反复被回填死链
+# `https://site-selection-skill.vercel.app`（Vercel 项目已删，实测 404）。
+# 经排查，仓库内任何脚本 / CI / package.json 都不会写该字段——
+# 回填来自 GitHub 网页端（About 框残留值被重放保存）。
+# 按项目禁令，任何 agent 不得 PATCH 仓库元数据（含 homepage）。
+#
+# 本工作流是「只读哨兵」：周期性（每小时）与每次 push / 手动触发时，
+# 以 no-cache 方式读取仓库元数据，若 homepage 非空（或含 vercel.app）
+# 则令 job 失败、CI 变红，第一时间提醒人工清空。它不修改任何仓库字段。
+
+name: Homepage 守卫
+
+on:
+  schedule:
+    # 每小时第 17 分钟跑一次，尽早发现回填
+    - cron: '17 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 只读：仅需要读取仓库元数据的权限
+permissions:
+  contents: read
+
+jobs:
+  homepage-guard:
+    name: 校验 GitHub homepage 必须为空
+    runs-on: ubuntu-latest
+    steps:
+      - name: 读取仓库元数据（no-cache）并校验 homepage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          URL="https://api.github.com/repos/ShaoRoy/site-selection-skill"
+          if [ -n "${GH_TOKEN:-}" ]; then
+            RESP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Cache-Control: no-cache" "$URL")
+          else
+            RESP=$(curl -s -H "Cache-Control: no-cache" "$URL")
+          fi
+          HP=$(printf '%s' "$RESP" | python3 -c "import sys,json;print((json.load(sys.stdin).get('homepage') or ''))")
+          echo "homepage = [$HP]"
+          if [ -n "$HP" ]; then
+            echo "::error::GitHub homepage 非空（=$HP）。疑似被回填死链——请到仓库 About 手动清空，且不要再填入 vercel.app。任何 agent 按禁令不得 PATCH 该字段。"
+            exit 1
+          fi
+          echo "OK: homepage 为空，符合预期。"
