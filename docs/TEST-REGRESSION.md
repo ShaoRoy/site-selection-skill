@@ -7,28 +7,42 @@
 
 ## 一、自动化测试（必须全绿）
 
+> **计数口径的唯一基准是 `references/06-regression-and-failure-modes.md`**（该文件是随包分发的生效台账）。
+> 本文件只做「怎么跑」的清单，不另立一套数字——历史上这里曾写 212/213，与 06 的 250 打架，已按 06 对齐。
+
 ```powershell
 cd "F:\Claude Roy\site-selection\scratch-plugin"
-pnpm test        # 10 组，212 条断言
+pnpm test        # 250 条断言（分 10 组，见下表）
 pnpm typecheck   # 0 error
 ```
 
-| 组 | 条数 | 覆盖 |
+| 组 | 条数 | 覆盖 | 来源 |
+|---|---|---|---|
+| test-veto | 13 | 否决规则（提醒语义，不裁决） | 06 台账 |
+| test-geo | 17 | 等时圈 / 距离 / 坐标偏移 | 06 台账 |
+| test-poi-dedupe | 15 | 去重 / 前置清洗 / 分段 | 06 台账 |
+| test-segments | 13 | 竞争分段 × 价位段 | 06 台账 |
+| test-finance | 94 | 三档 / 保本 / 回本 / 锚点 / 租期 / 空间 / 比值 / 翻台风险 | 06 台账 |
+| test-report | 33 | 报告结构 / 段落完整性 | 06 台账 |
+| test-benchmark | 20 | 19 城 × 48 业态对标 | 06 台账 |
+| test-grid | 30 | 网格编号公式 + 候选评分双口径 + sidecar 可复算（v2.10.34 由 16 增至 30） | 06 台账 |
+| registry --self-test | 12 | 网格注册表自检 | 06 台账 |
+| test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归）· **仅源码包（03）可执行** | 06 台账 |
+| **合计** | **250** | | |
+
+**基线（三个口径分开记，不混算）**：
+
+| 口径 | 条数 | 命令 |
 |---|---|---|
-| test-veto | 13 | 否决规则（提醒语义） |
-| test-geo | 17 | 等时圈 / 距离 / 坐标 |
-| test-poi-dedupe | 15 | 去重 / 前置清洗 / 分段 |
-| test-segments | 13 | 竞争分段 × 价位段 |
-| test-finance | 73 | 三档 / 保本 / 回本 / 锚点 / 租期 / 空间 / 比值 / 翻台风险 / 回本标尺 |
-| test-report | 33 | 报告结构 / 段落完整性 |
-| test-benchmark | 20 | 19 城 × 48 业态对标 |
-| test-grid | 16 | 网格扫描编号公式 |
-| registry --self-test | 19 | 网格注册表自检 |
-| **test-tools-smoke** | **13** | **渲染链（含默认瓦片路径回归）** |
+| 源码包全量（pnpm test） | **250** | `pnpm test` + `pnpm typecheck` |
+| TS ↔ Python 契约 | **136** | `node tools/test-parity.mjs` |
+| Python 侧自检 | **48** | `python scripts/site_core.py selftest` |
+| 网格评分纯函数 | **17** | `python scripts/grid-scan.py --self-test` |
+| 发布文本守卫 | 见输出 | `node tools/check-text.mjs` |
 
-**基线：213/213 通过。**
+> 250 与 136 不是同一件事：250 是源码包内 10 组 node 测试之和；136 是 TS 与 Python 两条引擎逐字段比对。
+> 早期版本 parity 只有 78 项且未覆盖 `sensitivity`，v2.10.36 补齐至 136。
 
----
 
 ## 二、A / B 业态对照（验证「业态不污染财务」）
 
