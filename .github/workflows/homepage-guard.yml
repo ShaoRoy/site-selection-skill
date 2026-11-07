@@ -1,22 +1,25 @@
 # Homepage 守卫（只读监控，不写字段）
 #
-# 背景：GitHub 仓库 About 的 homepage 字段曾反复被回填死链
-# `https://site-selection-skill.vercel.app`（Vercel 项目已删，实测 404）。
+# 背景：GitHub 仓库 About 的 homepage 曾指向已失效的 Vercel 死链
+# `https://site-selection-skill.vercel.app`（项目已删，实测 404）。
 # 经排查，仓库内任何脚本 / CI / package.json 都不会写该字段——
-# 回填来自 GitHub 网页端（About 框残留值被重放保存 / 浏览器自动填充）。
+# 历次变更均来自网页端人工编辑 About 框（配置 Pages / 部署尝试时填写）。
+#
+# 2026-11-08 更新：死链已由用户替换为仓库自指 URL
+# `https://github.com/ShaoRoy/site-selection-skill#readme`。
+# 本工作流的目标随之收敛为「阻止 vercel.app 死链复发 + 阻止未登记的新值」，
+# 不再要求 homepage 必须为空。仓库实测为 public，GitHub Pages 未启用。
 #
 # 说明：Actions 自带的 GITHUB_TOKEN 没有 `administration` 权限，无法修改
-# 仓库设置（homepage 属此类），因此本工作流只做**只读哨兵**：周期性
-# （每小时）与每次 push / 手动触发时，以 no-cache 方式读取仓库元数据，
-# 若 homepage 非空（或含 vercel.app）则令 job 失败、CI 变红，第一时间提醒
-# 人工或外部定时任务清空。它不修改任何仓库字段。
-# 真正清空由带 `repo` 权限的 PAT 定时任务（仓库外）负责。
+# 仓库设置（homepage 属此类）。本工作流只做**只读哨兵**：周期性（每小时）
+# 与每次 push / 手动触发时，以 no-cache 方式读取仓库元数据并校验；
+# 不修改任何仓库字段。
 
 name: Homepage 守卫
 
 on:
   schedule:
-    # 每小时第 17 分钟跑一次，尽早发现回填
+    # 每小时第 17 分钟跑一次
     - cron: '17 * * * *'
   push:
     branches: [main]
@@ -28,7 +31,7 @@ permissions:
 
 jobs:
   homepage-guard:
-    name: 校验 GitHub homepage 必须为空
+    name: 校验 GitHub homepage 合规（禁死链 / 白名单）
     runs-on: ubuntu-latest
     steps:
       - name: 读取仓库元数据（no-cache）并校验 homepage
@@ -37,6 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://api.github.com/repos/ShaoRoy/site-selection-skill"
+          ALLOW="https://github.com/ShaoRoy/site-selection-skill#readme"
           if [ -n "${GH_TOKEN:-}" ]; then
             RESP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Cache-Control: no-cache" "$URL")
           else
@@ -44,8 +48,12 @@ jobs:
           fi
           HP=$(printf '%s' "$RESP" | python3 -c "import sys,json;print((json.load(sys.stdin).get('homepage') or ''))")
           echo "homepage = [$HP]"
-          if [ -n "$HP" ]; then
-            echo "::error::GitHub homepage 非空（=$HP）。疑似被回填死链——请到仓库 About 手动清空，或由外部定时任务清空；不要再填入 vercel.app。任何 agent 按禁令不得 PATCH 该字段（Actions 令牌也无此权限）。"
+          if printf '%s' "$HP" | grep -qi 'vercel\.app'; then
+            echo "::error::homepage 仍是已失效的 vercel.app 死链（=$HP）。请到仓库 About 改为白名单值；任何 agent 不得 PATCH 该字段。"
             exit 1
           fi
-          echo "OK: homepage 为空，符合预期。"
+          if [ -n "$HP" ] && [ "$HP" != "$ALLOW" ]; then
+            echo "::error::homepage 非白名单值（=$HP）。若是有意更换主页，请同步更新本工作流 ALLOW、verify-release.mjs 白名单与索引登记。"
+            exit 1
+          fi
+          echo "OK: homepage 合规（为空或白名单值，且无 vercel.app 死链）。"
