@@ -120,7 +120,8 @@ function checkBadges(rel, raw) {
  *
  * 分级：
  *   · README.md 与 references/*.md → 致命（发布门面与随包分发的生效文档，必须干净）
- *   · docs/*.md → 警告（历史存档，按工单 §6「docs 一律不动」只报告不改写）
+ *   · docs/*.md → 默认同样致命；仅 DOCS_WHITELIST 里那 6 处已知历史存档降为警告
+ *     （白名单按「文件+行号」硬锁定，改动被锁文件的前置行会让白名单失配而变红，这是有意设计）
  */
 function checkMarkdown(rel, raw) {
   const lines = raw.split('\n')
