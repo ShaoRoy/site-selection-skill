@@ -16,23 +16,11 @@
 
 | 宿主 | 下载 | 安装方式 | 交付报告 |
 |---|---|---|---|
-| **WorkBuddy** | `site-selection-workbuddy-v2.10.36.zip` | 「导入技能」直接导入 | 文字分析报告（Markdown） |
-| **DeepSeek Harness** | `site-selection-dsh-v2.10.36.zip` | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
+| **WorkBuddy** | [`site-selection-workbuddy-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
+| **DeepSeek Harness** | [`site-selection-dsh-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
 
-> **给 Agent 的判据**：若当前运行在 WorkBuddy（能调用「导入技能」或存在 `~/.workbuddy/`）→ 走第一行；若运行在 DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh` 命令）→ 走第二行。
-> 两边共用同一套 Python 计算引擎，**数字与口径完全一致**，仅报告载体不同：WorkBuddy 包不含 Node 渲染链，按 SKILL.md 的分流条款输出 Markdown 报告；DSH 包带 `tools/report.mjs`，可出 HTML。
-> DSH 侧出 HTML 需要输入数据（`probe.json` 或调研表 CSV）；若要现场采集，还需高德 Key。
-## ⬇️ 下载
-
-| 你要做什么 | 下这个 | 多大 |
-|---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-workbuddy-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB |
-| **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
-
-> ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
-> 传到 WorkBuddy「导入技能」会报「所选文件夹中未找到 SKILL.md」。用上面的 Release 附件。
-
-> 本文件是**精简入口**。完整计算口径（十节口径规范 + 22 条公式）见 [`docs/SKILL-FULL.md`](https://github.com/ShaoRoy/site-selection-skill/blob/main/docs/SKILL-FULL.md)。
+> **给 Agent 的判据**：WorkBuddy（能「导入技能」或存在 `~/.workbuddy/`）→ 第一行；DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh`）→ 第二行。两边共用同一套 Python 计算引擎，**数字与口径一致**，仅报告载体不同；DSH 出 HTML 需 `probe.json` 或调研表 CSV，现场采集还需高德 Key。
+> ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
 
 ---
 
@@ -257,7 +245,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`03-github-仓库源码.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.36.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -330,7 +318,7 @@ python scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 01-skill-导入技能.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.36.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -492,7 +480,7 @@ site-selection-skill/
 │   ├── COMPLIANCE-CHECKLIST.md
 │   ├── DECISIONS.md
 │   ├── LAUNCH.md
-│   ├── SKILL-FULL.md     # 完整计算口径（含 0.2.x 十节口径与 22 条公式）
+│   ├── SKILL-FULL.md     # 历史全文留档（旧口径已废止，勿据此立项）
 │   └── CUSTOMIZE.md      # 自定义与地区适配手册
 └── assets/               # 报告示例截图
 ```
