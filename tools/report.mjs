@@ -19,6 +19,39 @@ const SCALE_LABEL = { small: '小吃快餐（人均<60）', mid: '中端（人�
  * 该段全部无人均数据时（有价率 0%），不能写成断言式「人均>120」——
  * 否则读者会以为这 15 家是实证出来的高端店。
  */
+// ── 假设台账的人话释义 ──────────────────────────────────────────────
+// 台账里的 item 是引擎内部键名（tax_rate / amortization_months …），
+// 直接摆给决策人只会造成「看不懂 → 跳过 → 等于没披露」。
+// 这里给每个键配三样东西：中文名 / 它是干什么的 / 改它影响哪个结论。
+const LEDGER_GLOSSARY = {
+  daily_revenue:          ['日营业额', '一天卖多少钱', '整份测算的分母'],
+  gross_margin:           ['毛利率', '扣掉食材成本后的毛利比例', '保本线与极限租金'],
+  monthly_rent:           ['月租金', '房租（不含物业费）', '租售比与全部回本结论'],
+  monthly_labor:          ['月人力', '工资社保合计', '保本日营业额'],
+  monthly_other_fixed:    ['月其他固定', '物业费、水电、杂费', '保本日营业额'],
+  initial_investment:     ['初始投资', '装修+设备+押金等一次性投入', '回本周期与 ROI'],
+  tax_rate:               ['综合税率', '增值税及附加占营业额的比例', '净利，通常 4%–6%'],
+  amortization_months:    ['装修摊销月数', '一次性投入按几个月摊进成本', '会计口径净利（不影响现金流）'],
+  term_years:             ['租期', '合同签几年', '租期现金流表的长度'],
+  rent_escalation_pct:    ['年租金递增', '每年房租涨多少', '租期累计现金'],
+  renovation_cycle_years: ['翻新周期', '几年翻新一次', '租期内是否要重复投入'],
+  renovation_cost:        ['单次翻新投入', '每次翻新花多少', '租期累计现金'],
+  target_payback_months:  ['目标回本周期', '希望几个月回本', '「建议租金」的锚点'],
+  目标回本周期:            ['目标回本周期', '希望几个月回本', '「建议租金」的锚点'],
+}
+
+// 决策人能自己去核实的项（合同、报价单、收款记录上看得见）；
+// 其余是「我们算账时用的内部口径」，折叠起来——需要时能查，但不该占版面。
+const LEDGER_USER_CHECKABLE = new Set([
+  'monthly_rent', 'initial_rent', 'initial_investment',
+  'daily_revenue', 'monthly_labor', 'monthly_other_fixed',
+  'term_years', 'rent_escalation_pct',
+  // 「目标回本周期」是决策人自己的期望值，不是内部规则——放第一层让他能改
+  'target_payback_months', '目标回本周期',
+])
+
+const ledgerGloss = (item) => LEDGER_GLOSSARY[item] || [item, '', '']
+
 const scaleLabelBy = (seg) => {
   // 段名来自 seg.key（如 yuecai_large），先走 segLabel 拿到完整名，再按有价率降级
   const full = segLabel(seg.key)
@@ -535,16 +568,35 @@ function financeSection(md) {
     out.push('')
   }
 
-  // 假设台账：把「不是你亲口给的数」逐条摊开
+  // 假设台账：把「不是你亲口给的数」摊开，但分层——
+  //   第一层：决策人能自己去核实的（合同/报价单上看得见）→ 显式列出
+  //   第二层：我们算账用的内部口径（税率、摊销年限…）→ 折叠，需要时查
+  // 理由：一口气摆 13 行 tax_rate/amortization_months 只会让人跳过整段，
+  //       披露反而失效。TEXT: 用户看不懂不等于不该披露，但必须分主次。
   const ledger = Array.isArray(f.assumption_ledger) ? f.assumption_ledger : []
   const needCheck = ledger.filter((r) => r.action !== '可直接用' && r.action !== '已按覆盖值生效')
-  if (needCheck.length > 0) {
+  const userRows = needCheck.filter((r) => LEDGER_USER_CHECKABLE.has(r.item))
+  const internalRows = needCheck.filter((r) => !LEDGER_USER_CHECKABLE.has(r.item))
+  if (userRows.length > 0 || internalRows.length > 0) {
     out.push('**待确认的假设（不是你亲口给的数）**', '')
-    out.push('| 分类 | 参数 | 取值 | 来源 | 建议 |', '| --- | --- | --- | --- | --- |')
-    for (const r of needCheck) {
-      out.push(`| ${r.category} | ${r.item} | ${r.value} | ${r.source} | ${r.action} |`)
+  }
+  if (userRows.length > 0) {
+    out.push('这几项你能自己去核实，核实完整份结论就会变：', '')
+    out.push('| 项 | 当前取值 | 数据来源 | 核实后影响 |', '| --- | --- | --- | --- |')
+    for (const r of userRows) {
+      const [zh, , impact] = ledgerGloss(r.item)
+      out.push(`| ${zh} | ${r.value} | ${r.source} | ${impact || r.action} |`)
     }
     out.push('')
+  }
+  if (internalRows.length > 0) {
+    out.push(`<details><summary>另有 ${internalRows.length} 项是测算时用的内部口径（税率、摊销年限等），点开查看</summary>`, '')
+    out.push('| 项 | 含义 | 当前取值 | 影响 |', '| --- | --- | --- | --- |')
+    for (const r of internalRows) {
+      const [zh, what, impact] = ledgerGloss(r.item)
+      out.push(`| ${zh}${what ? `（${what}）` : ''} | \`${r.item}\` | ${r.value} | ${impact || '—'} |`)
+    }
+    out.push('', '</details>', '')
   }
 
   const sens = Array.isArray(f.sensitivity) ? f.sensitivity : []
@@ -1231,17 +1283,43 @@ ${traceRows.map((r) => `<tr><td>${esc(r.group)}</td><td>${esc(r.metric)}</td><td
 <table><tr><th>指标</th><th>当前值</th><th>该业态常规</th><th>判定</th><th>说明</th></tr>
 ${ratioRows.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.value}${esc(c.unit)}</td><td>${c.healthy_min}~${c.healthy_max}${esc(c.unit)}</td><td>${c.status === 'ok' ? '✅ 正常' : c.status === 'low' ? '⚠️ 偏低' : '⚠️ 偏高'}</td><td>${esc(c.note)}</td></tr>`).join('')}</table>`
     : ''
+  // ── 假设台账：分层渲染 ─────────────────────────────────────────────
+  // 第一层「你能核实的」显式列出；第二层「我们算账用的内部口径」折叠。
+  // 理由：把 13 行 tax_rate/amortization_months 平铺，决策人看不懂就整段跳过，
+  // 披露等于失效；但也不能删——缺省必披露是铁律，只是要分主次。
+  const ledgerUserRows = ledgerRows.filter((r) => LEDGER_USER_CHECKABLE.has(r.item))
+  const ledgerInternalRows = ledgerRows.filter((r) => !LEDGER_USER_CHECKABLE.has(r.item))
+
+  const ledgerUserHtml = ledgerUserRows.length > 0
+    ? `<h3 style="font-size:15px;margin:18px 0 6px">待确认的假设（不是你亲口给的数）</h3>
+<p style="margin:0 0 8px;color:#555;font-size:13.5px">下面这几项你能自己去核实——合同、报价单、收款记录上看得到的数。核实完整份结论会跟着变。</p>
+<table><tr><th>项</th><th>当前取值</th><th>数据来源</th><th>核实后影响</th></tr>
+${ledgerUserRows.map((r) => {
+  const g = ledgerGloss(r.item)
+  return `<tr><td>${esc(g[0])}</td><td>${esc(r.value)}</td><td>${esc(r.source)}</td><td>${esc(g[2] || r.action)}</td></tr>`
+}).join('')}
+</table>`
+    : ''
+
+  const ledgerInternalHtml = ledgerInternalRows.length > 0
+    ? `<details style="margin:14px 0"><summary style="cursor:pointer;font-size:13.5px;color:#2f5d50;font-weight:600">另有 ${ledgerInternalRows.length} 项是测算时用的内部口径（税率、摊销月数、租期系数等）——点开查看</summary>
+<p style="margin:10px 0 8px;color:#666;font-size:13px">这些不是「你给的」也不是「你能改的」，是我们算账时统一采用的规则；如果和你的实际情况差很多，告诉我们可以重算。</p>
+<table><tr><th>项</th><th>含义</th><th>当前取值</th><th>影响</th></tr>
+${ledgerInternalRows.map((r) => {
+  const g = ledgerGloss(r.item)
+  return `<tr><td>${esc(g[0])}<br><span style="color:#999;font-size:11.5px">${esc(r.item)}</span></td><td>${esc(g[1])}</td><td>${esc(r.value)}</td><td>${esc(g[2] || '—')}</td></tr>`
+}).join('')}
+</table></details>`
+    : ''
+
   const auditHtml = (ledgerRows.length > 0 || sensRows.length > 0 || spaceSensRows.length > 0 || ratioRows.length > 0)
-    ? `${ratioHtml}
-${ledgerRows.length > 0 ? `<h3 style="font-size:15px;margin:18px 0 6px">待确认的假设（不是你亲口给的数）</h3>
-<table><tr><th>分类</th><th>参数</th><th>取值</th><th>来源</th><th>建议</th></tr>
-${ledgerRows.map((r) => `<tr><td>${esc(r.category)}</td><td>${esc(r.item)}</td><td>${esc(r.value)}</td><td>${esc(r.source)}</td><td>${esc(r.action)}</td></tr>`).join('')}</table>` : ''}
+    ? `${ratioHtml}${ledgerUserHtml}${ledgerInternalHtml}
 ${sensRows.length > 0 ? `<h3 style="font-size:15px;margin:18px 0 6px">敏感度：各参数 ±20% 对谈判锚点的影响</h3>
 <table><tr><th>参数</th><th>锚点 −20%</th><th>锚点 基准</th><th>锚点 +20%</th><th>结论</th></tr>
 ${sensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${num(s.anchor_low)}</td><td>${num(s.anchor_base)}</td><td>${num(s.anchor_high)}</td><td>${s.conclusion_flips ? '<b style="color:#c62828">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}
 ${spaceSensRows.length > 0 ? `<h3 style="font-size:15px;margin:18px 0 6px">空间侧敏感度：各系数 ±20% 对座位与产能的影响</h3>
 <table><tr><th>系数</th><th>座位 −20%</th><th>座位 基准</th><th>座位 +20%</th><th>应有日营收 −20%</th><th>基准</th><th>+20%</th><th>结论</th></tr>
-${spaceSensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${s.seats_low}</td><td>${s.seats_base}</td><td>${s.seats_high}</td><td>${num(s.implied_revenue_low)}</td><td>${num(s.implied_revenue_base)}</td><td>${num(s.implied_revenue_high)}</td><td>${s.consistency_flips ? '<b style="color:#c62828">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}`
+${spaceSensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${s.seats_low}</td><td>${s.seats_base}</td><td>${s.seats_high}</td><td>${num(s.revenue_low)}</td><td>${num(s.revenue_base)}</td><td>${num(s.revenue_high)}</td><td>${s.conclusion_flips ? '<b style="color:#c62828">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}`
     : ''
 
   const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>选址报告 · ${esc(data.address)}</title>
