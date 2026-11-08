@@ -11,9 +11,9 @@
 ```
 
 
-## 渲染成 HTML（唯一交付形态）
+## 载体：按宿主分流
 
-九段骨架的**最终载体是 HTML**，渲染器是 `tools/report.mjs`（不是 Markdown，也不要另写简化版）。
+九段骨架与交付内容两边一致；**载体按宿主分流**：WorkBuddy（01 包）用结构化 Markdown 承载，DeepSeek Harness（03 包）用 `tools/report.mjs` 渲染成自包含 HTML。Markdown 版本必须完整覆盖九段，不得因无渲染链而省略章节；**不许**自己写简化版 HTML 充数。
 
 ```bash
 # 只有 03 源码包时（只渲染）
