@@ -312,6 +312,7 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 | `references/05-ops-and-troubleshooting.md` | 跑不通时：Docker/Valhalla、WorldPop 人口栅格、降级策略 |
 | `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 246 条、失败模式台账（按症状索引）、最近版本变更摘要 |
 | `references/07-preferences.md` | **动手前先读**：三条已定口径 + 数据纪律 + 口径细节 + 工程约定。与 SKILL.md 冲突时以它为准 |
+| `references/08-business-guide.md` | **用户问「怎么用」时**：怎么提需求（三句话 + 分档）· 报告怎么读（先看三处 / 四个误读）· 哪些指标能调（A 自填 / B 业态默认 / C 扫描旋钮）。纯业务视角、不含命令，适合直接转给决策人 |
 
 ---
 
