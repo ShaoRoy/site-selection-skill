@@ -12,30 +12,16 @@
 
 ---
 
-## 安装前必读
+## 安装
 
-本仓库对外只提供**一种组件**：`site-report` 技能（走 WorkBuddy「导入技能」）。
-它自带完整计算引擎与全部工具脚本，纯 Python 标准库，不依赖任何专家包。
+一个技能包，走 WorkBuddy「导入技能」：
 
-| 形态 | 组件 | 安装入口 |
+| 组件 | 能做什么 | 安装入口 |
 |---|---|---|
-| 技能 Skill | `site-report`（选址报告生成） | 「导入技能」 |
+| `site-report`（选址报告生成） | 按铁律生成选址报告、跑 48 条自检、出公式追溯 | 「导入技能」 |
 
-> ⚠️ **不要同时安装 02 专家包。** 它内嵌一份与 01 逐字节相同的技能定义，
-> 同时安装会造成同一技能重复注册、以及旧副本遮蔽新版修复。
-> 原「四人专家团队」已独立剥离、停止维护；Release 里
-> `site-selection-expert-v2.10.36.zip` 仅为历史存档。
->
-> 仓库内残留的 `agents/`、`avatars/`、`assets/team-card.png`、
-> `.codebuddy-plugin/plugin.json` 属专家层资产，标记为 **deprecated / 归档**，
-> 不参与技能安装，后续版本将移除。
-
----
-
-> **只装技能即可。** 把本仓库地址交给 agent 时，请走「导入技能」通道，
-> 它只加载 `SKILL.md` 技能层并调用根目录 `scripts/` 下的工具。
-> 仓库内残留的专家层配置（`.codebuddy-plugin/plugin.json`、`agents/` 等）已标
-> **deprecated**，请勿据此再安装 02 专家包，避免与 01 重复注册。
+`site-report` 自带完整计算引擎与全部工具脚本（`scripts/site_core.py`，9 个子命令），
+纯 Python 标准库，无第三方依赖。
 
 ---
 
@@ -356,9 +342,6 @@ cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
 > `site-selection-skill-main/`，「导入技能」会报「所选文件夹中未找到 SKILL.md」。
-
-> 仓库内 `.codebuddy-plugin/`、`agents/`、`avatars/` 属于**已归档的专家层残留**
-> （原四人专家团队已于 2026-11-08 剥离），与本技能安装无关，打包时可一并带上，也可忽略。
 
 ### 上传报错对照
 
