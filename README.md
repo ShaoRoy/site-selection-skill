@@ -12,7 +12,7 @@
 
 ---
 
-## 安装
+## 一句话安装
 
 一个技能包，走 WorkBuddy「导入技能」：
 
@@ -317,7 +317,7 @@ cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 python scripts/site_core.py selftest
 ```
 
-看到 `20 passed` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
+看到 `48 passed` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
 
 ### DSH 原生插件挂载（可选）
 
@@ -337,7 +337,7 @@ python scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
+# 直接用 Release 里的 01-skill-导入技能.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -348,7 +348,7 @@ cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
 | 报错 | 原因 | 解法 |
 |---|---|---|
 | 所选文件夹中未找到 SKILL.md | 包多套了一层文件夹 | 用**不带外层文件夹**的包 |
-| 没有 skill | SKILL.md 缺 `title` / `summary` | 当前版本已具备 |
+| 没有 skill | SKILL.md frontmatter 缺 `name` / `description` | 当前版本两者齐备，无需处理 |
 
 ### 验证安装成功
 
@@ -366,7 +366,7 @@ Agent 应该会：读 `SKILL.md` → 调 `scripts/site_core.py` 算财务口径 
 |---|---|
 | `INVALID_USER_KEY` | 高德 Key 类型选错，去控制台换「Web 服务」类型 |
 | `python: command not found` | 没装 Python 或没加 PATH；脚本类功能不可用，但 SKILL.md 方法论仍可读 |
-| Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/restaurant-location-analysis/`（目录名要叫 `site-selection`，不是 `site-selection-skill`） |
+| Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/restaurant-location-analysis/`（目录名必须是 `restaurant-location-analysis`，与 `manifest.json` 的 `name` 一致；不要用仓库名 `site-selection-skill`） |
 | `openpyxl` 导入失败 | `pip install openpyxl`；只有 `import-benchmarks.py` 需要 |
 | 路径含中文 / 空格 | 部分脚本对路径敏感，建议装在纯英文路径 |
 | 高德额度耗尽 | 个人开发者默认日额度 5000 次，网格扫描前先 `--dry-run` 看预计调用量 |
@@ -435,7 +435,7 @@ python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 
 ## 报告里有什么
 
-生成的 `report.md` / `report.html` 两版内容一致，主要包含：
+标准交付物是**自包含单文件 HTML**（见 SKILL.md「报告交付」）；同目录还会生成一份同名 `.md` 作纯文本备查，内容与 HTML 同源。主要包含：
 
 | 段 | 内容 |
 |---|---|
@@ -464,7 +464,7 @@ python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 
 ```
 site-selection-skill/
-├── SKILL.md              # 方法论、六条硬纪律、公式全书、报告结构
+├── SKILL.md              # 方法论、三条已定口径、公式全书、报告交付规则
 ├── CHANGELOG.md          # 版本更新记录
 ├── manifest.json         # Skill 清单与运行时声明
 ├── PROMPT.md             # Agent 提示词模板
@@ -510,7 +510,7 @@ site-selection-skill/
 | **任意 Agent（WorkBuddy 等）** | `scripts/site_core.py`（6 个工具全移植，纯 Python） | 解压即用 |
 | **DSH** | `dsh/site-tools.ts` 原生插件 | 按 `dsh/cordis.patch.yml` 挂载后重启 |
 
-两者**计算口径完全一致**（fin-v4），只是调用方式不同。
+两者**计算口径完全一致**（版本号以 `scripts/site_core.py` 的 `FORMULA_VERSION` 常量为唯一真源，本文不写死具体值），只是调用方式不同。
 
 ### 报告由谁生成
 
@@ -571,7 +571,7 @@ site-selection-skill/
 | 城市不在基准库 | 返回 city_in_benchmark: false + 列出全部可用城市，**不套用其他城市** |
 | 业态关键词未命中 | 落到通用默认值（中式正餐 24 月 / 租售比 11~17%），**报告须标注「业态参数未校准」** |
 | 行政区名写错 | 高德返回空，网格扫描 0 锚点，直接报错而不是静默返回空表 |
-| 人口栅格 | 全国覆盖，与地区无关（**当前尚未接入**） |
+| 人口栅格 | 全国覆盖，与地区无关；用 `worldpop-clip.py` 从全国 tif 裁出城市窗口（约 7 MB/城市） |
 
 <!-- ③ 关键词：纯文本，可被搜索引擎与大模型直接抓取 -->
 
