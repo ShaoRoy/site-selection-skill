@@ -327,7 +327,7 @@ function financeSection(md) {
     net_profit: '月净利·会计口径（元） —— 扣掉装修设备折旧后的账面利润',
     monthly_cash_flow: '月现金净流（元） —— 实际进账的钱，不扣折旧',
     roi: '年化 ROI —— 一年赚的钱 ÷ 投进去的钱',
-    breakeven_revenue_daily: '保本日营业额（元） —— 一天至少卖这么多才不亏',
+    breakeven_revenue_daily: '每日最低业绩（元，估算） —— 一天至少卖这么多才不亏',
     payback_static_months: '回本·现金口径（月） —— 按实进账算，多久把本钱挣回来',
     accounting_payback_months: '回本·会计口径（月） —— 把折旧摊进去算，账面多久回本（更保守）',
     max_rent_breakeven: '极限租金·保本（元/月） —— 租金涨到这个数就刚好不赚不亏',
@@ -542,17 +542,18 @@ function financeSection(md) {
       }
       out.push(`| 坪效 | ${num(sp.revenue_per_sqm_month)} 元/㎡/月（每平米每月能做多少营业额，用来看地方有没有被浪费；按**建筑面积**算，不是营业面积；经验基准 ${sp.revenue_per_sqm_benchmark}） |`)
       out.push(`| 单方造价 | ${num(sp.investment_per_sqm)} 元/㎡（每平米投了多少钱：装修+设备+其他初始投入） |`)
-      out.push(`| 盈亏平衡 | 日 ${num(Math.round(sp.breakeven_revenue_monthly / 30))} / 月 ${num(sp.breakeven_revenue_monthly)} 元 |`)
+      out.push(`| **保本业绩（估算）** | 每日最低 **${num(Math.round(sp.breakeven_revenue_monthly / 30))} 元** / 每月最低 **${num(sp.breakeven_revenue_monthly)} 元** —— 卖不到这个数就是亏 |`)
       if (sp.breakeven_customers_daily >= 0) {
         out.push(`| 保本客单量 | ${sp.breakeven_customers_daily} 单/日（一天至少接待多少单才不亏） |`)
       }
+      out.push('| 这个数怎么来的 | 用月租、人力、其他固定和毛利率反推，**不是预测值**：没开业也能算，因为它是门槛不是成绩 |')
       out.push('')
       if (sp.defaults_used.length > 0) out.push(`> 空间模型缺省系数：${sp.defaults_used.join('、')}`)
       for (const w of sp.warnings) out.push(`> ⚠️ ${w}`)
       if (sp.defaults_used.length > 0 || sp.warnings.length > 0) out.push('')
     } else {
       out.push(`**空间容量**：未计算（${sp.note}）`, '')
-      out.push(`**盈亏平衡**：日 ${num(Math.round(sp.breakeven_revenue_monthly / 30))} 元 / 月 ${num(sp.breakeven_revenue_monthly)} 元`, '')
+      out.push(`**保本业绩（估算）**：每日最低 ${num(Math.round(sp.breakeven_revenue_monthly / 30))} 元 / 每月最低 ${num(sp.breakeven_revenue_monthly)} 元 —— 用月租、人力、毛利率反推，不是预测值`, '')
     }
   }
 
@@ -677,6 +678,34 @@ export function buildReport(data, profile) {
   md.push('> 看不惯行业黑话的话，**文末《附：白话版》**有 24 条术语对照表；'
     + '内文重要行也已就地注成「原说法 —— 大白话」。', '')
 
+  // ── 估算披露：报告里每个非实测数字都要说清来源（用户要求：没开店的人不知道能做多少营业额）──
+  const estimateRows = (() => {
+    const fq = data.finance ?? {}
+    const rb = fq.revenue_basis
+    const spq = fq.space_model ?? {}
+    const beM = Number(spq.breakeven_revenue_monthly)
+    const revSrc = rb === 'benchmark_estimate'
+      ? '你未提供 → 按业态坪效基准估算（建筑面积 × 该业态每㎡月营收基准 ÷ 30）'
+      : (rb === 'input' ? '你提供的数' : '未提供')
+    const revKind = rb === 'benchmark_estimate' ? '**估算**（拿到实测值可替换）' : '输入值'
+    const beSrc = '月租 + 人力 + 其他固定 ÷（毛利率 − 税率）'
+      + (Number.isFinite(beM) && beM > 0 ? `，本次 ${num(beM)} 元/月` : '')
+    return [
+      ['竞品 / POI / 地铁站', '高德（+ 腾讯交叉校验）', '检索值，不是实地核查；闭店、搬店会滞后'],
+      ['人口 / 客流', 'WorldPop 栅格、小区与写字楼密度', '代理指标，不是实测客流'],
+      ['距离与步行时长', '本地路网；无路网时用直线', '直线为【估算】，遇江面 / 快速路会高估'],
+      ['业态基准值（翻台、每座面积、坪效、租售比）', '行业平均（19 城 × 48 业态）', '行业基准，不是本城本店实测；只用来判断「离不离谱」'],
+      ['日 / 月营业额', revSrc, revKind],
+      ['保本业绩（每日 / 每月最低）', beSrc, '**估算**：是门槛不是预测，没开业也能算'],
+      ['回本周期 / 极限租金 / 敏感度', '由上面几项推算', '推算值：输入一变结论就变，「会翻转」的那几项必须先实测'],
+      ['月租、毛利率、初始投入', '你提供的数', '输入值，签约前最好对一遍单据'],
+    ]
+  })()
+  const estimateHtml = `<h2>哪些数是估算</h2>
+<p style="color:#555">没开店，本来不知道能做多少营业额——所以每一项都写明来源。括号里的「估算」不是免责，是提醒你别拿它当实测去谈价。</p>
+<table><tr><th>数据</th><th>来源</th><th>性质</th></tr>
+${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2].replace(/\*\*/g, ''))}</td></tr>`).join('')}</table>`
+
   md.push('## 1. 数据质量', '', '| 项 | 值 |', '| --- | --- |')
   md.push(`| 原始 POI | ${num(d.raw)} |`)
   md.push(`| 去重后有效 | ${num(d.effective)} |`)
@@ -707,6 +736,12 @@ export function buildReport(data, profile) {
     const mark = dq.verdict === 'ok' ? '✅ 正常' : dq.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'
     md.push(`| 采集可信度 | ${mark}（${dq.verdict}）${dq.warnings?.length ? `：${dq.warnings.join('；')}` : ''} |`, '')
   }
+
+  md.push('### 哪些数是估算（别把估算当实测）', '')
+  md.push('> 没开店，本来不知道能做多少营业额——每一项都写清来源；括号里标「估算」的，拿到实测值就该替换。', '')
+  md.push('| 数据 | 来源 | 性质 |', '| --- | --- | --- |')
+  for (const r of estimateRows) md.push(`| ${r[0]} | ${r[1]} | ${r[2]} |`)
+  md.push('')
 
   md.push('## 2. 竞品分布', '')
   // 20.5 竞争集中度：一眼看出这块地是「有头部」还是「一堆碎片」
@@ -1247,7 +1282,7 @@ ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
 })() : ""}
 <tr><td>坪效</td><td>${num(spLm.revenue_per_sqm_month)} 元/㎡/月（按<b>建筑面积</b>，非营业面积；经验基准 ${spLm.revenue_per_sqm_benchmark}）</td></tr>
 <tr><td>单方造价</td><td>${num(spLm.investment_per_sqm)} 元/㎡</td></tr>
-<tr><td>盈亏平衡</td><td>日 ${num(Math.round(spLm.breakeven_revenue_monthly / 30))} / 月 ${num(spLm.breakeven_revenue_monthly)} 元</td></tr>
+<tr><td><b>保本业绩（估算）</b></td><td>每日最低 <b>${num(Math.round(spLm.breakeven_revenue_monthly / 30))} 元</b> / 每月最低 <b>${num(spLm.breakeven_revenue_monthly)} 元</b> —— 卖不到这个数就是亏；用月租、人力、毛利率反推，不是预测值</td></tr>
 ${spLm.breakeven_customers_daily >= 0 ? `<tr><td>保本客单量</td><td>${spLm.breakeven_customers_daily} 单/日</td></tr>` : ''}</table>
 ${spLm.defaults_used.length > 0 ? `<p style="color:#888">空间模型缺省系数：${esc(spLm.defaults_used.join('、'))}</p>` : ''}
 ${spLm.warnings.map((w) => `<p style="color:#c62828">⚠️ ${esc(w)}</p>`).join('')}`
@@ -1496,6 +1531,7 @@ ${(() => {
 })()}
 ${data.data_quality ? `<tr><td>采集可信度</td><td>${data.data_quality.verdict === 'ok' ? '✅ 正常' : data.data_quality.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'}（${esc(data.data_quality.verdict)}）${data.data_quality.warnings?.length ? `：${esc(data.data_quality.warnings.join('；'))}` : ''}</td></tr>` : ''}</table>
 ${segRows}
+${estimateHtml}
 <h2>2. 竞品分布</h2>
 <p style="color:#888;font-size:13px">逐家名单见上方「地图与竞品排名」；此处给竞争<b>集中度</b>与距离带。</p>
 ${(() => {
