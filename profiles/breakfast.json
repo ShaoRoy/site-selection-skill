@@ -1,0 +1,32 @@
+{
+  "name": "早餐（包子粥铺 30–60㎡）",
+  "category_pattern": "餐饮|早餐|包子|馒头|粥|豆浆|面点|小吃",
+  "exclude_pattern": "酒楼|宴会|火锅",
+  "exclude_category_pattern": "便利店|超市",
+  "subtype_pattern": "包子|馒头|粥|豆浆",
+  "keywords": [
+    "早餐",
+    "包子",
+    "粥"
+  ],
+  "scan_radius": 1000,
+  "rings": [
+    {
+      "label": "内圈·步行3分",
+      "mode": "walk",
+      "minutes": 3,
+      "max_m": 300
+    },
+    {
+      "label": "外圈·步行8分",
+      "mode": "walk",
+      "minutes": 8,
+      "max_m": 800
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 500,
+    "parking_threshold_m": 100
+  },
+  "archetype": "breakfast"
+}
