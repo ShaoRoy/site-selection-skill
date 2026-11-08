@@ -629,9 +629,14 @@ function conclusionLine(data) {
   const parts = []
   const rent = data.finance?.recommendation
   if (rent) {
-    parts.push(`锚点 ${Math.round(rent.target_rent).toLocaleString('zh-CN')} 元/月`)
+    // 锚点为负 / 引擎标了 anchor_unreachable → 说明「零租金也达不到目标回本」，
+    // 此时报一个负数「建议锚点」会被下游读成「出价 -10062 元」，必须换成定性描述。
+    const unreachable = rent.anchor_unreachable === true || Number(rent.target_rent) <= 0
+    if (unreachable) parts.push('锚点不可达（零租金仍达不到目标回本）')
+    else parts.push(`锚点 ${Math.round(rent.target_rent).toLocaleString('zh-CN')} 元/月`)
     const gap = Math.round(rent.gap_to_target)
-    if (gap > 0) parts.push(`距租金需降 ${gap.toLocaleString('zh-CN')}`)
+    // 不可达时「距租金需降」无意义（降到 0 也不达标），一并抑制
+    if (gap > 0 && !unreachable) parts.push(`距租金需降 ${gap.toLocaleString('zh-CN')}`)
     if (rent.rent_ratio_verdict === 'breach') parts.push('租售比超红线')
   }
   const comp = data.rings?.[0]
