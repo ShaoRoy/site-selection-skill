@@ -12,40 +12,30 @@
 
 ---
 
-## 本项目包含两样东西（安装前必读）
+## 安装前必读
 
-本仓库对同一套「连锁餐饮选址」能力，提供了**两种形态、需要分别安装**的组件：
+本仓库对外只提供**一种组件**：`site-report` 技能（走 WorkBuddy「导入技能」）。
+它自带完整计算引擎与全部工具脚本，纯 Python 标准库，不依赖任何专家包。
 
-| 形态 | 组件 | 安装入口 | 能做什么 |
-|---|---|---|---|
-| ① 技能 Skill | `site-report`（选址报告生成） | 「导入技能」 | 按铁律生成选址报告、跑 48 条自检、出公式追溯 |
-| ② 专家团队 Expert | `site-selection-analyst`（连锁餐饮选址分析师，**4 人团队**） | 「配置专家」 | 多角色协作：评估 → 数据校验 → 财务复核 → 排雷风控，交叉复审 |
+| 形态 | 组件 | 安装入口 |
+|---|---|---|
+| 技能 Skill | `site-report`（选址报告生成） | 「导入技能」 |
 
-**专家团队不是技能的附庸。** 它是一个独立的 `expertType: "team"` 组件，由 4 个角色组成：
-
-- 🧭 **选址评估师**（领队）：统筹四道筛、派工、汇总、识别停止信号
-- 🔍 **数据校验官**：核对来源 / 新鲜度 / 单源双源 / 缺省披露，出缺口清单
-- 💰 **财务复核官**：独立复算三档与极限租金，核对公式与敏感度档位
-- 🛡️ **排雷风控官**：硬伤筛查、动线阻断、租约条款，出现场必查清单（只提醒，不裁决）
-
-> ⚠️ **只装技能（①）≠ 拥有了专家。** 两者分开安装：装了技能只是单兵作战，
-> **只有装了专家团队（②），才会触发四个角色的交叉复审**。很多用户以为「装了技能就够了」，
-> 其实漏掉了团队——请下载表里两行都下，两步都做。
-
-<img width="520" alt="连锁餐饮选址分析师 4 人团队卡" src="assets/team-card.png" />
-
-> 上图是在 WorkBuddy 专家详情里截的实机团队卡：领队「选址评估师」带 ⭐ 主理人标记，
-> 另三位是数据校验官、财务复核官、排雷风控官。
+> ⚠️ **不要同时安装 02 专家包。** 它内嵌一份与 01 逐字节相同的技能定义，
+> 同时安装会造成同一技能重复注册、以及旧副本遮蔽新版修复。
+> 原「四人专家团队」已独立剥离、停止维护；Release 里
+> `site-selection-expert-v2.10.36.zip` 仅为历史存档。
+>
+> 仓库内残留的 `agents/`、`avatars/`、`assets/team-card.png`、
+> `.codebuddy-plugin/plugin.json` 属专家层资产，标记为 **deprecated / 归档**，
+> 不参与技能安装，后续版本将移除。
 
 ---
 
-
-> **装源码 ≠ 直接拥有团队。** 把本仓库地址交给 agent 安装时：仓库内同时含技能层与
-> `.codebuddy-plugin/plugin.json`（`expertType: "team"`，4 人团队）。
-> 但「导入技能」通道只加载 `SKILL.md` 技能层，**不会**自动注册专家团队；
-> 要走「配置专家」通道（或安装 02 专家包）才会载入四个角色。
-> 本仓库为扁平源码结构，与 02 分发包的 `skills/site-selection/` 嵌套结构不同，
-> agent 文件内脚本路径已按扁平结构适配，**两者不是同一份字节**。
+> **只装技能即可。** 把本仓库地址交给 agent 时，请走「导入技能」通道，
+> 它只加载 `SKILL.md` 技能层并调用根目录 `scripts/` 下的工具。
+> 仓库内残留的专家层配置（`.codebuddy-plugin/plugin.json`、`agents/` 等）已标
+> **deprecated**，请勿据此再安装 02 专家包，避免与 01 重复注册。
 
 ---
 
@@ -53,8 +43,7 @@
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.19 MB |
-| **WorkBuddy「配置专家」** | [`site-selection-expert-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB（02 专家包已同步至 2.10.36）|
+| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -352,44 +341,30 @@ python scripts/site_core.py selftest
 2. 重启 DSH，让插件索引生效
 3. 重启后在对话里说"用 site-selection 评估一下 XXX 铺位"验证是否触发
 
-### WorkBuddy 上传：两个入口，两种结构
+### WorkBuddy 上传：只需打包技能
 
-WorkBuddy 有两个上传入口，**包结构要求不同，传错必定报错**：
+本包只有一个上传入口：
 
 | 入口 | 要求 | 怎么打包 |
 |---|---|---|
 | **导入技能** | zip 根目录直接有 `SKILL.md` | 把仓库**内容**打包，不带最外层文件夹 |
-| **配置专家** | zip 内有一层文件夹，且含 `<名>/.codebuddy-plugin/plugin.json` | 仓库根改名为 `site-selection-analyst/` 再打包 |
+
+```bash
+git clone https://github.com/ShaoRoy/site-selection-skill.git
+cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
+```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
 > `site-selection-skill-main/`，「导入技能」会报「所选文件夹中未找到 SKILL.md」。
 
-```bash
-git clone https://github.com/ShaoRoy/site-selection-skill.git
-
-# 导入技能：只打包内容
-cd site-selection-skill && zip -r ../01-skill.zip * -x ".git/*"
-
-# 配置专家：先改成一层文件夹
-cd .. && mv site-selection-skill site-selection-analyst
-zip -r ../02-expert.zip site-selection-analyst -x "*.git*"
-```
-
-本仓库根目录已含专家所需结构，可直接按上表打包：
-
-```
-.codebuddy-plugin/plugin.json   ← 专家配置（16 个必填字段）
-agents/site-selection-analyst.md ← Agent 人设 + frontmatter
-avatars/expert.png              ← 头像 512×512
-```
+> 仓库内 `.codebuddy-plugin/`、`agents/`、`avatars/` 属于**已归档的专家层残留**
+> （原四人专家团队已于 2026-11-08 剥离），与本技能安装无关，打包时可一并带上，也可忽略。
 
 ### 上传报错对照
 
 | 报错 | 原因 | 解法 |
 |---|---|---|
-| 所选文件夹中未找到 SKILL.md | 传了专家包到「导入技能」 | 用**不带外层文件夹**的包 |
-| 未找到 .codebuddy-plugin/plugin.json | 传了技能包到「配置专家」 | 用**带一层文件夹**的包 |
-| 专家名称已被占用 | `plugin.json` 的 `name` 撞名 | 改 `name` 与 `plugin`（两处一起改） |
+| 所选文件夹中未找到 SKILL.md | 包多套了一层文件夹 | 用**不带外层文件夹**的包 |
 | 没有 skill | SKILL.md 缺 `title` / `summary` | 当前版本已具备 |
 
 ### 验证安装成功
