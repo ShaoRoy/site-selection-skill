@@ -20,44 +20,9 @@
 
 import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
+import { parseCsv, toNumber, HEADER_ALIAS, REQUIRED_PARAMS } from './survey-csv.mjs'
 
-const REQUIRED_PARAMS = ['daily_revenue', 'gross_margin', 'monthly_rent', 'initial_investment']
 
-function parseCsv(text) {
-  const rows = []
-  let row = []
-  let field = ''
-  let inQuotes = false
-  const src = text.replace(/^\uFEFF/, '')
-  for (let i = 0; i < src.length; i += 1) {
-    const c = src[i]
-    if (inQuotes) {
-      if (c === '"') {
-        if (src[i + 1] === '"') { field += '"'; i += 1 } else inQuotes = false
-      } else field += c
-      continue
-    }
-    if (c === '"') inQuotes = true
-    else if (c === ',') { row.push(field); field = '' }
-    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = '' }
-    else if (c !== '\r') field += c
-  }
-  if (field !== '' || row.length > 0) { row.push(field); rows.push(row) }
-  return rows.filter((r) => r.some((cell) => String(cell).trim() !== ''))
-}
-
-const HEADER_ALIAS = {
-  类型: 'type', type: 'type',
-  键: 'key', key: 'key', 字段: 'key', 参数: 'key',
-  值: 'value', value: 'value',
-  来源: 'source', source: 'source', 数据依据: 'source',
-  置信度: 'confidence', confidence: 'confidence',
-}
-
-function toNumber(raw) {
-  const n = Number(String(raw).replace(/[,，\s]/g, ''))
-  return Number.isFinite(n) ? n : undefined
-}
 
 function coerceValue(raw) {
   const text = String(raw ?? '').trim()
