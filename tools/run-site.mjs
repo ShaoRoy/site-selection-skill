@@ -14,6 +14,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { buildReport } from './report.mjs'
+import { parseSurveyText } from './survey-csv.mjs'
 
 const toPath = (url) => decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1')
 const toolPath = (name) => toPath(new URL(name, import.meta.url))
@@ -138,86 +139,18 @@ function writeOpenScript(dir) {
   writeFileSync(toPath(new URL('open.cmd', dir)), body, 'utf8')
 }
 
-/** 极简 CSV → {fields, params, meta}（与 import-survey.mjs 同契约） */
+/**
+ * 读调研表 → {fields, params, meta}
+ *
+ * 解析逻辑唯一实现在 tools/survey-csv.mjs（与 import-survey.mjs 共用），
+ * 这里只做「读文件 + 打印警告」。不要再在此处复制一份解析循环——
+ * 两份实现分叉正是 2026-11-08 那次「来源列以数字开头导致 value 被吞」的根因。
+ */
 function readSurvey(path) {
-  const text = readFileSync(path, 'utf8').replace(/^\uFEFF/, '')
-  const rows = text.split(/\r?\n/).filter((l) => l.trim() !== '').map((line) => {
-    const cells = []
-    let cell = ''
-    let quoted = false
-    for (let i = 0; i < line.length; i += 1) {
-      const c = line[i]
-      if (quoted) {
-        if (c === '"') { if (line[i + 1] === '"') { cell += '"'; i += 1 } else quoted = false } else cell += c
-      } else if (c === '"') quoted = true
-      else if (c === ',') {
-        // Excel 复制出来的 150,000 会被切成 value=150 / source=000。
-        // 还原千分位，但判据必须严格（见下）。
-        const next3 = line.slice(i + 1, i + 4)
-        // 旧判据只看「下一格前三位是数字」，会把 `12750,150 人 × 85 元` 这种
-        // 「值 + 以数字开头的来源」误判成千分位，导致 value 变成
-        // "12750,150 人 × 85 元" → Number() = NaN → 该参数被静默丢弃，
-        // 引擎回落到业态默认值，整份财务段的分母就错了。
-        //
-        // 新判据三层同时成立才算千分位：
-        //   a) 当前格是 1–3 位纯数字且不以 0 开头（千分位第一段）
-        //   b) 紧跟的三位是纯数字
-        //   c) 这三位之后必须是分隔符或行尾（不能是空格/汉字/字母）
-        const tail = line[i + 4] ?? ''
-        const headOk = /^[1-9]\d{0,2}(,\d{3})*$/.test(cell.trim())  // 允许多段千分位：1,234,567
-        const nextOk = /^\d{3}$/.test(next3)
-        const tailOk = tail === ',' || tail === '' || tail === '\r'
-        if (headOk && nextOk && tailOk) {
-          cell += ','
-        } else {
-          cells.push(cell); cell = ''
-        }
-      } else cell += c
-    }
-    cells.push(cell)
-    return cells
-  })
-  if (rows.length < 2) return null
-  const head = rows[0].map((h) => h.trim())
-  const alias = { 类型: 'type', type: 'type', 键: 'key', key: 'key', 值: 'value', value: 'value', 来源: 'source', source: 'source', 置信度: 'confidence', confidence: 'confidence' }
-  const idx = (name) => head.findIndex((h) => (alias[h] ?? h) === name)
-  const fields = {}
-  const params = {}
-  const meta = {}
-  for (const row of rows.slice(1)) {
-    const get = (n) => (idx(n) >= 0 ? String(row[idx(n)] ?? '').trim() : '')
-    const type = get('type').toLowerCase()
-    const key = get('key')
-    if (!key) continue
-    const raw = get('value')
-    const source = get('source') || '未标注来源'
-    const confRaw = get('confidence').toLowerCase()
-    const confidence = confRaw === '' ? 0.5 : (['high', 'medium', 'low'].includes(confRaw) ? confRaw : Number(confRaw))
-    if (type === 'meta') { meta[key] = raw; continue }
-    if (type === 'field') {
-      const val = /^(true|false)$/i.test(raw) ? raw.toLowerCase() === 'true' : (/^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw)
-      fields[key] = { value: val, source, confidence }
-      continue
-    }
-    if (type === 'param') {
-      // 空单元格不能当 0：Number('') === 0 且 isFinite(0) === true，
-      // 会把「留空」静默变成「营业额 0」，整份报告变全亏。
-      const cleaned = raw.replace(/[,，\s]/g, '')
-      if (cleaned === '') continue
-      const n = Number(cleaned)
-      if (Number.isFinite(n)) params[key] = { value: n, source, confidence }
-    }
-  }
-    // 缺必需财务参数时不能静默回落业态默认值——那会让报告「能生成但分母错」
-    const REQUIRED_PARAMS = ['daily_revenue', 'gross_margin', 'monthly_rent', 'initial_investment']
-    const missing = REQUIRED_PARAMS.filter((k) => !(k in params))
-    if (missing.length > 0) {
-      console.warn(`⚠️ 调研表缺必需财务参数：${missing.join(', ')}`)
-      console.warn('   这些项会回落到业态默认值，报告里会标「业态默认（未提供）」。')
-      console.warn('   若 CSV 里明明写了却报缺失，多半是该行没解析出来——检查来源列是否含逗号。')
-    }
-
-  return { fields, params, meta }
+  const parsed = parseSurveyText(readFileSync(path, 'utf8'))
+  if (!parsed) return null
+  for (const w of parsed.warnings ?? []) console.warn(`⚠️ 调研表：${w}`)
+  return { fields: parsed.fields, params: parsed.params, meta: parsed.meta }
 }
 
 async function runOne(address, surveyPath) {
