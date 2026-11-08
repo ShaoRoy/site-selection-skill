@@ -286,19 +286,24 @@ console.log(DUAL_SOURCE
   : '腾讯：本轮跳过（单源模式，未检出真实租金）')
 
 // ── 4. 去重清洗
-// 采集层依赖 DSH 插件的计算模块（src/site-tools.ts）。技能包里没有 src/，
-// 直接 import 会抛 MODULE_NOT_FOUND 堆栈——这里先探一下，给能照做的提示。
-const siteToolsUrl = new URL('../src/site-tools.ts', import.meta.url)
-if (!existsSync(fileURLToPath(siteToolsUrl))) {
-  console.error('\n❌ 本次运行缺少采集所需的计算模块：src/site-tools.ts')
-  console.error('   技能包（导入技能 / 配置专家）里只有渲染器，没有采集层。')
+// 采集层依赖 DSH 插件的计算模块。可能放在 src/（完整工作区）或 dsh/（分发包内），两处都认。
+// 若都没有，先给能照做的提示，不要抛 MODULE_NOT_FOUND 堆栈。
+const siteToolsCandidates = [
+  new URL('../src/site-tools.ts', import.meta.url),
+  new URL('../dsh/site-tools.ts', import.meta.url),
+]
+const siteToolsUrl = siteToolsCandidates.find((u) => existsSync(fileURLToPath(u)))
+if (!siteToolsUrl) {
+  console.error('\n❌ 本次运行缺少采集所需的计算模块：src/site-tools.ts 或 dsh/site-tools.ts')
+  console.error('   当前目录既没有 src/（完整工作区）也没有 dsh/（分发包内的采集层）。')
   console.error('')
   console.error('   两条路：')
-  console.error('   A. 在 DSH 里跑完分析，得到 probe.json，再渲染：')
+  console.error('   A. 已有 probe.json 时只渲染：')
   console.error('        node tools/report.mjs --in=<路径>/probe.json')
-  console.error('   B. 用完整源码工作区（含 scratch-plugin/src/）跑本脚本。')
+  console.error('   B. 用完整源码工作区（含 src/site-tools.ts）跑本脚本。')
   process.exit(2)
 }
+console.log(`采集计算层：${fileURLToPath(siteToolsUrl).replace(/.*[\\/]dist[\\/]/, 'dist/')}`)
 const mod = await import(siteToolsUrl.href)
 // 竞争分段：品类 × 规模（同段才是直接竞品）
 const segs = subtypeArg !== ''
