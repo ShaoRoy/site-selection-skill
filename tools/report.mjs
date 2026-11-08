@@ -351,7 +351,7 @@ function financeSection(md) {
         const v = sc[k]?.[key]
         if (key === 'roi' && typeof v === 'number') return `${(v * 100).toFixed(1)}%`
         if (key === 'max_rent_ratio' && typeof v === 'number') return `${(v * 100).toFixed(1)}%`
-        if (key === 'payback_static_months' && typeof v === 'number') return v > 0 ? `${v}` : '无法回本'
+        if ((key === 'payback_static_months' || key === 'accounting_payback_months') && typeof v === 'number') return v > 0 ? `${v}` : '无法回本（−1 为哨兵值）'
         return num(v)
       }).join(' | ')} |`)
     }
@@ -388,13 +388,13 @@ function financeSection(md) {
       }[pv.level] ?? pv.label
       out.push('**回本周期判读（餐饮重资产大店实操标尺）**', '')
       out.push('| 项 | 值 |', '| --- | --- |')
-      out.push(`| 会计口径回本（基准档） | **${num(b.accounting_payback_months)} 个月** → ${mark} —— 扣掉装修折旧后，账面要这么多月才回本 |`)
+      out.push(`| 会计口径回本（基准档） | **${b.accounting_payback_months > 0 ? num(b.accounting_payback_months) + ' 个月' : '无法回本（−1 为哨兵值）'}** → ${mark} —— 扣掉装修折旧后，账面要这么多月才回本 |`)
       if (pvc) {
         const markC = {
           too_good: '🔍 快得不真实', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
           very_risky: '❌ 风险极高', no_value: '⛔ 基本没有投资价值', never: '⛔ 无法回本',
         }[pvc.level] ?? pvc.label
-        out.push(`| 现金流口径回本（基准档） | ${num(b.payback_static_months)} 个月 → ${markC} —— 只算钱进出，账面数字会更好看 |`)
+        out.push(`| 现金流口径回本（基准档） | ${b.payback_static_months > 0 ? num(b.payback_static_months) + ' 个月' : '无法回本（−1 为哨兵值）'} → ${markC} —— 只算钱进出，账面数字会更好看 |`)
       }
       out.push(`| 判读依据 | ${pv.note} |`)
       out.push('')
@@ -581,7 +581,7 @@ function financeSection(md) {
     out.push('')
   }
   if (Array.isArray(f.low_confidence_params) && f.low_confidence_params.length > 0) {
-    out.push(`> 低置信参数（结论须标【预估】）：${f.low_confidence_params.join('、')}`)
+    out.push(`> 低置信参数（**相关数值按【预估】看待，须现场核实**）：${f.low_confidence_params.join('、')}`)
     out.push('')
   }
   return out
@@ -944,7 +944,7 @@ export function buildReport(data, profile) {
   const segSelf = Array.isArray(d.segments) ? d.segments.find((s) => s.is_self) : null
   const segTotal = Array.isArray(d.segments) ? d.segments.reduce((a, s) => a + s.count, 0) : 0
   const segPlain = segSelf
-    ? `你的直接对手是「${scaleLabelBy(segSelf)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : '，<b>该段全部无高德人均数据</b>，分段依据是店名与品类而非人均实证'}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是<b>协同或弱竞争</b>，不是直接对手。`
+    ? `你的直接对手是「${scaleLabelBy(segSelf)}」：${segSelf.count} 家${segSelf.avg_cost > 0 ? `，平均人均 ${segSelf.avg_cost} 元` : '，该段全部无高德人均数据，分段依据是店名与品类而非人均实证'}。其余 ${segTotal - segSelf.count} 家属于别的段——同品类不同规模、或不同菜系，是「协同或弱竞争」，不是直接对手。`
     : ''
 
   const segRows = Array.isArray(d.segments) && d.segments.length > 0
@@ -1010,10 +1010,10 @@ ${keys.map((key) => `<tr><td>${esc(metric[key] ?? key)}</td>${order.map((k) => {
           const v = sc[k]?.[key]
           if (key === 'roi' && typeof v === 'number') return `<td>${(v * 100).toFixed(1)}%</td>`
           if (key === 'max_rent_ratio' && typeof v === 'number') return `<td>${(v * 100).toFixed(1)}%</td>`
-          if (key === 'payback_static_months' && typeof v === 'number') return `<td>${v > 0 ? v : '无法回本'}</td>`
+          if ((key === 'payback_static_months' || key === 'accounting_payback_months') && typeof v === 'number') return `<td>${v > 0 ? v : '无法回本（−1 为哨兵值）'}</td>`
           return `<td>${num(v)}</td>`
         }).join('')}</tr>`).join('')}</table>
-${Array.isArray(data.finance.low_confidence_params) && data.finance.low_confidence_params.length > 0 ? `<p style="color:#c62828">低置信参数（须标【预估】）：${esc(data.finance.low_confidence_params.join('、'))}</p>` : ''}
+${Array.isArray(data.finance.low_confidence_params) && data.finance.low_confidence_params.length > 0 ? `<p style="color:#c62828">低置信参数（<b>相关数值按【预估】看待，须现场核实</b>）：${esc(data.finance.low_confidence_params.join('、'))}</p>` : ''}
 ${data.finance.rent_ceiling ? `<h3 style="font-size:15px;margin:18px 0 6px">极限租金反推（${esc(data.finance.rent_ceiling.scenario)} 档｜目标回本 ${data.finance.rent_ceiling.target_payback_months} 个月）</h3>
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>净利=0 时的租金上限</td><td>${num(data.finance.rent_ceiling.rent_ceiling_breakeven)} 元/月</td></tr>
@@ -1046,8 +1046,8 @@ ${(() => {
     + `。两者差 <b>${ratioTxt} 倍</b>——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
 })()}
 <table><tr><th>项</th><th>值</th></tr>
-<tr><td>会计口径回本（基准档）</td><td><b>${num(b.accounting_payback_months)} 个月</b> → <b>${mk(pv.level, pv.label)}</b></td></tr>
-${pvc ? `<tr><td>现金流口径回本（基准档）</td><td>${num(b.payback_static_months)} 个月 → ${mk(pvc.level, pvc.label)}</td></tr>` : ''}
+<tr><td>会计口径回本（基准档）</td><td><b>${b.accounting_payback_months > 0 ? num(b.accounting_payback_months) + ' 个月' : '无法回本（−1 为哨兵值）'}</b> → <b>${mk(pv.level, pv.label)}</b></td></tr>
+${pvc ? `<tr><td>现金流口径回本（基准档）</td><td>${b.payback_static_months > 0 ? num(b.payback_static_months) + ' 个月' : '无法回本（−1 为哨兵值）'} → ${mk(pvc.level, pvc.label)}</td></tr>` : ''}
 <tr><td>判读依据</td><td>${esc(pv.note)}</td></tr></table>
 <p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555;margin:10px 0">
 <b>行业实操标尺</b>（装修投入几百万的重资产大店）<br>
