@@ -126,9 +126,8 @@ docs/未处理事项.md@L55
 | 检查 | 结果 |
 |---|---|
 | 三包共有文件 | **29 个，唯一哈希 = 1** |
-| 条目数 | 01=30 / 02=35 / 03=**74**（v2.10.36 收口轮补入 `.codebuddy-plugin/plugin.json`） |
-| 01 ↔ 02 技能副本 | **30/30** 逐字节一致 |
-| 02 专属 5 文件 | `plugin.json` / `LICENSE` / `README.md` / `agents/*.md` / `avatars/expert.png` 与基线一致 |
+| 条目数 | 01=30 / 03=**81** |
+| 01 ↔ 03 同源文件 | **28/28** 归一化后逐字节一致（README 除外） |
 | `_src` ↔ 包内 | 三个包逐条目零差异（`verify-release.mjs` 第 [2] 项） |
 | `release\` 三副本 | 与根包逐字节相同 |
 
@@ -141,7 +140,6 @@ docs/未处理事项.md@L55
 | 真实 POI 采集 | 全流程用合成快照，**0 次接口调用**；真实 Key 下的高德 / 腾讯双源未在本轮验证 |
 | WorkBuddy 实机导入 | 平台识别与安装路径 `~/.dsh/skills/restaurant-location-analysis` **未实机验证** |
 | 03 包运行时依赖 | `package.json` 只声明 `typescript`，`dsh-tools` / `cordis` 未声明；当前靠工作区 Junction 才能跑 parity，属长期待立项 |
-| L4 自演进 | 02 专家包无 `memory/` / 失败模式自动采集 / 专家团，未做 |
 | `docs/SKILL-FULL.md` | 历史全文存档，含已废止旧口径，已加存档标注，不参与验收 |
 
 ---
