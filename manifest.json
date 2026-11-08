@@ -18,7 +18,8 @@
         "veto",
         "dedupe",
         "geo",
-        "benchmark"
+        "benchmark",
+        "worldpop"
       ]
     }
   },
