@@ -191,6 +191,34 @@ def space_preset(code):
     return SPACE_FALLBACK
 
 
+def estimate_daily_revenue(code, area, space=None, overrides=None):
+    """按业态坪效基准估日营业额（选址阶段本来没有营业额，用它当基数并标为估算）。
+
+    口径：建筑面积 × 该业态每㎡月营收基准 ÷ 30。
+    取坪效而不是「座位 × 翻台 × 客单价」，是因为坪效基准本身就是行业平均水位，
+    且不依赖客单价与翻台两个额外假设，结果偏保守——不会把铺子估成能赚。
+    """
+    space = space or {}
+    overrides = overrides or {}
+    try:
+        a = float(area or 0)
+    except (TypeError, ValueError):
+        a = 0.0
+    if a <= 0:
+        return 0.0
+    cfg = space_preset(code or "")
+    rps = (overrides.get("revenue_per_sqm_benchmark")
+           or space.get("revenue_per_sqm_benchmark")
+           or cfg.get("rps") or 900)
+    try:
+        rps = float(rps)
+    except (TypeError, ValueError):
+        rps = 900.0
+    if rps <= 0:
+        return 0.0
+    return r2(rps * a / 30)
+
+
 def ratio_bench(code):
     import re
     for row in RATIO_BENCH:
@@ -410,6 +438,15 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     if overrides.get("amortization_months") is not None:
         p["amortization_months"] = float(overrides["amortization_months"])
 
+    # 缺营业额：不拿通用占位值去算回本（会算出负的极限租金），改按面积产能估，
+    # 并在台账里标明「估算」，让读者一眼看出这不是实测值。
+    revenue_basis = "input"
+    if "daily_revenue" in defaulted:
+        est = estimate_daily_revenue(code, area, space, overrides)
+        if est > 0:
+            p["daily_revenue"] = est
+            revenue_basis = "benchmark_estimate"
+
     raw_daily = p["daily_revenue"]
     cap = CATCHMENT.get((catchment or "").upper())
     if cap and cap[1] != 1:
@@ -443,10 +480,14 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     for k in PARAM_KEYS:
         prov = k not in defaulted
         policy = k in POLICY_KEYS
+        if k == "daily_revenue" and revenue_basis == "benchmark_estimate":
+            src_txt, act_txt = "按业态坪效基准估算（未提供）", "已有实测日营业额时替换，结论会变"
+        else:
+            src_txt = ("调用方提供" if prov else ("内置口径（政策默认）" if policy else "行业平均基准（未提供）"))
+            act_txt = ("可按实际校准" if policy else ("可直接用" if prov else "有实测值就替换，结论会跟着变"))
         ledger.append({"category": "口径" if policy else "财务参数", "item": k,
                        "value": str(r2(p[k], 4)),
-                       "source": ("调用方提供" if prov else ("内置口径（政策默认）" if policy else "业态默认（未提供）")),
-                       "action": ("可按实际校准" if policy else ("可直接用" if prov else "必须补实际值，否则结论无意义"))})
+                       "source": src_txt, "action": act_txt})
     if cap:
         ledger.append({"category": "口径", "item": "点位截流力", "value": f"{catchment.upper()} {cap[0]}",
                        "source": "现场判定", "action": f"客流 ×{cap[1]}（常规 {raw_daily} → {p['daily_revenue']}）"})
@@ -490,6 +531,7 @@ def finance(params_raw, area=None, lease=None, space=None, target=None, catchmen
     return {
         "per_scenario": per, "formula_version": FORMULA_VERSION, "param_version": PARAM_VERSION,
         "low_confidence_params": [], "param_defaults_used": defaulted,
+        "revenue_basis": revenue_basis,
         "recommendation": {
             "target_rent": target_rent, "ceiling_rent": r2(ceiling), "based_on_scenario": anchor_key,
             # 与 TS 链路字段同构：保守档值单列作压力提示
