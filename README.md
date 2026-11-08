@@ -12,24 +12,21 @@
 
 ---
 
-## 一句话安装
+## 你用的是哪个软件？
 
-一个技能包，走 WorkBuddy「导入技能」：
+| 宿主 | 下载 | 安装方式 | 交付报告 |
+|---|---|---|---|
+| **WorkBuddy** | `site-selection-workbuddy-v2.10.36.zip` | 「导入技能」直接导入 | 文字分析报告（Markdown） |
+| **DeepSeek Harness** | `site-selection-dsh-v2.10.36.zip` | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
 
-| 组件 | 能做什么 | 安装入口 |
-|---|---|---|
-| `site-report`（选址报告生成） | 按铁律生成选址报告、跑 48 条自检、出公式追溯 | 「导入技能」 |
-
-`site-report` 自带完整计算引擎与全部工具脚本（`scripts/site_core.py`，9 个子命令），
-纯 Python 标准库，无第三方依赖。
-
----
-
+> **给 Agent 的判据**：若当前运行在 WorkBuddy（能调用「导入技能」或存在 `~/.workbuddy/`）→ 走第一行；若运行在 DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh` 命令）→ 走第二行。
+> 两边共用同一套 Python 计算引擎，**数字与口径完全一致**，仅报告载体不同：WorkBuddy 包不含 Node 渲染链，按 SKILL.md 的分流条款输出 Markdown 报告；DSH 包带 `tools/report.mjs`，可出 HTML。
+> DSH 侧出 HTML 需要输入数据（`probe.json` 或调研表 CSV）；若要现场采集，还需高德 Key。
 ## ⬇️ 下载
 
 | 你要做什么 | 下这个 | 多大 |
 |---|---|---|
-| **WorkBuddy「导入技能」** | [`site-selection-skill-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB |
+| **WorkBuddy「导入技能」** | [`site-selection-workbuddy-v2.10.36.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 0.22 MB |
 | **DeepSeek Harness** | 不用下载，见下方[安装](#安装)：`git clone` + `install.ps1`（仅源码包） | — |
 
 > ⚠️ **别用 GitHub 网页的「Code → Download ZIP」**——它会套一层 `site-selection-skill-main/`，
@@ -69,10 +66,6 @@ python scripts/site_core.py finance \
   --params '{"daily_revenue":3500,"gross_margin":0.65,"monthly_rent":18000,"monthly_labor":15000,"monthly_other_fixed":5000,"initial_investment":250000}' \
   --area 80 --space '{"avg_ticket":18}' --format tea_drink --target 24
 ```
-
----
-
----
 
 ## 📌 适用业态 & 范围
 
@@ -343,6 +336,7 @@ git clone https://github.com/ShaoRoy/site-selection-skill.git
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
 > `site-selection-skill-main/`，「导入技能」会报「所选文件夹中未找到 SKILL.md」。
 
+
 ### 上传报错对照
 
 | 报错 | 原因 | 解法 |
@@ -572,6 +566,7 @@ site-selection-skill/
 | 业态关键词未命中 | 落到通用默认值（中式正餐 24 月 / 租售比 11~17%），**报告须标注「业态参数未校准」** |
 | 行政区名写错 | 高德返回空，网格扫描 0 锚点，直接报错而不是静默返回空表 |
 | 人口栅格 | 全国覆盖，与地区无关；用 `worldpop-clip.py` 从全国 tif 裁出城市窗口（约 7 MB/城市） |
+
 
 <!-- ③ 关键词：纯文本，可被搜索引擎与大模型直接抓取 -->
 
