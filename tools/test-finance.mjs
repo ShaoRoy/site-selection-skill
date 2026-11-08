@@ -11,7 +11,22 @@
  * 这样任何一处公式改动都会被立刻抓住。
  */
 
-const mod = await import(new URL('../src/site-tools.ts', import.meta.url).href)
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+// 采集计算层可能放在 src/（完整工作区）或 dsh/（分发包内），两处都认
+const ST_CANDIDATES = [
+  new URL('../src/site-tools.ts', import.meta.url),
+  new URL('../dsh/site-tools.ts', import.meta.url),
+]
+const ST_URL = ST_CANDIDATES.find((u) => existsSync(fileURLToPath(u)))
+if (!ST_URL) {
+  console.error('FAIL：找不到 site-tools.ts（src/ 或 dsh/ 都没有）')
+  process.exit(1)
+}
+console.log(`site-tools：${fileURLToPath(ST_URL).replace(/.*[\\/]dist[\\/]/, 'dist/')}`)
+
+const mod = await import(ST_URL.href)
 const registered = []
 mod.apply({ tools: { register: (d) => { registered.push(d); return () => {} } } })
 
