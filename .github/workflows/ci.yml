@@ -60,7 +60,7 @@ jobs:
         run: |
           python - <<'PY'
           import json, glob, sys
-          files = ['manifest.json', '.codebuddy-plugin/plugin.json'] + \
+          files = ['manifest.json'] + \
                   glob.glob('data/*.json') + glob.glob('params/*.json')
           bad = []
           for f in files:
