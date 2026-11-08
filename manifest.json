@@ -80,7 +80,6 @@
     "manifest.name": "restaurant-location-analysis",
     "manifest.name_用途": "WorkBuddy 技能包标识；01 README 的安装路径写死 ~/.dsh/skills/restaurant-location-analysis，改名会断链",
     "plugin.name": "site-selection-analyst",
-    "plugin.name_用途": "02 专家包的 expertType/agentName，与 agents/site-selection-analyst.md 对应",
     "package.name": "site-selection-skill",
     "package.name_用途": "03 源码包的 npm 包名，仅本地构建用",
     "expert_skill_path": "skills/site-selection",
