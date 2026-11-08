@@ -46,7 +46,9 @@ const DETOUR = 1.35
 /** 分段 key → 人话（yuecai_large → 粤菜·高端） */
 const CUISINE_LABEL = { yuecai: '粤菜', chaoshan: '潮汕', other: '其他菜系', snack: '小吃' }
 const SCALE_LABEL = { small: '小吃快餐', mid: '中端', large: '高端' }
-const segLabel = (key) => {
+// 优先用 profile 里给的 label；没有才按 key 拆分猜（xiaolongbao 这类自定义 key 拆不出来）
+const segLabel = (key, label) => {
+  if (label) return label
   const parts = String(key).split('_')
   const scale = parts.length > 1 ? parts[parts.length - 1] : ''
   const cuisine = parts.length > 1 ? parts.slice(0, -1).join('_') : parts[0]
@@ -176,17 +178,49 @@ const getJson = async (url) => {
   return json
 }
 
-// ── 1. 地理编码 → 中心点（GCJ-02）
-const geo = await getJson(
-  `https://restapi.amap.com/v3/geocode/geo?key=${AMAP}&address=${encodeURIComponent(address)}&city=${encodeURIComponent(cityHint)}`,
-)
-if (geo.status !== '1' || !geo.geocodes?.length) {
-  console.error('地理编码失败：', JSON.stringify(geo).slice(0, 200))
-  process.exit(1)
+// ── 1. 定位中心点（GCJ-02）
+// 优先 place/text（POI 搜索）：返回的是商铺/商场/写字楼的真实坐标。
+// 回退 geocode/geo：它会把「XX地铁站」匹配到站点、「XX路口」匹配到道路中心，
+// 坐标落在马路中间——2026-11-08 实测望京SOHO 的 geocode 结果偏了约 920 米。
+const BAD_POI_TYPES = ['公交地铁站点', '地铁站', '道路', '村庄', '地名地址信息', '交通设施服务', '道路附属设施']
+let center = null
+let centerVia = ''
+let centerName = ''
+
+try {
+  const ps = await getJson(
+    `https://restapi.amap.com/v3/place/text?key=${AMAP}&keywords=${encodeURIComponent(address)}`
+    + `&city=${encodeURIComponent(cityHint)}&offset=5&page=1&extensions=base`,
+  )
+  for (const p of (ps.pois ?? [])) {
+    const t = String(p.type ?? '')
+    if (BAD_POI_TYPES.some((b) => t.includes(b))) continue
+    if (!p.location) continue
+    const [lngS, latS] = String(p.location).split(',')
+    center = { lat: Number(latS), lng: Number(lngS) }
+    centerVia = `POI:${t.split(';').pop() || t}`
+    centerName = p.name ?? ''
+    break
+  }
+} catch { /* 落到下面的 geocode */ }
+
+if (!center) {
+  const geo = await getJson(
+    `https://restapi.amap.com/v3/geocode/geo?key=${AMAP}&address=${encodeURIComponent(address)}&city=${encodeURIComponent(cityHint)}`,
+  )
+  if (geo.status !== '1' || !geo.geocodes?.length) {
+    console.error('地理编码失败：', JSON.stringify(geo).slice(0, 200))
+    process.exit(1)
+  }
+  const [lngStr, latStr] = String(geo.geocodes[0].location).split(',')
+  center = { lat: Number(latStr), lng: Number(lngStr) }
+  centerVia = `geocode:${geo.geocodes[0].level ?? ''}`
+  centerName = geo.geocodes[0].formatted_address ?? ''
+  console.warn(`⚠️ POI 搜索没命中商业载体，回退地理编码（匹配：${centerVia}）。`
+    + '这类坐标可能落在路口/站点，内圈竞品数会失真——换更具体的点位名。')
 }
-const [lngStr, latStr] = String(geo.geocodes[0].location).split(',')
-const center = { lat: Number(latStr), lng: Number(lngStr) }
-console.log(`\n=== 0. 中心点 ===\n${address} → ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}（GCJ-02）`)
+console.log(`\n=== 0. 中心点 ===\n${address} → ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}（GCJ-02，匹配：${centerVia}）`)
+if (centerName && centerName !== address) console.log(`命中载体：${centerName}`)
 
 // ── 2. 高德周边（翻页取全；--sweep 时按多关键词扫描，绕过单次 200 条上限）
 const AMAP_PAGE_SIZE = 25
@@ -324,7 +358,8 @@ const dedupe = mod.analyzePois([...amapPois, ...tencentPois], {
     const src = process.env.EXCLUDE_CATEGORY || scene.exclude_category
     return src === undefined || src === '' ? undefined : new RegExp(src)
   })(),
-  segments: segs.map((s) => ({ key: s.key, pattern: new RegExp(s.match) })),
+  // label 一路带到 dedupe 结果里，报告层直接显示中文名，不再印技术 key
+  segments: segs.map((s) => ({ key: s.key, ...(s.label ? { label: s.label } : {}), pattern: new RegExp(s.match) })),
   selfSegment: selfSeg,
   // 餐饮业态才启用「非堂食零售」过滤：便利店/超市业态里这些名字本身就是竞品
   diningOnly: /餐饮|餐厅|菜|火锅|酒楼|茶楼|小吃|快餐|烘焙|咖啡|茶饮/.test(scene.pattern ?? ''),
@@ -370,7 +405,7 @@ const segmentsFinal = [...segMap.entries()]
 const sameCountFinal = dedupe.self_segment ? (segMap.get(dedupe.self_segment) ?? 0) : keptSegmented.length
 
 if (segmentsFinal.length > 1 || dedupe.self_segment !== '') {
-  console.log(`竞争分段（★=客户所在段）：${segmentsFinal.map((s) => `${segLabel(s.key)}${s.is_self ? '★' : ''} ${s.count}`).join('｜')}`)
+  console.log(`竞争分段（★=客户所在段）：${segmentsFinal.map((s) => `${segLabel(s.key, segs.find((x) => x.key === s.key)?.label)}${s.is_self ? '★' : ''} ${s.count}`).join('｜')}`)
   console.log(`直接竞品（同段）${sameCountFinal} 家｜异段 ${keptSegmented.length - sameCountFinal} 家（协同或弱竞争）`)
 } else {
   console.log('未分竞争段（档案里配 segments + self_segment）：全部按同类计，竞品数会高估')
@@ -383,6 +418,9 @@ const segStats = segmentsFinal.map((s) => {
   const ratings = group.map((p) => p.rating).filter((r) => r > 0)
   return {
     key: s.key,
+    ...(segs.find((x) => x.key === s.key)?.label
+      ? { label: segs.find((x) => x.key === s.key).label }
+      : {}),
     count: s.count,
     is_self: s.is_self,
     avg_cost: costs.length > 0 ? Math.round(costs.reduce((a, b) => a + b, 0) / costs.length) : -1,
@@ -497,15 +535,39 @@ for (const ring of rings) {
 
   // 商圈锁：等时圈 ∩ 固定半径，防止把另一个商圈的竞品算进来
   const lockRadius = LOCK_RADIUS > 0 ? LOCK_RADIUS : Number(ring.max_m ?? 0)
+  const mLatIso = 111320
+  const mLngIso = 111320 * Math.cos((center.lat * Math.PI) / 180)
   if (iso && lockRadius > 0) {
-    const mLat0 = 111320
-    const mLng0 = 111320 * Math.cos((center.lat * Math.PI) / 180)
-    const farthest = Math.max(...iso.map(([x, y]) => Math.hypot((x - center.lng) * mLng0, (y - center.lat) * mLat0)))
+    const farthest = Math.max(...iso.map(([x, y]) => Math.hypot((x - center.lng) * mLngIso, (y - center.lat) * mLatIso)))
     iso = clampToRadius(iso, center.lat, center.lng, lockRadius)
     if (farthest > lockRadius * 1.02) {
       console.log(`  🔒 商圈锁：等时圈最远 ${Math.round(farthest)}m → 截断到 ${lockRadius}m（超出部分属其他商圈，已剔除）`)
     }
   }
+
+  // ── 等时圈可信度校验（2026-11-08 加）
+  // Valhalla 若没装该城市的路网数据，会返回一个固定大小的「假等时圈」：
+  // 实测北京两点位的步行 5 分 / 15 分 / 车行 10 分圈全是 186×142m，
+  // 而广州花城汇同参数是 677m / 1910m —— 圈不随时长变大就说明数据缺失。
+  // 这种圈会把所有竞品判成「圈外」，内圈数变成 0，报告结论整个失真。
+  let isoTrusted = Boolean(iso)
+  let isoRejectReason = ''
+  if (iso) {
+    const halfLat = (Math.max(...iso.map((p) => p[1])) - Math.min(...iso.map((p) => p[1]))) * mLatIso / 2
+    const halfLng = (Math.max(...iso.map((p) => p[0])) - Math.min(...iso.map((p) => p[0]))) * mLngIso / 2
+    const effRadius = Math.max(halfLat, halfLng)
+    // 该时长下合理的等效半径下限：步速 80m/min、车速 400m/min，打 0.35 折已是极保守
+    const speed = ring.mode === 'walk' ? 80 : ring.mode === 'bike' ? 200 : 400
+    const floor = speed * ring.minutes * 0.35
+    if (effRadius < floor) {
+      isoTrusted = false
+      isoRejectReason = `等时圈等效半径仅 ${Math.round(effRadius)}m，低于该时长合理下限 ${Math.round(floor)}m`
+      console.warn(`  ⚠️ ${ring.label}：${isoRejectReason} → 路网数据可能没覆盖该城市，本圈退回直线圆估算`)
+      console.warn('     （Valhalla 缺该城市 OSM 数据时会返回固定小多边形，圈内竞品会被误判为 0 家）')
+      iso = null
+    }
+  }
+
   const insideCount = iso ? dedupe.kept.filter((p) => pointInRing(p.lng, p.lat, iso)).length : inside.length
 
   // 份额只在主圈（内圈）报；外圈范围过大（含江面/非商圈），报份额会误导 → 改报距离带
@@ -531,7 +593,9 @@ for (const ring of rings) {
           if (!pointInRing(lng, lat, iso)) continue
           let best
           let bestD = Infinity
-          for (const poi of dedupe.kept) {
+          // 只在「圈内店」之间分配格子。用全部 kept 会让圈外店抢走圈边网格，
+          // 造成地图上点在圈外、却算进「内圈势力份额」的怪象（2026-11-09 修）
+          for (const poi of insidePois) {
             const dx = (poi.lng - lng) * mLngD
             const dy = (poi.lat - lat) * mLatD
             const d = dx * dx + dy * dy
@@ -548,8 +612,10 @@ for (const ring of rings) {
         .slice(0, TOP_N)
     }
   } else {
-    const limit = lockRadius > 0 ? lockRadius : ringRadius
-    const edges = [0, 300, 500, 800, 1000, 1500, 2000, 3000, 4000, 6000].filter((e) => e <= limit)
+    // 距离带只报到 1km：再远的店对「走过去的客人」没意义，报了也是噪音（2026-11-09）
+    const BAND_CAP = 1000
+    const limit = Math.min(lockRadius > 0 ? lockRadius : ringRadius, BAND_CAP)
+    const edges = [0, 300, 500, 800, 1000].filter((e) => e <= limit)
     if (edges[edges.length - 1] < limit) edges.push(Math.round(limit))
     for (let b = 0; b < edges.length - 1; b += 1) {
       const lo = edges[b]
@@ -581,7 +647,12 @@ for (const ring of rings) {
     })(),
   })
   const bandText = distanceBands.map((b) => `${b.label} ${b.count} 家`).join('｜')
-  console.log(`\n[${ring.label}] ${source !== 'estimate' ? `${source} 路网等时圈（${iso.length} 顶点${lockRadius > 0 ? ` · 商圈锁 ${lockRadius}m` : ''}）` : `直线半径 ${result.isochrone.straight_radius_m} 米`}｜范围 ${(result.coverage.total_area_sqm / 1000000).toFixed(2)} km²｜网格 ${gridStep}m`)
+  const ringDesc = iso
+    ? `${source} 路网等时圈（${iso.length} 顶点${lockRadius > 0 ? ` · 商圈锁 ${lockRadius}m` : ''}）`
+    : (isoRejectReason
+        ? `直线圆估算（等时圈不可信：${isoRejectReason}）`
+        : `直线半径 ${result.isochrone.straight_radius_m} 米`)
+  console.log(`\n[${ring.label}] ${ringDesc}｜范围 ${(result.coverage.total_area_sqm / 1000000).toFixed(2)} km²｜网格 ${gridStep}m`)
   if (result.isochrone.straight_radius_m >= radius * 0.95) {
     console.log(`  ⚠️ 圈层半径接近采集上限（${radius}m）→ 该圈内竞品可能不全，需扩大采集半径或拆扫描`)
   }
@@ -712,6 +783,20 @@ console.log('出图：node .\\tools\\render-map.mjs （自动取最新的 out/*.
 
 console.log(`\n=== 4. API 消耗 ===`)
 console.log(`接口调用 ${apiCalls} 次｜缓存命中 ${cacheHits} 次${cacheEnabled ? '' : '（--fresh：已强制回源）'}`)
+// 把真实调用数并进统一账本，否则 quota.json 只反映 demand-fetch 的消耗，
+// 看不出 run-site 花了多少（2026-11-08 加）
+if (apiCalls > 0) {
+  try {
+    const qf = new URL('../survey/demand/.quota.json', import.meta.url)
+    const today = new Date().toISOString().slice(0, 10)
+    let q = { date: today, calls: 0 }
+    try { q = JSON.parse(readFileSync(qf, 'utf8')) } catch { /* 首次 */ }
+    if (q.date !== today) q = { date: today, calls: 0 }
+    q.calls += apiCalls
+    writeFileSync(qf, JSON.stringify(q), 'utf8')
+    console.log(`账本已记：今日累计 ${q.calls} 次`)
+  } catch { /* 记账失败不影响主流程 */ }
+}
 console.log('零消耗（纯本地）：poi_dedupe / geo_analyze / crs_guard')
 
 console.log('\n=== 5. 报告可用字段 ===')

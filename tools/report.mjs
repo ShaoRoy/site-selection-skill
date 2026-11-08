@@ -53,8 +53,19 @@ const LEDGER_USER_CHECKABLE = new Set([
 const ledgerGloss = (item) => LEDGER_GLOSSARY[item] || [item, '', '']
 
 const scaleLabelBy = (seg) => {
-  // 段名来自 seg.key（如 yuecai_large），先走 segLabel 拿到完整名，再按有价率降级
-  const full = segLabel(seg.key)
+  // 优先用 profile 里显式给的 label（中文可读名）；没有才回退到 seg.key 解析
+  // 2026-11-08 修：xiaolongbao / baozi_general 这类自定义 key 不在 CUISINE_LABEL 表里，
+  // 直接走 key 解析会把技术键名原样印到报告上
+  const full = seg.label
+    ? (typeof seg.cost_coverage === 'number' && seg.cost_coverage < 30
+        ? String(seg.label).replace(/（人均[^）]*）/, '（规模档推定，无人均实证）')
+        : String(seg.label))
+    : (() => {
+        const f = segLabel(seg.key)
+        return typeof seg.cost_coverage === 'number' && seg.cost_coverage < 30
+          ? f.replace(/（人均[^）]*）/, '（规模档推定，无人均实证）')
+          : f
+      })()
   if (typeof seg.cost_coverage === 'number' && seg.cost_coverage < 30) {
     return full.replace(/（人均[^）]*）/, '（规模档推定，无人均实证）')
   }
@@ -373,7 +384,7 @@ function financeSection(md) {
       if (typeof tgt === 'number' && tgt > 0) {
         out.push(`> 📐 **两套标尺**：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
           + `行业基准库里高端中餐酒楼的回本中位是 **${bmMed} 个月**`
-          + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，19 城估算值）` : '（19 城估算值）')
+          + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，20 城估算值）` : '（20 城估算值）')
           + `。两者差 **${ratioTxt} 倍**——**${tgt} 个月不是行业常态，是偏紧的要求**。`, '')
       }
     }
@@ -694,7 +705,7 @@ export function buildReport(data, profile) {
       ['竞品 / POI / 地铁站', '高德（+ 腾讯交叉校验）', '检索值，不是实地核查；闭店、搬店会滞后'],
       ['人口 / 客流', 'WorldPop 栅格、小区与写字楼密度', '代理指标，不是实测客流'],
       ['距离与步行时长', '本地路网；无路网时用直线', '直线为【估算】，遇江面 / 快速路会高估'],
-      ['业态基准值（翻台、每座面积、坪效、租售比）', '行业平均（19 城 × 48 业态）', '行业基准，不是本城本店实测；只用来判断「离不离谱」'],
+      ['业态基准值（翻台、每座面积、坪效、租售比）', '行业平均（20 城 × 51 业态）', '行业基准，不是本城本店实测；只用来判断「离不离谱」'],
       ['日 / 月营业额', revSrc, revKind],
       ['保本业绩（每日 / 每月最低）', beSrc, '**估算**：是门槛不是预测，没开业也能算'],
       ['回本周期 / 极限租金 / 敏感度', '由上面几项推算', '推算值：输入一变结论就变，「会翻转」的那几项必须先实测'],
@@ -737,12 +748,6 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
     md.push(`| 采集可信度 | ${mark}（${dq.verdict}）${dq.warnings?.length ? `：${dq.warnings.join('；')}` : ''} |`, '')
   }
 
-  md.push('### 哪些数是估算（别把估算当实测）', '')
-  md.push('> 没开店，本来不知道能做多少营业额——每一项都写清来源；括号里标「估算」的，拿到实测值就该替换。', '')
-  md.push('| 数据 | 来源 | 性质 |', '| --- | --- | --- |')
-  for (const r of estimateRows) md.push(`| ${r[0]} | ${r[1]} | ${r[2]} |`)
-  md.push('')
-
   md.push('## 2. 竞品分布', '')
   // 20.5 竞争集中度：一眼看出这块地是「有头部」还是「一堆碎片」
   {
@@ -762,7 +767,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
       md.push(`| Top1 势力份额 | ${_t[0].share_pct}%（${_t[0].name}） |`)
       md.push(`| Top3 合计 | ${_t3}% |`)
       md.push(`| Top10 合计 | ${_t10}% |`)
-      if (_restN > 0) md.push(`| Top20 之外 ${_restN} 家瓜分 | ${Number((100 - _t10).toFixed(1))}% |`)
+      if (_restN > 0) md.push(`| 榜单之外 ${_restN} 家瓜分 | ${Number((100 - _t10).toFixed(1))}% |`)
       md.push(`| 集中度判读 | **${_verdict}** |`)
       md.push('', '> 势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。', '')
     }
@@ -772,9 +777,12 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   const secNo = () => `2.${++_sec}`
   const _topList = inner.top ?? []
   const _tieMark = () => ""
-  md.push(`### ${secNo()} ${inner.label ?? '内圈'}（势力份额 Top20）`, '')
+  const _nTop = _topList.length
+  const _topTitle = _nTop > 20 ? '势力份额 Top20' : `势力份额（共 ${_nTop} 家）`
+  md.push(`### ${secNo()} ${inner.label ?? '内圈'}（${_topTitle}）`, '')
   md.push('> **「份额」是本系统自算的势力覆盖占比**：把圈内切成网格，每格归给最近的一家店，该店分到的格子数 ÷ 总格子数。')
-  md.push('> 它衡量「这块地方谁离得最近」——**不是营业额份额，也不是市占率**。', '')
+  md.push('> 它衡量「这块地方谁离得最近」——**不是营业额份额，也不是市占率**。')
+  md.push('> 列表里可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。', '')
   // 左右两栏：Top1–10 ｜ Top11–20
   const _l = _topList.slice(0, 10)
   const _r = _topList.slice(10, 20)
@@ -822,7 +830,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
     tierLines.push('> **分类规则**：按「菜系 × 价位段」切分。同价位段且目标客群高度重叠的，即使菜系不同也按**直接竞品**对待；'
       + '只有客群明显不同的才算间接。', '')
     tierLines.push('| 层级 | 划分依据 | 家数 | 对选址的含义 |', '| --- | --- | --- | --- |')
-    tierLines.push(`| 直接竞品 | 同品类 + 同价位段（\`${tier.selfSegKey}\`） | **${tier.directCount}** | 真正的对手，决定你能拿多少份额 |`)
+    tierLines.push(`| 直接竞品 | 同品类 + 同价位段（档案段 \`${tier.selfSegKey}\`） | **${tier.directCount}** | 真正的对手，决定你能拿多少份额 |`)
     tierLines.push(`| 替代竞品 | 同品类、不同价位段 | ${tier.substituteCount} | 客群会互相流动（聚餐/宴请档期最明显） |`)
     tierLines.push(`| 间接竞品 | 不同品类 | ${tier.indirectCount} | 抢同一笔餐饮预算，但不是同一场景 |`)
     if (tier.subList.length > 0) {
@@ -934,11 +942,18 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   md.push(...vetoSection(data))
   md.push(...financeSection(data))
 
-  // 行业基准对标（19 城 × 48 业态库）
+  // 「哪些数是估算」放在财务段之后：财务参数里的估算项最多、最需要当场核对
+  md.push('### 哪些数是估算（别把估算当实测）', '')
+  md.push('> 没开店，本来不知道能做多少营业额——每一项都写清来源；括号里标「估算」的，拿到实测值就该替换。', '')
+  md.push('| 数据 | 来源 | 性质 |', '| --- | --- | --- |')
+  for (const r of estimateRows) md.push(`| ${r[0]} | ${r[1]} | ${r[2]} |`)
+  md.push('')
+
+  // 行业基准对标（20 城 × 51 业态库）
   const bm = data.benchmark
   if (bm && bm.matched) {
-    md.push('**行业基准对标（19 城 × 48 业态库）**', '')
-  md.push('> ⚠️ **数据性质**：本库不是 19 城实测样本——同业态跨城的净利率、面积、备注完全相同，'
+    md.push('**行业基准对标（20 城 × 51 业态库）**', '')
+  md.push('> ⚠️ **数据性质**：本库不是 20 城实测样本——同业态跨城的净利率、面积、备注完全相同，'
     + '实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看**偏离方向**，'
     + '不能当作该城市实测水位（审计 E4）。', '')
     md.push(
@@ -1039,13 +1054,13 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
 <p style="color:#555">同一家餐厅，<b>品类相同但规模不同就不是竞品</b>：人均 28 元的粿条店和人均 252 元的粤菜馆，客群完全不重叠。
 下表按「菜系 + 规模」把人分成几段，<b>★ = 你所在的段（直接竞品）</b>，其余段是协同或弱竞争。</p>
 ${segPlain ? `<div class="concl" style="font-size:14px">${esc(segPlain)}</div>` : ''}
-<table><tr><th>分段</th><th>家数</th><th>人均</th><th>评分</th><th>有价率</th><th>机器键</th></tr>
+<table><tr><th>分段</th><th>家数</th><th>人均</th><th>评分</th><th>有价率</th><th title="档案里的技术标识，只在改 profile 时用得上">档案键</th></tr>
 ${d.segments.map((s) => `<tr><td>${esc(scaleLabelBy(s))}${s.is_self ? ' ★' : ''}</td><td>${s.count}</td><td>${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'}</td><td>${s.avg_rating > 0 ? s.avg_rating : '—'}</td><td>${s.cost_coverage ?? 0}%</td><td style="color:#aaa;font-size:12px">${esc(s.key)}</td></tr>`).join('')}</table>`
     : ''
 
   const vetoHtml = data.veto
     ? `<h2>5. 场地核查（提醒，非否决）</h2><p>规则来源：${esc(data.veto.rule_source === 'custom' ? '用户自定义' : '内置示例')}（${esc(data.veto.rule_version)}）</p>
-<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555">本段是<b>备忘录，不是裁决</b>：缺什么就补什么，签约前补齐即可。证照与合规由承租方办理，系统不判「能不能开」。</p>
+<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555">本段是<b>备忘录，不是裁决</b>：缺什么就补什么，签约前补齐即可。证照与合规由承租方办理，本系统只陈述事实。</p>
 <table><tr><th>项</th><th>内容</th></tr>
 <tr><td>硬伤</td><td><b>${data.veto.hard_reasons.length} 项</b></td></tr>
 <tr><td>风险</td><td>${data.veto.major_risks.length} 项</td></tr>
@@ -1129,7 +1144,7 @@ ${(() => {
   return `<p style="color:#555;background:#f5f5f5;padding:8px 10px;border-left:3px solid #999;font-size:13px">`
     + `📐 <b>两套标尺</b>：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
     + `而行业基准库里高端中餐酒楼的回本中位是 <b>${bmMed} 个月</b>`
-    + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，19 城估算值）` : '（19 城估算值）')
+    + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，20 城估算值）` : '（20 城估算值）')
     + `。两者差 <b>${ratioTxt} 倍</b>——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
 })()}
 <table><tr><th>项</th><th>值</th></tr>
@@ -1220,7 +1235,7 @@ ${caveat}${populationHtml(data)}`
   const secCap = `2.${_base + 1}`
   const secTier = `2.${_base + 2}`
   const tierHtml = tier === null ? '' : `<h3>${secTier} 竞品三级分层</h3><table><tr><th>层级</th><th>划分依据</th><th>家数</th><th>对选址的含义</th></tr>
-<tr><td>直接竞品</td><td>同品类 + 同价位段（<code>${esc(tier.selfSegKey)}</code>）</td><td><b>${tier.directCount}</b></td><td>真正的对手，决定你能拿多少份额</td></tr>
+<tr><td>直接竞品</td><td>同品类 + 同价位段（档案段 <code>${esc(tier.selfSegKey)}</code>）</td><td><b>${tier.directCount}</b></td><td>真正的对手，决定你能拿多少份额</td></tr>
 <tr><td>替代竞品</td><td>同品类、不同价位段</td><td>${tier.substituteCount}</td><td>客群会互相流动（聚餐/宴请档期最明显）</td></tr>
 <tr><td>间接竞品</td><td>不同品类</td><td>${tier.indirectCount}</td><td>抢同一笔餐饮预算，但不是同一场景</td></tr></table>
 ${tier.subList.length > 0 ? `<p style="color:#666">替代层明细：${esc(tier.subList.map((s) => `${s.key} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost}）` : ''}`).join('；'))}</p>` : ''}`
@@ -1290,9 +1305,9 @@ ${spLm.warnings.map((w) => `<p style="color:#c62828">⚠️ ${esc(w)}</p>`).join
 
   const bmRows = data.benchmark?.matched ? data.benchmark : null
   const bmHtml = bmRows
-    ? `<h3>行业基准对标（19 城 × 48 业态库）</h3>
+    ? `<h3>行业基准对标（20 城 × 51 业态库）</h3>
 <p style="color:#a15c00;background:#fff8e1;padding:8px 10px;border-left:3px solid #ffb300;font-size:13px">
-⚠️ <b>数据性质</b>：本库不是 19 城实测样本——同业态跨城的净利率、面积、备注完全相同，实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看<b>偏离方向</b>，不能当作该城市实测水位。</p>
+⚠️ <b>数据性质</b>：本库不是 20 城实测样本——同业态跨城的净利率、面积、备注完全相同，实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看<b>偏离方向</b>，不能当作该城市实测水位。</p>
 <p>对标业态：<b>${esc(bmRows.matched_format)}</b>（${esc(bmRows.category)}）｜样本 ${bmRows.sample_size} 城｜该业态回本中位 ${bmRows.payback_median} 月（区间 ${bmRows.payback_min}~${bmRows.payback_max}）</p>
 <table><tr><th>指标</th><th>本项目</th><th>行业基准</th><th>偏离</th><th>判定</th></tr>
 ${bmRows.compares.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.ours}${esc(c.unit)}</td><td>${c.benchmark}${esc(c.unit)}</td><td>${c.deviation_pct > 0 ? '+' : ''}${c.deviation_pct}%</td><td>${c.verdict === 'ok' ? '✅ 正常' : c.verdict === 'high' ? '⚠️ 偏高' : '⚠️ 偏低'}</td></tr>`).join('')}</table>
@@ -1458,7 +1473,7 @@ ${data._staticMapSvg
     <div class="mapinner">${data._staticMapSvg}</div>
   </div>
   <div class="shareside">
-    <div style="font-weight:600;font-size:13px;margin:0 0 4px">${esc((data.rings?.[0]?.label) ?? '内圈')} · 势力份额 Top20</div>
+    <div style="font-weight:600;font-size:13px;margin:0 0 4px">${esc((data.rings?.[0]?.label) ?? '内圈')} · ${(data.rings?.[0]?.top?.length ?? 0) > 20 ? '势力份额 Top20' : `势力份额（共 ${data.rings?.[0]?.top?.length ?? 0} 家）`}</div>
     <div style="font-size:11px;color:#888;margin:0 0 8px;line-height:1.5">份额＝圈内网格中该店为最近店的比例，<b>不是营业额份额</b>。</div>
     ${(() => {
       const top = ((data.rings?.[0]?.top) ?? [])
@@ -1531,7 +1546,6 @@ ${(() => {
 })()}
 ${data.data_quality ? `<tr><td>采集可信度</td><td>${data.data_quality.verdict === 'ok' ? '✅ 正常' : data.data_quality.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'}（${esc(data.data_quality.verdict)}）${data.data_quality.warnings?.length ? `：${esc(data.data_quality.warnings.join('；'))}` : ''}</td></tr>` : ''}</table>
 ${segRows}
-${estimateHtml}
 <h2>2. 竞品分布</h2>
 <p style="color:#888;font-size:13px">逐家名单见上方「地图与竞品排名」；此处给竞争<b>集中度</b>与距离带。</p>
 ${(() => {
@@ -1554,11 +1568,11 @@ ${(() => {
     ['Top1 势力份额', `${top[0].share_pct}%（${esc(top[0].name)}）`],
     ['Top3 合计', `${t3}%`],
     ['Top10 合计', `${top10}%`],
-    restN > 0 ? [`Top20 之外 ${restN} 家瓜分`, `${restShare}%`] : null,
+    restN > 0 ? [`榜单之外 ${restN} 家瓜分`, `${restShare}%`] : null,
     ['集中度判读', `<b>${verdict}</b>`],
   ].filter(Boolean)
   return `<table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-<p style="color:#777;font-size:12px;margin:6px 0 0">势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。</p>`
+<p style="color:#777;font-size:12px;margin:6px 0 0">势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。<br>列表可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。</p>`
 })()}
 ${outer.distance_bands?.length ? `<h3>${secOuter} ${esc(outer.label ?? '外圈')}（不报份额，只报距离带）</h3><table><tr><th>距离带</th><th>家数</th></tr>${outer.distance_bands.map((b) => `<tr><td>${esc(b.label)}</td><td>${b.count}</td></tr>`).join('')}</table>` : ''}
 ${compHtml}
@@ -1570,6 +1584,7 @@ ${tierHtml}
 ${popHtml}
 ${vetoHtml}
 ${finHtml}
+${estimateHtml}
 ${leaseHtml}
 ${spaceHtml}
 ${auditHtml}

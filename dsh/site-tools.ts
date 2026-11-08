@@ -3412,11 +3412,15 @@ export const financialCalcTool = defineTool({
 interface ProfileSegment {
   key: string
   match: string
+  /** 中文可读名（可选），来自 profile 档案；报告优先显示它 */
+  label?: string
 }
 
 interface DedupeSegment {
   key: string
   pattern: RegExp
+  /** 中文可读名，报告里显示这个而不是技术 key（2026-11-08 加） */
+  label?: string
 }
 
 /** 去重与清洗阈值；**不含任何业态假设**，全部由调用方传入。 */
@@ -3513,7 +3517,7 @@ export interface PoiDedupeResult {
   /** 客户自身所属分段 key；空串表示未分段 */
   self_segment: string
   /** 各竞争分段统计（品类 × 规模）；同段才是直接竞品 */
-  segments: Array<{ key: string; count: number; is_self: boolean }>
+  segments: Array<{ key: string; label?: string; count: number; is_self: boolean }>
   /** 存活 POI 的坐标，可直接喂给 geo_analyze（第 5 步 → 第 6 步的接口） */
   kept: Array<{ name: string; lat: number; lng: number; segment: string; same_type: boolean; cost: number; rating: number }>
   dropped: DroppedPoi[]
@@ -3809,7 +3813,16 @@ export function analyzePois(entries: readonly unknown[], config: DedupeConfig): 
     segmentCounts.set(key, (segmentCounts.get(key) ?? 0) + 1)
   }
   const segmentList = [...segmentCounts.entries()]
-    .map(([key, count]) => ({ key, count, is_self: config.selfSegment !== undefined && key === config.selfSegment }))
+    .map(([key, count]) => {
+      // label 从 profile 的 segments 里带过来；没有就留空，让报告层回退到 key 解析
+      const segConf = config.segments.find((s) => s.key === key)
+      return {
+        key,
+        ...(segConf?.label ? { label: segConf.label } : {}),
+        count,
+        is_self: config.selfSegment !== undefined && key === config.selfSegment,
+      }
+    })
     .sort((a, b) => b.count - a.count)
   const selfCount = config.segments.length === 0
     ? survivors.length
@@ -4053,6 +4066,7 @@ export const poiDedupeTool = defineTool({
       excludeCategoryPattern: compilePattern(args.exclude_category_pattern, 'exclude_category_pattern'),
       segments: (args.segments ?? []).map((seg: ProfileSegment) => ({
         key: seg.key,
+        ...(seg.label ? { label: seg.label } : {}),
         pattern: compilePattern(seg.match, `segments.${seg.key}`) as RegExp,
       })),
       selfSegment: args.self_segment === undefined || args.self_segment === '' ? undefined : args.self_segment,
@@ -4284,6 +4298,9 @@ export function analyzeGeography(
   const step = Math.max(gridStepM, 20)
   const cells = new Map<string, number>()
   let totalArea = 0
+  // 候选池按直线半径筛一遍：Voronoi 只把格子分给圈内店。
+  // 注意网格本身仍按 pois.length 触发计算——否则圈内 0 家时面积会被算成 0（2026-11-09 修）
+  const poisInRadius = pois.filter((p) => haversine(centerLat, centerLng, p.lat, p.lng) <= radius)
   if (pois.length > 0) {
     const half = Math.max(1, Math.ceil(radius / step))
     const cellArea = step * step
@@ -4297,16 +4314,20 @@ export function analyzeGeography(
         if (haversine(centerLat, centerLng, lat, lng) > radius) continue
         let best: string | undefined
         let bestDistance = Number.POSITIVE_INFINITY
-        for (const poi of pois) {
+        // 只在「圈内店」之间分配格子：用全量 pois 会让圈外店抢走圈边网格，
+        // 报告里就会出现「点在圈外却占内圈份额」（2026-11-09 修）
+        for (const poi of poisInRadius) {
           const distance = haversine(lat, lng, poi.lat, poi.lng)
           if (distance < bestDistance) {
             bestDistance = distance
             best = poi.name
           }
         }
+        // 圈内网格面积先累加：即使圈内一家店都没有，这块地的面积也是真实的，
+        // 不能因为「没有店可分」就把面积算成 0（2026-11-09 修）
+        totalArea += cellArea
         if (best === undefined) continue
         cells.set(best, (cells.get(best) ?? 0) + cellArea)
-        totalArea += cellArea
       }
     }
   }
@@ -4879,7 +4900,7 @@ function judgeDeviation(ours: number, bench: number, unit: string): BenchmarkCom
   }
 }
 
-/** 行业基准对标：把我们算出来的数，放到 19 城 × 48 业态的基准里看偏离。 */
+/** 行业基准对标：把我们算出来的数，放到 20 城 × 51 业态的基准里看偏离。 */
 export function checkBenchmark(input: {
   city: string
   format: string
@@ -5055,7 +5076,7 @@ export const benchmarkCheckTool = defineTool({
   name: 'benchmark_check',
   description:
     '行业基准对标：把本项目算出来的数（投资/租金/客单/营业额/回本/净利率）'
-    + '放到 19 城 × 48 业态的行业基准库（tools/base-data）里逐项比对，'
+    + '放到 20 城 × 51 业态的行业基准库（tools/base-data）里逐项比对，'
     + '输出偏离百分比与判定。基准为行业估算区间（单店实际 ±30%），**只作现实性校验，不替代单店参数**。',
   parameters: {
     city: { type: 'string', required: true, description: '城市名，如「广州」' },

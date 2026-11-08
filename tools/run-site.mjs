@@ -62,6 +62,10 @@ const BENCH_FORMAT_MAP = {
   fast_food: '中式快餐档口(黄焖鸡/沙县)',
   tea_drink: '新式茶饮(霸王茶姬/茶百道)',
   convenience: '早餐包子铺档口(15-30㎡)',
+  // 2026-11-08 新增三品类
+  wuhan_reganmian: '武汉热干面',
+  xiaolongbao: '小笼包(24小时营业)',
+  huntun: '馄饨店',
 }
 
 const args = new Map()
@@ -172,11 +176,28 @@ async function runOne(address, surveyPath) {
       : '（高德初判参考值；等拿到真实租金再用腾讯精算，不占腾讯 POI 额度）'),
   )
 
+  // --reuse：跳过采集，直接复用 out/<目录>/probe.json 重渲染。
+  // 改 report.mjs 这类渲染层时用，零 API 消耗（2026-11-08 加）
+  const reuseDir = args.get('reuse')
+  let reusedProbe = null
+  if (reuseDir) {
+    const reusePath = toPath(new URL(`../out/${reuseDir}/probe.json`, import.meta.url))
+    if (!existsSync(reusePath)) {
+      console.error(`❌ --reuse 找不到 ${reusePath}`)
+      process.exit(1)
+    }
+    // 复制成「刚采集完」的样子塞进 OUT，让后续流程原样接上
+    const stamp = Date.now()
+    reusedProbe = `${slug}-reuse-${stamp}.json`
+    copyFileSync(reusePath, toPath(new URL(reusedProbe, OUT)))
+    console.log(`\n♻️ 复用已有采集结果：${reuseDir}/probe.json（跳过 API 采集，0 次调用）`)
+  }
+
   const probeArgs = [address, `--profile=${slug}`]
   if (args.has('sweep')) probeArgs.push('--sweep')
   // --dual-source 只在带租金时透传；不带时 probe 只跑高德，省腾讯 800/日 的 POI 额度
   if (hasRent) probeArgs.push('--dual-source')
-  run(`② 采集与分析（${address}）`, 'guangzhou-probe.mjs', probeArgs)
+  if (!reusedProbe) run(`② 采集与分析（${address}）`, 'guangzhou-probe.mjs', probeArgs)
 
   const jsons = readdirSync(OUT)
     .filter((f) => f.endsWith('.json'))
@@ -470,7 +491,7 @@ async function runOne(address, surveyPath) {
           )
 
           // 行业基准对标：城市 + 业态能从地址/档案里认出来就跑
-          const KNOWN_CITIES = ['上海', '广州', '深圳', '佛山', '重庆', '成都', '杭州', '武汉', '苏州', '西安', '南京', '长沙', '天津', '青岛', '宁波', '东莞', '郑州', '合肥', '昆明']
+          const KNOWN_CITIES = ['北京', '上海', '广州', '深圳', '佛山', '重庆', '成都', '杭州', '武汉', '苏州', '西安', '南京', '长沙', '天津', '青岛', '宁波', '东莞', '郑州', '合肥', '昆明']
           const city = survey.meta.city ?? KNOWN_CITIES.find((c) => String(data.address ?? '').includes(c)) ?? ''
           const formatLabel = survey.meta.format_name ?? profile.name ?? formatCode
           if (city !== '' && base) {

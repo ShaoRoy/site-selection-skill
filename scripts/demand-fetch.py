@@ -126,13 +126,48 @@ def api_get(path, params):
 
 
 def geocode(address, city):
+    """定位到「可承租的商业载体」，不是路口。
+
+    geocode/geo 把「XX地铁站」「XX路口」匹配到站点/道路中心点，
+    坐标落在马路中间——2026-11-08 实测：常营地铁站 → level=公交地铁站点，
+    望京SOHO 的 geocode 结果比真实建筑偏了约 920 米。
+
+    所以顺序改成：① 先试 place/text（POI 搜索，返回商铺/商场/写字楼的真实坐标）
+    ② 只在 POI 搜不到时才回退 geocode/geo，并在返回值里把 level 标成 geocode，让上游知道不可靠。
+    """
+    # ① POI 搜索优先
+    try:
+        data = api_get("place/text", {
+            "keywords": address,
+            "city": city,
+            "offset": 5,
+            "page": 1,
+            "extensions": "base",
+        })
+        pois = data.get("pois") or []
+        # 只接受建筑/商业类 POI（排除公交地铁站点、道路、村庄这类不可承租的落点）
+        BAD = ("公交地铁站点", "地铁站", "道路", "村庄", "地名地址信息", "交通设施服务")
+        for p in pois:
+            ptype = str(p.get("type", ""))
+            if any(b in ptype for b in BAD):
+                continue
+            loc = p.get("location")
+            if not loc:
+                continue
+            lng, lat = (float(x) for x in loc.split(","))
+            name = p.get("name", address)
+            return lat, lng, f"POI:{ptype.split(';')[-1] or ptype}", name, True
+    except (RuntimeError, ValueError, KeyError):
+        pass
+
+    # ② 回退 geocode（坐标可能落在路口，标记为不可靠）
     data = api_get("geocode/geo", {"address": address, "city": city})
     codes = data.get("geocodes") or []
     if not codes:
         raise SystemExit(f"地理编码无结果：{address}")
     g = codes[0]
     lng, lat = (float(x) for x in g["location"].split(","))
-    return lat, lng, g.get("level", "")
+    return lat, lng, f"geocode:{g.get('level', '')}", g.get("formatted_address", address), False
 
 
 def count_poi(lat, lng, keyword, radius):
@@ -205,15 +240,27 @@ def main():
     ap.add_argument("--radius", type=int, default=3000)
     ap.add_argument("--inner-radius", type=int, default=1000)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--center", default=None, help="直接用 lat,lng 指定点位，跳过地理编码（最可靠）")
     args = ap.parse_args()
 
-    lat, lng, level = geocode(args.address, args.city)
+    if args.center:
+        lat_s, lng_s = args.center.split(",")
+        lat, lng = float(lat_s), float(lng_s)
+        level, matched_name, trustworthy = "手动指定坐标", args.address, True
+    else:
+        lat, lng, level, matched_name, trustworthy = geocode(args.address, args.city)
+
     quota = load_quota()
     if quota["calls"] >= DAILY_LIMIT * 0.9:
         print(f"⛔ 今日已用 {quota['calls']} 次，接近高德日配额 {DAILY_LIMIT}：后续调用可能只返回 0，先换 Key 或等明日重置")
     area_km2 = circle_area_km2(args.radius)
     inner_km2 = circle_area_km2(args.inner_radius)
-    print(f"坐标：{lat:.6f}, {lng:.6f}（匹配级别：{level}）｜扫描半径 {args.radius}m ≈ {area_km2:.2f} km²")
+    print(f"坐标：{lat:.6f}, {lng:.6f}（匹配：{level}）｜扫描半径 {args.radius}m ≈ {area_km2:.2f} km²")
+    if matched_name and matched_name != args.address:
+        print(f"命中的载体：{matched_name}")
+    if not trustworthy:
+        print("⚠️ 定位不可靠：这不是商业载体的真实坐标（可能是路口/站点/道路），"
+              "报告里的内圈竞品数会失真。换更具体的点位名，或直接用 --center 给经纬度。")
 
     counts = {}
     for kw, field in CATEGORY_SCANS:
