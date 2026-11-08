@@ -1,0 +1,64 @@
+{
+  "name": "大型餐饮·粤菜（1000–2000㎡）· 500m 测试档",
+  "note": "杨韬广场 500m 半径测试：口径与 large-yuecai 完全一致，仅缩小扫描半径与圈层上限",
+  "category_pattern": "餐饮|中餐厅|粤菜|海鲜|宴会|酒楼|潮州|顺德",
+  "exclude_pattern": "快餐|外卖|自助餐",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "chaoshan_small",
+      "match": "粿条|牛肉饭|牛肉丸|粉面|小吃|肠粉"
+    },
+    {
+      "key": "chaoshan_large",
+      "match": "潮汕|汕头|澄海|狮头鹅|砂锅粥|打冷|卤鹅"
+    },
+    {
+      "key": "yuecai_large",
+      "match": "粤菜|海鲜|酒楼|宴会|烧鹅|顺德|茶餐厅"
+    },
+    {
+      "key": "yuecai_mid",
+      "match": "粤式|广式|老广|煲仔饭|啫啫"
+    },
+    {
+      "key": "yuecai_small",
+      "match": "肠粉|云吞|面店|烧腊|快餐"
+    }
+  ],
+  "cost_bands": [
+    {
+      "key": "small",
+      "max_cost": 60
+    },
+    {
+      "key": "mid",
+      "max_cost": 120
+    },
+    {
+      "key": "large",
+      "max_cost": 99999
+    }
+  ],
+  "self_segment": "yuecai_large",
+  "keywords": [
+    "粤菜",
+    "海鲜",
+    "酒楼",
+    "宴会"
+  ],
+  "scan_radius": 500,
+  "rings": [
+    {
+      "label": "内圈·步行8分",
+      "mode": "walk",
+      "minutes": 8,
+      "max_m": 500
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 300
+  },
+  "archetype": "large_yuecai"
+}
