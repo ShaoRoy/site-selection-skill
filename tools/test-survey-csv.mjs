@@ -18,6 +18,11 @@
  * 用法：node tools/test-survey-csv.mjs
  */
 
+import { parseCsv, toNumber } from './survey-csv.mjs'
+
+/** 单行 → 字段数组（走真实现，不是复制品） */
+const parseLine = (line) => parseCsv(line)[0] ?? []
+
 const CASES = [
   // ── 回归：来源以数字开头，绝不能吞值 ────────────────────────────
   {
@@ -69,28 +74,6 @@ const CASES = [
   },
 ]
 
-/** 与 run-site.mjs 的 readSurvey 内部循环同实现（改那边必须同步改这里） */
-function parseLine(line) {
-  const cells = []
-  let cell = ''
-  let quoted = false
-  for (let i = 0; i < line.length; i += 1) {
-    const c = line[i]
-    if (quoted) {
-      if (c === '"') { if (line[i + 1] === '"') { cell += '"'; i += 1 } else quoted = false } else cell += c
-    } else if (c === '"') quoted = true
-    else if (c === ',') {
-      const next3 = line.slice(i + 1, i + 4)
-      const tail = line[i + 4] ?? ''
-      const headOk = /^[1-9]\d{0,2}(,\d{3})*$/.test(cell.trim())
-      const nextOk = /^\d{3}$/.test(next3)
-      const tailOk = tail === ',' || tail === '' || tail === '\r'
-      if (headOk && nextOk && tailOk) { cell += ',' } else { cells.push(cell); cell = '' }
-    } else cell += c
-  }
-  cells.push(cell)
-  return cells
-}
 
 let pass = 0
 let fail = 0
