@@ -1,0 +1,64 @@
+{
+  "name": "24h 茶市茶楼（A/B 对照档：仅换业态，其余与 test-500m 一致）",
+  "note": "A/B 测试用：与 test-500m 同一场地、同一财务数据，只把业态从粤菜正餐换成茶市茶楼",
+  "category_pattern": "餐饮|茶楼|茶居|点心|早茶|酒楼",
+  "exclude_pattern": "快餐|外卖|咖啡|奶茶",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "chaoshan_small",
+      "match": "粿条|牛肉饭|牛肉丸|粉面|小吃|肠粉"
+    },
+    {
+      "key": "chaoshan_large",
+      "match": "潮汕|汕头|澄海|狮头鹅|砂锅粥|打冷|卤鹅"
+    },
+    {
+      "key": "yumcha_large",
+      "match": "茶楼|茶居|点心|早茶|茶市|粤式茶"
+    },
+    {
+      "key": "yumcha_mid",
+      "match": "粤式|广式|老广|煲仔饭|啫啫"
+    },
+    {
+      "key": "yumcha_small",
+      "match": "肠粉|云吞|面店|烧腊|快餐"
+    }
+  ],
+  "cost_bands": [
+    {
+      "key": "small",
+      "max_cost": 60
+    },
+    {
+      "key": "mid",
+      "max_cost": 130
+    },
+    {
+      "key": "large",
+      "max_cost": 99999
+    }
+  ],
+  "self_segment": "yumcha_large",
+  "keywords": [
+    "茶楼",
+    "早茶",
+    "点心",
+    "茶市"
+  ],
+  "scan_radius": 500,
+  "rings": [
+    {
+      "label": "内圈·步行8分",
+      "mode": "walk",
+      "minutes": 8,
+      "max_m": 500
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 300
+  },
+  "archetype": "tea_house"
+}
