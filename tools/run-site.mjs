@@ -152,9 +152,22 @@ function readSurvey(path) {
       } else if (c === '"') quoted = true
       else if (c === ',') {
         // Excel 复制出来的 150,000 会被切成 value=150 / source=000。
-        // 判据：当前格是纯数字、下一格是三位数字 → 这是千分位，不是分隔符。
+        // 还原千分位，但判据必须严格（见下）。
         const next3 = line.slice(i + 1, i + 4)
-        if (/^\d+$/.test(cell.trim()) && /^\d{3}$/.test(next3) && !/^\d$/.test(line[i + 4] ?? '')) {
+        // 旧判据只看「下一格前三位是数字」，会把 `12750,150 人 × 85 元` 这种
+        // 「值 + 以数字开头的来源」误判成千分位，导致 value 变成
+        // "12750,150 人 × 85 元" → Number() = NaN → 该参数被静默丢弃，
+        // 引擎回落到业态默认值，整份财务段的分母就错了。
+        //
+        // 新判据三层同时成立才算千分位：
+        //   a) 当前格是 1–3 位纯数字且不以 0 开头（千分位第一段）
+        //   b) 紧跟的三位是纯数字
+        //   c) 这三位之后必须是分隔符或行尾（不能是空格/汉字/字母）
+        const tail = line[i + 4] ?? ''
+        const headOk = /^[1-9]\d{0,2}(,\d{3})*$/.test(cell.trim())  // 允许多段千分位：1,234,567
+        const nextOk = /^\d{3}$/.test(next3)
+        const tailOk = tail === ',' || tail === '' || tail === '\r'
+        if (headOk && nextOk && tailOk) {
           cell += ','
         } else {
           cells.push(cell); cell = ''
@@ -195,6 +208,15 @@ function readSurvey(path) {
       if (Number.isFinite(n)) params[key] = { value: n, source, confidence }
     }
   }
+    // 缺必需财务参数时不能静默回落业态默认值——那会让报告「能生成但分母错」
+    const REQUIRED_PARAMS = ['daily_revenue', 'gross_margin', 'monthly_rent', 'initial_investment']
+    const missing = REQUIRED_PARAMS.filter((k) => !(k in params))
+    if (missing.length > 0) {
+      console.warn(`⚠️ 调研表缺必需财务参数：${missing.join(', ')}`)
+      console.warn('   这些项会回落到业态默认值，报告里会标「业态默认（未提供）」。')
+      console.warn('   若 CSV 里明明写了却报缺失，多半是该行没解析出来——检查来源列是否含逗号。')
+    }
+
   return { fields, params, meta }
 }
 
