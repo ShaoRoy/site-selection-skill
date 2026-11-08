@@ -1,0 +1,61 @@
+{
+  "name": "大型餐饮·粤菜（1000–2000㎡）",
+  "category_pattern": "餐饮|中餐厅|粤菜|海鲜|宴会|酒楼|潮州|顺德",
+  "exclude_pattern": "快餐|外卖|自助餐",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "chaoshan_small",
+      "match": "粿条|牛肉饭|牛肉丸|粉面|小吃|肠粉"
+    },
+    {
+      "key": "chaoshan_large",
+      "match": "潮汕|汕头|澄海|狮头鹅|砂锅粥|打冷|卤鹅"
+    },
+    {
+      "key": "yuecai_large",
+      "match": "粤菜|顺德|烧腊|粤式|酒家|茶楼|中餐厅"
+    }
+  ],
+  "cost_bands": [
+    {
+      "key": "small",
+      "max_cost": 60
+    },
+    {
+      "key": "mid",
+      "max_cost": 120
+    },
+    {
+      "key": "large",
+      "max_cost": 99999
+    }
+  ],
+  "self_segment": "yuecai_large",
+  "keywords": [
+    "粤菜",
+    "海鲜",
+    "酒楼",
+    "宴会"
+  ],
+  "scan_radius": 3000,
+  "rings": [
+    {
+      "label": "内圈·步行10分",
+      "mode": "walk",
+      "minutes": 10,
+      "max_m": 1000
+    },
+    {
+      "label": "外圈·车行5分",
+      "mode": "car",
+      "minutes": 5,
+      "max_m": 1500
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 300
+  },
+  "archetype": "large_yuecai"
+}
