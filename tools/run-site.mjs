@@ -276,7 +276,16 @@ async function runOne(address, surveyPath) {
         const outName = `${mySlug(address) || 'site'}.json`
         const outPath = toPath(new URL(outName, _demandDirPre))
         mkdirSync(toPath(_demandDirPre), { recursive: true })
-        const r = spawnSync('python', ['tools/demand-fetch.py', address, '--radius', '3000', '--out', `survey/demand/${outName}`], {
+        // demand-fetch.py 在 scripts/（Python 侧），不在 tools/
+  const demandScript = [
+    toolPath('demand-fetch.py'),
+    toPath(new URL('../scripts/demand-fetch.py', import.meta.url)),
+  ].find((p) => existsSync(p))
+  if (!demandScript) {
+    console.error('⚠️ 找不到 demand-fetch.py（tools/ 与 scripts/ 都没有），跳需求侧采集')
+    return false
+  }
+  const r = spawnSync('python', [demandScript, address, '--radius', '3000', '--out', `survey/demand/${outName}`], {
           cwd: toPath(new URL('..', import.meta.url)), encoding: 'utf8', shell: true,
         })
         const tail = String(r.stdout ?? '').trim().split('\n').slice(-6).join('\n')
@@ -317,10 +326,15 @@ async function runOne(address, surveyPath) {
       郑州: 'zz', 合肥: 'hf', 昆明: 'km',
     }
     const hitCity = Object.keys(CITY_CODE).find((c) => String(address).includes(c))
-    const tifDir = toPath(new URL('../../data/worldpop/', import.meta.url))
+    // tools/ → dist/site-selection/ → dist/ → site-selection/（仓库根，data/worldpop 在这里）
+      const tifDir = toPath(new URL('../../../data/worldpop/', import.meta.url))
     const tif = hitCity ? `${tifDir}${CITY_CODE[hitCity]}_pop_2020_100m.tif` : null
     const qgisPy = 'D:\\QGIS 3.44.8\\bin\\python-qgis-ltr.bat'
-    const sampler = toPath(new URL('./worldpop-sample.py', import.meta.url))
+    // worldpop-sample.py 在 scripts/（Python 侧），不在 tools/
+      const sampler = [
+        toPath(new URL('./worldpop-sample.py', import.meta.url)),
+        toPath(new URL('../scripts/worldpop-sample.py', import.meta.url)),
+      ].find((p) => existsSync(p))
     const skip = (reason, fix) => {
       data.population_skip = { reason, fix }
       console.warn(`⚠️ 人口核对未执行：${reason}`)
