@@ -20,12 +20,24 @@ const toolPath = (name) => toPath(new URL(name, import.meta.url))
 const OUT = new URL('../out/', import.meta.url)
 // 输出文件名要清洗：地址里出现 / 或 .. 会写到目录外
 const mySlug = (s) => String(s).replace(/^(广州|深圳|上海|佛山|重庆|成都|杭州|武汉|苏州|西安|南京|长沙|天津|青岛|宁波|东莞|郑州|合肥|昆明)(市)?/, '')
+// 采集计算层定位：优先 src/site-tools.ts（完整工作区），回退 dsh/site-tools.ts（分发包内）
+const resolveSiteTools = () => {
+  const selfDir = dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'))
+  const candidates = [
+    join(selfDir, '..', 'src', 'site-tools.ts'),
+    join(selfDir, '..', 'dsh', 'site-tools.ts'),
+  ]
+  for (const p of candidates) if (existsSync(p)) return p
+  return null
+}
+
 // ── 环境自检：采集链依赖 DSH 插件的计算模块与本目录的等时圈模块。
 // 技能包里只有渲染器，缺这些依赖——先探一次，给能照做的提示，别抛堆栈。
 {
   const selfDir = dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'))
   const missing = []
-  if (!existsSync(join(selfDir, '..', 'src', 'site-tools.ts'))) missing.push('src/site-tools.ts（采集计算层）')
+  // 采集计算层可能放在 src/（完整工作区）或 dsh/（分发包内），两处都认
+  if (!resolveSiteTools()) missing.push('src/site-tools.ts 或 dsh/site-tools.ts（采集计算层）')
   if (!existsSync(join(selfDir, 'isochrone.mjs'))) missing.push('tools/isochrone.mjs（等时圈）')
   if (!existsSync(join(selfDir, 'guangzhou-probe.mjs'))) missing.push('tools/guangzhou-probe.mjs（采集入口）')
   if (missing.length > 0) {
@@ -83,7 +95,9 @@ const profile = JSON.parse(readFileSync(profileFile, 'utf8'))
 let tools = null
 const loadTools = async () => {
   if (tools) return tools
-  tools = await import(new URL('../src/site-tools.ts', import.meta.url).href)
+  const stPath = resolveSiteTools()
+  if (!stPath) throw new Error('找不到采集计算层（src/site-tools.ts 或 dsh/site-tools.ts）')
+  tools = await import(new URL('file://' + stPath.replace(/\\/g, '/')))
   return tools
 }
 
@@ -593,7 +607,15 @@ async function runOne(address, surveyPath) {
     writeFileSync(statusPath, JSON.stringify(status, null, 2), 'utf8')
 
     // 回写 registry（Python 单写者，避免并发冲突）
-    const reg = spawnSync('python', [toolPath('grid-registry.py'), '--status-file', statusPath], {
+    // grid-registry.py 在 scripts/ 下（Python 侧），不在 tools/（Node 侧）
+  const regScript = [
+    toolPath('grid-registry.py'),
+    toPath(new URL('../scripts/grid-registry.py', import.meta.url)),
+  ].find((p) => existsSync(p))
+  if (!regScript) {
+    console.error('⚠️ 找不到 grid-registry.py（tools/ 与 scripts/ 都没有），跳过 registry 回写')
+  }
+  const reg = regScript && spawnSync('python', [regScript, '--status-file', statusPath], {
       encoding: 'utf8', timeout: 30000,
     })
     if (reg.status === 0) console.log(`留痕：${(reg.stdout ?? '').trim()}`)
