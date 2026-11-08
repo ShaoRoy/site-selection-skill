@@ -1,6 +1,6 @@
 # 结构化输出模板
 
-> 与 `agents/site-selection-analyst.md` 的「输出结构」九段**完全一致**。
+> 与选址分析师 Agent 人格文件里的「输出结构」九段**完全一致**（该人格文件属专家包，不在本仓库内）。
 > 本文件只是九段的填充细则，**不引入第二套骨架**。
 > 口径铁律见 SKILL.md「核心口径」三条 + 人格七条铁律——本文件不得与之冲突。
 > **本文件含少量「❌ 不写」的反例词**（如硬性否决、建议签约、直接放弃），
@@ -9,6 +9,36 @@
 ## 九段骨架（所有场景共用）
 
 ```
+
+
+## 渲染成 HTML（唯一交付形态）
+
+九段骨架的**最终载体是 HTML**，不是 Markdown。渲染器：
+
+```bash
+python scripts/report-html.py --result <finance结果.json> --meta <上下文.json> --site "<点位>" --out out/reports
+```
+
+渲染层**不做任何再计算**，所有数字原样取自引擎输出。九段与 HTML 区块的对应：
+
+| 骨架段 | HTML 区块 | 数据来源 |
+|---|---|---|
+| 【结论】 | 顶部结论横幅 + 4 个 KPI 卡 | `per_scenario.base` + `recommendation` |
+| 【数据质量】 | 列表 + 缺失项告警 | `meta.demand` / `meta.competitors` |
+| 【竞品格局】 | 份额表 | `meta.competitors.top5` |
+| 【需求侧】 | 4 个 KPI 卡 + 代理指标声明 | `meta.demand` |
+| 【场地】 | 待核实清单表（含「现场怎么核」列） | `meta.veto.missing_fields` |
+| 【财务】 | 三档表 + 租期现金流表 | `per_scenario` + `lease_model` |
+| 【对标】 | 基准偏离表 | `meta.benchmark.compares` |
+| 【口径】 | 版本表 + 缺省参数台账（可折叠） | `formula_version` / `param_version` / `ledger` |
+| 【下一步】 | 有序列表 | 由前八段推导 |
+
+**报告顶部必须有一个深色代码块写明文件的绝对保存路径**——这是硬性要求，不是装饰。
+
+路径规则：`out/reports/<点位名>-<YYYYMMDD-HHMM>.html`，不覆写，每次分析产生新文件。
+
+---
+
 【结论】  一句话 + 三个支撑数字
 【数据质量】采集可信度 + 缺失项
 【竞品格局】份额 / 距离带 / 截流两轴 / 三级分层 / 动线阻断
