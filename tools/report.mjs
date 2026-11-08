@@ -164,7 +164,7 @@ function demandSection(data) {
   out.push('> ⚠️ **本段 POI 代理指标未计算**：本点位尚未跑需求侧采集，下面只有独立人口源。', '')
   out.push('补齐方式：在 `scratch-plugin` 目录下运行', '')
   out.push('```')
-  out.push('python tools/demand-fetch.py "地址" --radius 3000 --out survey/demand/<store_id>.json')
+  out.push('python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/<store_id>.json')
   out.push('```')
   out.push('')
   out.push(...populationBlock(data))
