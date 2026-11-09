@@ -27,8 +27,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_UPLOAD = os.path.abspath(os.path.join(HERE, '..', '..', 'upload'))
 
 PACKS = [
-    ('01', '01-skill-导入技能.zip', 'site-report', 'site-selection-workbuddy-v2.10.38.zip'),
-    ('03', '03-github-仓库源码.zip', '', 'site-selection-dsh-v2.10.38.zip'),
+    ('01', '01-skill-导入技能.zip', 'site-report', 'site-selection-workbuddy-v2.10.40.zip'),
+    ('03', '03-github-仓库源码.zip', '', 'site-selection-dsh-v2.10.40.zip'),
 ]
 
 
