@@ -215,7 +215,11 @@ async function runOne(address, surveyPath) {
     .replace(/^(广州|深圳|上海|佛山|重庆|成都|杭州|武汉|苏州|西安|南京|长沙|天津|青岛|宁波|东莞|郑州|合肥|昆明)(市)?/, '')
     .replace(/^(天河区|海珠区|荔湾区|越秀区|白云区|番禺区|黄埔区|南沙区|花都区|增城区|从化区)/, '')
     .slice(0, 14) || 'point'
-  const dir = new URL(`${slug}-${addrSlug}/`, OUT)
+  // 目录名与报告文件名统一成「坐标名-品类」，如 北京国贸大酒店-小笼包（2026-11-09 用户要求）
+  // 品类短名 = profile.name 去掉括号里的面积说明
+  const _shortLabel = String(profile?.name ?? slug).replace(/[（(].*?[)）]/g, '').trim() || slug
+  const briefName = `${addrSlug}-${_shortLabel}`
+  const dir = new URL(`${briefName}/`, OUT)
   mkdirSync(dir, { recursive: true })
   const probeCopy = new URL('probe.json', dir)
   copyFileSync(toPath(new URL(latest, OUT)), toPath(probeCopy))
@@ -564,6 +568,9 @@ async function runOne(address, surveyPath) {
 
   console.log('\n──────── ⑤ 生成报告 ────────')
   const { markdown, html } = buildReport(data, profile)
+  // 主文件用「坐标-品类」命名；report.md / report.html 作为兼容副本保留
+  writeFileSync(toPath(new URL(`${briefName}.md`, dir)), markdown, 'utf8')
+  writeFileSync(toPath(new URL(`${briefName}.html`, dir)), html, 'utf8')
   writeFileSync(toPath(new URL('report.md', dir)), markdown, 'utf8')
   writeFileSync(toPath(new URL('report.html', dir)), html, 'utf8')
   writeFileSync(toPath(probeCopy), JSON.stringify(data, null, 2), 'utf8')
@@ -642,6 +649,7 @@ async function runOne(address, surveyPath) {
     address,
     json: data,
     dir,
+    briefName,
   }
 }
 
@@ -695,10 +703,10 @@ if (batch) {
 } else {
   const one = await runOne(singleAddress, args.get('survey'))
   console.log(`\n✅ 完成：${profile.name} ｜ ${one.address}`)
-  console.log(`   报告：${toPath(new URL('report.html', one.dir))}`)
+  console.log(`   报告：${toPath(new URL(`${one.briefName ?? 'report'}.html`, one.dir))}`)
   console.log(`   数据：${toPath(new URL('probe.json', one.dir))}`)
   if (!args.has('no-map')) console.log(`   地图：${toPath(new URL('map.html', one.dir))}`)
   console.log(`   一键打开：${toPath(new URL('open.cmd', one.dir))}（双击即可）`)
-  if (!args.has('no-open')) openWithShell(toPath(new URL('report.html', one.dir)))
+  if (!args.has('no-open')) openWithShell(toPath(new URL(`${one.briefName ?? 'report'}.html`, one.dir)))
   console.log('\n复核提示：报告里每个数字都能在 probe.json / survey.json 找到出处。')
 }
