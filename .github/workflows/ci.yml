@@ -153,8 +153,11 @@ jobs:
   # 为什么单独一个 job：Python 侧不需要 Node，TS 侧需要 Node + 运行时依赖，
   # 分开跑能让失败原因一眼可辨（是口径分裂，还是依赖装不上）。      # 渲染链冒烟：report.mjs 独立运行、缺 _staticMapSvg 自动补图、render-map 相对路径、HTML 自包含性。
       # 全部用本地 fixture，不碰网络。13 项。
-      - name: 渲染链冒烟（13 项，不联网）
+      - name: 渲染链冒烟（14 项，不联网）
         run: node tools/test-tools-smoke.mjs
+
+      - name: 本地数据位结构校验（不联网）
+        run: node tools/local-data.mjs --check
 
   cross-chain-parity:
     name: 跨链路契约测试（TS ↔ Python）
