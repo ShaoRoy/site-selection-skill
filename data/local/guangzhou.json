@@ -1,0 +1,34 @@
+{
+  "city": "广州",
+  "_说明": "示例文件，仅演示填写格式；example=true 的记录不参与计算。请按官方公布数据替换后再删掉该标记。",
+  "records": [
+    {
+      "city": "广州",
+      "scope": "全市",
+      "metric": "rent_per_sqm_month",
+      "value": 728.7,
+      "unit": "元/㎡/月",
+      "source": "戴德梁行 2025Q3 广州购物中心首层租金（示例值，需按最新公开数据更新）",
+      "source_url": "",
+      "published_at": "2025Q3",
+      "collected_at": "2026-11-09",
+      "confidence": 0.7,
+      "note": "首层购物中心口径，不含物业费；示例值，未核实",
+      "example": true
+    },
+    {
+      "city": "广州",
+      "scope": "全市",
+      "metric": "population_density",
+      "value": 2500,
+      "unit": "人/km²",
+      "source": "广州市统计局 统计公报（示例占位，须填真实值）",
+      "source_url": "",
+      "published_at": "2025",
+      "collected_at": "2026-11-09",
+      "confidence": 0.5,
+      "note": "常住人口口径，非客流；示例占位，未核实",
+      "example": true
+    }
+  ]
+}
