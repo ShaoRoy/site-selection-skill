@@ -16,8 +16,8 @@
 
 | 宿主 | 下载 | 安装方式 | 交付报告 |
 |---|---|---|---|
-| **WorkBuddy** | [`site-selection-workbuddy-v2.10.40.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
-| **DeepSeek Harness** | [`site-selection-dsh-v2.10.40.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
+| **WorkBuddy** | [`site-selection-workbuddy-v2.10.41.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
+| **DeepSeek Harness** | [`site-selection-dsh-v2.10.41.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
 
 > **给 Agent 的判据**：WorkBuddy（能「导入技能」或存在 `~/.workbuddy/`）→ 第一行；DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh`）→ 第二行。两边共用同一套 Python 计算引擎，**数字与口径一致**，仅报告载体不同；DSH 出 HTML 需 `probe.json` 或调研表 CSV，现场采集还需高德 Key。
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
@@ -355,7 +355,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.40.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.41.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -428,7 +428,7 @@ python scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.40.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.41.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -656,7 +656,7 @@ site-selection-skill/
 <p>
   <strong>关键词</strong>：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告
 </p>
-> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.40
+> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.41
 >
 > 内置 **19 城 × 48 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。
@@ -683,6 +683,16 @@ Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负
 **Email：** yingshao113113@gmail.com
 
 如有问题、建议或合作交流，欢迎邮件联系。
+
+## 支持本项目
+
+本项目由作者无偿维护，永久免费。若它帮你省下了一次实地跑盘，可自愿打赏（**无对价赠与，不附带任何回报**）：
+
+<img src="assets/sponsor-wechat.jpg" width="240" alt="微信收款码 · 自愿打赏" />
+
+- 仅接受境内微信支付，任意金额、一次性、无档位、无回报
+- 不支持，功能完全一样；支持了，也不会多出任何功能或服务
+- 不承诺维护时限、不提供优先支持；商业用途请另按 [LICENSE](LICENSE) 第二条取得作者书面许可，与本节无关
 
 ## License
 
