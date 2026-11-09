@@ -779,7 +779,17 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   const _tieMark = () => ""
   const _nTop = _topList.length
   const _topTitle = _nTop > 20 ? '势力份额 Top20' : `势力份额（共 ${_nTop} 家）`
-  md.push(`### ${secNo()} ${inner.label ?? '内圈'}（${_topTitle}）`, '')
+  if (_nTop === 0) {
+    // 0 家时不打印空表头与「无数据」：直接给一句能读的结论
+    const _sameType = data.dedupe?.same_type_count ?? 0
+    const _segSelf = (data.dedupe?.segments ?? []).find((x) => x.is_self)
+    const _segName = _segSelf?.label ?? _segSelf?.key ?? '同段'
+    const _maxKm = (((data.rings ?? [])[data.rings.length - 1]?.radius ?? 0) / 1000).toFixed(1)
+    md.push(`### ${secNo()} ${inner.label ?? '内圈'}（无同段竞品）`, '')
+    md.push(`> 这个圈层内扫不到「${_segName}」对手。全扫描范围（约 ${_maxKm}km）内同段有 **${_sameType}** 家，最近的一家在圈外。`, '')
+    md.push('> 圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。', '')
+  } else {
+    md.push(`### ${secNo()} ${inner.label ?? '内圈'}（${_topTitle}）`, '')
   md.push('> **「份额」是本系统自算的势力覆盖占比**：把圈内切成网格，每格归给最近的一家店，该店分到的格子数 ÷ 总格子数。')
   md.push('> 它衡量「这块地方谁离得最近」——**不是营业额份额，也不是市占率**。')
   md.push('> 列表里可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。', '')
@@ -794,6 +804,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
     md.push(`| ${_cell(_l[k], k)} | ${_cell(_r[k], k + 10)} |`)
   }
   md.push('')
+  }
   if (outer.distance_bands?.length) {
     md.push(`### ${secNo()} ${outer.label ?? '外圈'}（不报份额，只报距离带）`, '', '| 距离带 | 家数 |', '| --- | --- |')
     outer.distance_bands.forEach((b) => md.push(`| ${b.label} | ${b.count} |`))
@@ -1472,12 +1483,28 @@ ${data._staticMapSvg
     </div>
     <div class="mapinner">${data._staticMapSvg}</div>
   </div>
-  <div class="shareside">
-    <div style="font-weight:600;font-size:13px;margin:0 0 4px">${esc((data.rings?.[0]?.label) ?? '内圈')} · ${(data.rings?.[0]?.top?.length ?? 0) > 20 ? '势力份额 Top20' : `势力份额（共 ${data.rings?.[0]?.top?.length ?? 0} 家）`}</div>
-    <div style="font-size:11px;color:#888;margin:0 0 8px;line-height:1.5">份额＝圈内网格中该店为最近店的比例，<b>不是营业额份额</b>。</div>
+  <div class="shareside">${(() => {
+      const top = ((data.rings?.[0]?.top) ?? [])
+      // 0 家时不渲染份额表（否则会出现「共 0 家 / 无份额数据」这种空壳）：
+      // 改成一屏能读懂的结论 + 全扫描范围内的对照数
+      if (top.length === 0) {
+        const sameType = data.dedupe?.same_type_count ?? 0
+        const segSelf = (data.dedupe?.segments ?? []).find((x) => x.is_self)
+        const segName = segSelf?.label ?? segSelf?.key ?? '同段'
+        const maxKm = ((data.rings?.[data.rings.length - 1]?.radius ?? 0) / 1000).toFixed(1)
+        return `<div style="font-weight:600;font-size:13px;margin:0 0 8px">${esc((data.rings?.[0]?.label) ?? '内圈')} · 无同段竞品</div>
+    <div style="font-size:12px;color:#666;line-height:1.8">
+      这个圈层内扫不到「${esc(segName)}」对手。<br>
+      全扫描范围（约 ${maxKm}km）内同段有 <b>${sameType}</b> 家，最近的一家在圈外。<br>
+      <span style="color:#999">圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。</span>
+    </div>`
+      }
+      return `<div style="font-weight:600;font-size:13px;margin:0 0 4px">${esc((data.rings?.[0]?.label) ?? '内圈')} · ${top.length > 20 ? '势力份额 Top20' : `势力份额（共 ${top.length} 家）`}</div>
+    <div style="font-size:11px;color:#888;margin:0 0 8px;line-height:1.5">份额＝圈内网格中该店为最近店的比例，<b>不是营业额份额</b>。</div>`
+    })()}
     ${(() => {
       const top = ((data.rings?.[0]?.top) ?? [])
-      if (top.length === 0) return '<p style="color:#999">无份额数据</p>'
+      if (top.length === 0) return ''
       const rows = top.map((t, i) => ({
         ...t,
         no: i + 1,
