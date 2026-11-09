@@ -88,19 +88,19 @@ function verdict(data) {
   const otherType = data.dedupe?.other_type_count ?? 0
   const nearest = inner.nearest?.[0]
   // 圈层密度分级：标签自带白话，非行业读者也能读懂「红海」是什么意思
-  const level = count > 30 ? '贴脸红海 —— 密度极高，客人随手一拉就是一家'
-    : count >= 11 ? '很密集 —— 选择很多，得靠差异化'
-      : count >= 4 ? '正常竞争 —— 有对手，但不至于抢破头'
-        : '几乎空档 —— 先查是不是真没需求'
+  const level = count > 30 ? '查到的同段竞品很多 —— 客群重叠概率高'
+    : count >= 11 ? '查到的竞品偏多 —— 可对照本批其他片区'
+      : count >= 4 ? '查到的竞品数量中等 —— 有对手，但不密集'
+        : '查到的同段竞品偏少 —— 仅凭 POI 数量判断不了需求'
   const plain = count > 30
-    ? '顾客根本不缺选择，新店要靠记忆点抢客，不靠位置'
+    ? '密度高时客群重叠概率上升，建议现场核实'
     : count >= 11
-      ? '翻台靠位置和复购，新店必须有一个记忆点'
+      ? '可对照本批其他片区的竞品密度再看'
       : count >= 4
-        ? '顾客有得选，靠口味和品类赢'
-        : '先确认为什么没人——可能没需求，不是机会'
+        ? '建议结合现场客流判断'
+        : 'POI 数量少不等于没需求，也不代表机会大小；建议现场核实'
   const line = `${inner.label ?? '内圈'}内 ${count} 家（${level}）`
-    + `${nearest ? `，最近一家 ${nearest.distance_m} 米——门对门抢客` : ''}`
+    + `${nearest ? `，最近一家 ${nearest.distance_m} 米（距离越近，客群重叠概率越高）` : ''}`
     + `——${plain}。`
   const split = sameType + otherType > 0
     ? `全扫描范围内同段直接竞品 ${sameType} 家、异段 ${otherType} 家（协同或弱竞争）；上句 ${count} 家为${inner.label ?? '内圈'}圈内数量，两者范围不同，不要相加。`
@@ -427,16 +427,16 @@ function financeSection(md) {
     const pvc = b.payback_verdict_cash
     if (pv) {
       const mark = {
-        too_good: '🔍 快得不真实', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
-        very_risky: '❌ 风险极高', no_value: '⛔ 基本没有投资价值', never: '⛔ 无法回本',
+        too_good: '🔍 估算回本偏短，建议核实参数', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
+        very_risky: '❌ 按本次估算明显偏长', no_value: '⛔ 按本次估算超出常见经验区间', never: '⛔ 无法回本',
       }[pv.level] ?? pv.label
-      out.push('**回本周期判读（餐饮重资产大店实操标尺）**', '')
+      out.push('**回本周期参考标尺（估算 · 仅供参考）**', '')
       out.push('| 项 | 值 |', '| --- | --- |')
       out.push(`| 会计口径回本（基准档） | **${b.accounting_payback_months > 0 ? num(b.accounting_payback_months) + ' 个月' : '无法回本（−1 为哨兵值）'}** → ${mark} —— 扣掉装修折旧后，账面要这么多月才回本 |`)
       if (pvc) {
         const markC = {
-          too_good: '🔍 快得不真实', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
-          very_risky: '❌ 风险极高', no_value: '⛔ 基本没有投资价值', never: '⛔ 无法回本',
+          too_good: '🔍 估算回本偏短，建议核实参数', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
+          very_risky: '❌ 按本次估算明显偏长', no_value: '⛔ 按本次估算超出常见经验区间', never: '⛔ 无法回本',
         }[pvc.level] ?? pvc.label
         out.push(`| 现金流口径回本（基准档） | ${b.payback_static_months > 0 ? num(b.payback_static_months) + ' 个月' : '无法回本（−1 为哨兵值）'} → ${markC} —— 只算钱进出，账面数字会更好看 |`)
       }
@@ -444,15 +444,17 @@ function financeSection(md) {
       out.push('')
       out.push('> **行业实操标尺**（装修投入几百万的重资产大店） —— 这个标尺回答「多久回本算正常」：')
       out.push('> · **24–36 个月（2–3 年）＝ 优秀门店**　· **≤48 个月（4 年）＝ 可勉强接受的上限**')
-      out.push('> · 49–60 个月＝风险偏高　· 61–84 个月（5–7 年）＝风险极高　· **>84 个月（7–8 年）＝基本没有投资价值**')
+      out.push('> · 49–60 个月＝风险偏高　· 61–84 个月（5–7 年）＝风险极高　· **>84 个月（7–8 年）＝按经验标尺明显偏长（估算）**')
       out.push('> 这是经验标尺，只用来给算出来的回本月数贴标签，不反过来影响测算结果。', '')
     }
   }
 
   const rec = f.recommendation
   if (rec) {
-    const verdict = { healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict
-    out.push('**建议租金（供谈判使用）**', '')
+    const verdict = { healthy: '健康', watch: '偏高', breach: '高于内置经验阈值' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict
+    out.push('**参考测算值（估算 · 仅供参考）**', '')
+    out.push('> 边界：以下数字随输入变化，敏感度中标「会翻转」的参数需先实测；'
+      + '**不是出价建议**，谈多少由你决定。', '')
       out.push('> 取值方式：**谈判锚点取基准档**。保守档不参与取锚点，'
         + '它只是压力测试下的下限，单独列出供风险参考——'
         + '拿压力测试值出价等于按最坏情况要价，谈不成。', '')
@@ -662,9 +664,9 @@ export function buildReport(data, profile) {
   const m = (transit.metro ?? [])[0]
 
   const md = []
-  md.push(`# 选址评估报告：${data.address}`, '')
+  md.push(`# ${data.site_mode === 'area' ? '选址区域初筛' : '选址评估报告'}：${data.address}`, '')
   md.push(`- 业态档案：**${profile?.name ?? '未指定'}**`)
-  md.push(`- 坐标（GCJ-02）：${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`)
+  if (data.site_mode !== 'area') md.push(`- 坐标（GCJ-02）：${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`)
   md.push(`- 生成时间：${now}`)
   md.push(`- 等时圈来源：${inner.source === 'valhalla' ? '本地 Valhalla 路网' : inner.source === 'osrm' ? '本地 OSRM 路网' : '直线估算【估算】'}（行走范围按真实道路路径算出来的，不是在地图上画个圆；导航引擎名字不影响结论）`)
   const isoN = data.isochrone_notice
@@ -675,8 +677,12 @@ export function buildReport(data, profile) {
     md.push(`> 启动：\`${isoN.fix}\`（首次：\`${isoN.first_time}\`）`)
   }
   md.push('')
-  md.push('## 0. 结论', '')
+  md.push('## 0. 参考判断（估算 · 仅供参考）', '')
   md.push(`**${v.line}**`, '')
+  md.push('> 依据：高德 POI 检索（腾讯交叉校验如启用）；「势力份额」是距离归属，不是营业额份额。'
+    + '数据来源等级见文末《哪些数是估算》。', '')
+  md.push('> 边界：本报告提供数据参考，**不构成是否开店的决定**；'
+    + '是否进入请结合现场客流、租金与自身经营判断。', '')
   if (v.split) md.push(v.split, '')
   if (data.data_quality && data.data_quality.verdict !== 'ok') {
     const dq = data.data_quality
@@ -702,6 +708,7 @@ export function buildReport(data, profile) {
     const beSrc = '月租 + 人力 + 其他固定 ÷（毛利率 − 税率）'
       + (Number.isFinite(beM) && beM > 0 ? `，本次 ${num(beM)} 元/月` : '')
     return [
+      ['本地数据位（A 级）', 'data/local/<城市>.json，用户按官方公开数据维护', '命中时显示来源与发布年份（可能滞后）；示例记录不参与计算'],
       ['竞品 / POI / 地铁站', '高德（+ 腾讯交叉校验）', '检索值，不是实地核查；闭店、搬店会滞后'],
       ['人口 / 客流', 'WorldPop 栅格、小区与写字楼密度', '代理指标，不是实测客流'],
       ['距离与步行时长', '本地路网；无路网时用直线', '直线为【估算】，遇江面 / 快速路会高估'],
@@ -1139,11 +1146,11 @@ ${(() => {
   const pv = b.payback_verdict
   if (!pv) return ''
   const mk = (lv, lb) => ({
-    too_good: '🔍 快得不真实', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
-    very_risky: '❌ 风险极高', no_value: '⛔ 基本没有投资价值', never: '⛔ 无法回本',
+    too_good: '🔍 估算回本偏短，建议核实参数', excellent: '✅ 优秀', acceptable: '🟡 可接受上限', risky: '⚠️ 风险偏高',
+    very_risky: '❌ 按本次估算明显偏长', no_value: '⛔ 按本次估算超出常见经验区间', never: '⛔ 无法回本',
   }[lv] ?? lb)
   const pvc = b.payback_verdict_cash
-  return `<h3 style="font-size:15px;margin:18px 0 6px">回本周期判读（餐饮重资产大店实操标尺）</h3>
+  return `<h3 style="font-size:15px;margin:18px 0 6px">回本周期参考标尺（估算 · 仅供参考）</h3>
 ${(() => {
   const tgt = data.finance?.rent_ceiling?.target_payback_months ?? data.finance?.space_model?.target_payback_months
   const bmkH = data.benchmark ?? {}
@@ -1165,7 +1172,7 @@ ${pvc ? `<tr><td>现金流口径回本（基准档）</td><td>${b.payback_static
 <p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555;margin:10px 0">
 <b>行业实操标尺</b>（装修投入几百万的重资产大店）<br>
 ✅ <b>24–36 个月（2–3 年）＝ 优秀门店</b>　🟡 <b>≤48 个月（4 年）＝ 可勉强接受的上限</b><br>
-⚠️ 49–60 个月＝风险偏高　❌ 61–84 个月（5–7 年）＝风险极高　⛔ <b>&gt;84 个月（7–8 年）＝基本没有投资价值</b><br>
+⚠️ 49–60 个月＝风险偏高　❌ 61–84 个月（5–7 年）＝风险极高　⛔ <b>&gt;84 个月（7–8 年）＝按经验标尺明显偏长（估算）</b><br>
 <span style="color:#888">经验标尺，只用来给算出来的回本月数贴标签，不反过来影响测算结果。</span>
 </p>`
 })()}
@@ -1180,13 +1187,14 @@ ${data.finance.recommendation ? (() => {
           ? `（当前租金 ${num(data.finance.rent_ceiling.current_rent)} 元/月，锚点 ${num(rec.target_rent)} 元/月，`
             + `安全余量占锚点 ${(Math.abs(rec.rent_headroom_pct) * 100).toFixed(0)}%）`
           : '')
-  return `<h3 style="font-size:15px;margin:18px 0 6px">建议租金（锚点取基准档，保守档仅作压力下限）</h3>
+  return `<h3 style="font-size:15px;margin:18px 0 6px">参考测算值（估算 · 仅供参考）</h3>
+<p style="color:#666;font-size:13px">边界：以下数字随输入变化，敏感度中标「会翻转」的参数需先实测；<b>不是出价建议</b>，谈多少由你决定。</p>
 <table><tr><th>项</th><th>值</th></tr>
 <tr><td>谈判锚点</td><td>${rec.anchor_unreachable ? '<b>不可达</b>（即便零租金，压力测试档也达不到目标回本）' : `<b>${num(rec.target_rent)}</b> 元/月（取自 ${rec.based_on_scenario} 档）`}</td></tr>
 <tr><td>保本红线</td><td>${num(rec.ceiling_rent)} 元/月</td></tr>
 ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保守档）</td><td>锚点 ${num(rec.target_rent_conservative)} 元/月 ｜ 保本 ${num(rec.ceiling_rent_conservative)} 元/月 —— 「营收降 15% 且成本涨 5%」时的最坏情况，<b>不作为谈判出价</b></td></tr>` : ''}
 <tr><td>距锚点</td><td>${gapCell}</td></tr>
-<tr><td>当前租售比</td><td>${(rec.current_rent_ratio * 100).toFixed(1)}%（${esc(rec.rent_ratio_label)}健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）→ <b>${esc({ healthy: '健康', watch: '偏高', breach: '超红线' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict)}</b></td></tr>
+<tr><td>当前租售比</td><td>${(rec.current_rent_ratio * 100).toFixed(1)}%（${esc(rec.rent_ratio_label)}健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）→ <b>${esc({ healthy: '健康', watch: '偏高', breach: '高于内置经验阈值' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict)}</b></td></tr>
 </table>
 <p style="color:#666">${esc(rec.rent_ratio_hint)}</p>
 <p style="color:#666"><b>取值方式</b>：谈判锚点取<b>基准档</b>。保守档不参与取锚点，它只是压力测试下的下限，单独列出供风险参考——拿压力测试值出价等于按最坏情况要价，谈不成。</p>
@@ -1462,14 +1470,16 @@ button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;
   <b>浏览器自带另存</b>：<code>Ctrl+S</code> 选「网页，仅 HTML」效果一样<br>
   <span style="color:#c62828">别选「网页，全部」——会多出一个文件夹，发出去容易漏图。</span>
 </div>
-<h1>选址评估报告：${esc(data.address)}</h1>
-<p>业态档案：<b>${esc(profile?.name ?? '未指定')}</b>｜坐标 ${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}｜${esc(now)}</p>
+<h1>${data.site_mode === 'area' ? '选址区域初筛' : '选址评估报告'}：${esc(data.address)}</h1>
+<p>业态档案：<b>${esc(profile?.name ?? '未指定')}</b>${data.site_mode === 'area' ? '' : `｜坐标 ${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`}｜${esc(now)}</p>
 ${data.isochrone_notice ? `<div style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;margin:12px 0;font-size:13px">
 <b>⚠️ 等时圈引擎未启用</b>（${esc(data.isochrone_notice.reason)}）<br>
 本次圈层为<b>直线估算</b>：${esc(data.isochrone_notice.impact)}。<br>
 启动：<code>${esc(data.isochrone_notice.fix)}</code>　首次：<code>${esc(data.isochrone_notice.first_time)}</code>
 </div>` : ''}
 <div class="concl">${esc(v.line)}</div>
+<p style="color:#666;font-size:13px;margin:6px 0 0">参考判断（估算 · 仅供参考）。依据：高德 POI 检索（腾讯交叉校验如启用）；「份额」是距离归属，不是营业额份额。数据来源等级见《哪些数是估算》。</p>
+<p style="color:#666;font-size:13px;margin:4px 0 0">边界：本报告提供数据参考，<b>不构成是否开店的决定</b>；是否进入请结合现场客流与租金判断。</p>
 ${v.split ? `<p>${esc(v.split)}</p>` : ''}
 <h2>地图与竞品排名</h2>
 ${data._staticMapSvg
