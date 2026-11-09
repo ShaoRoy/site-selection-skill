@@ -1892,8 +1892,17 @@ if (invokedDirectly) {
   }
 
   const { markdown, html } = buildReport(data, profile)
-  const base = inFile.replace(/\.json$/, '')
+  // --out-name 给了就用它当文件名（如「北京国贸大酒店-小笼包」），
+  // 否则回退到 probe.json 同名。目录仍由 run-site.mjs 决定（2026-11-09 改）
+  const inBase = inFile.replace(/\.json$/, '')
+  const dir = inBase.replace(/[\\/][^\\/]+$/, '')
+  const outName = args.get('out-name')
+  const base = outName ? `${dir}/${outName}` : inBase
   writeFileSync(`${base}.md`, markdown, 'utf8')
   writeFileSync(`${base}.html`, html, 'utf8')
+  // 兼容旧路径：--out-name 模式下额外写一份 report.html，老脚本/收藏夹不会断
+  if (outName && !/report$/.test(outName)) {
+    try { writeFileSync(`${dir}/report.html`, html, 'utf8') } catch { /* 忽略 */ }
+  }
   console.log(`已生成：${base}.md / ${base}.html`)
 }
