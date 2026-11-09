@@ -65,7 +65,8 @@ try {
   const md = existsSync(join(tmp, 'probe.md')) ? readFileSync(join(tmp, 'probe.md'), 'utf8') : ''
   const html = existsSync(join(tmp, 'probe.html')) ? readFileSync(join(tmp, 'probe.html'), 'utf8') : ''
 
-  check('md 含结论段', md.includes('## 0. 结论'))
+  check('md 含结论段', /## 0\. (结论|参考判断)/.test(md))
+  check('md 结论标注为参考判断', md.includes('估算 · 仅供参考') && md.includes('不构成是否开店的决定'))
   check('md 含竞品分布', md.includes('竞品分布'))
   check('md 含势力份额榜', md.includes('势力份额'))
   check('html 非空且 > 10KB', html.length > 10240)
