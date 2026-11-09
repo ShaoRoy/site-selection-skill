@@ -28,10 +28,10 @@ SRC = os.path.join(UPLOAD, '_src')
 SPECS = [
     ('01', '01-skill-导入技能.zip',
      os.path.join(SRC, '01-skill', 'site-report'), 'site-report',
-     'site-selection-workbuddy-v2.10.38.zip'),
+     'site-selection-workbuddy-v2.10.40.zip'),
     ('03', '03-github-仓库源码.zip',
      os.path.join(SRC, '03-source'), '',
-     'site-selection-dsh-v2.10.38.zip'),
+     'site-selection-dsh-v2.10.40.zip'),
 ]
 
 EXCLUDE_DIRS = {'out', '__pycache__', 'node_modules'}
