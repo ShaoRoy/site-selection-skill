@@ -1,0 +1,29 @@
+{
+  "_说明": "本地数据位模板。复制成 <城市>.json 后按需维护；每条记录必须可溯源。本文件不参与计算。",
+  "_字段": {
+    "city": "城市名，与 data/cities.json 一致",
+    "scope": "适用范围：全市 / 区名 / 商圈名",
+    "metric": "指标键，见 _可用指标",
+    "value": "数值（纯数字，不带单位、不带千分位）",
+    "unit": "单位，如 元/㎡/月、元、人/km²",
+    "source": "来源名称，如「广州市统计局 2026Q1 公报」",
+    "source_url": "来源链接；没有就填空字符串",
+    "published_at": "数据发布期，如 2026-03 或 2026Q1",
+    "collected_at": "录入日期 YYYY-MM-DD",
+    "confidence": "0–1，对口径完整性的自评",
+    "note": "口径说明（是否含物业费、首层还是全楼层等）"
+  },
+  "_可用指标": [
+    "rent_per_sqm_month",
+    "avg_ticket",
+    "daily_customers",
+    "population_density",
+    "investment_per_sqm",
+    "gross_margin",
+    "payback_months",
+    "net_margin"
+  ],
+  "_边界": "只收官方公开统计与公开市场数据；不收自家门店经营数据。官方数据可能滞后或不准确，报告会显示 published_at，不假装实时。",
+  "_优先级": "A 本地实测/官方 > B 内置行业基准 > C 模型估算 > D 占位默认值；按城市隔离，绝不写回 data/cities.json 的缩放基数。",
+  "records": []
+}
