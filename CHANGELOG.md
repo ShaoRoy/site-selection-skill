@@ -13,7 +13,7 @@
 
 - 两包 `SKILL.md` 的 frontmatter `version` 自 `2.10.39` 起历次升版均未同步（WorkBuddy / Skill 平台以该字段判定包版本，报错「包内版本号 2.10.39 必须大于当前最新版本 2.10.39」）。本次统一同步至 `2.10.42`。
 - `tools/verify-release.mjs` 的 [4] 段新增两包 `SKILL.md` frontmatter version 校验，与 `manifest.json` / `package.json` 同批比对，防止再次漏升。
-- 本次为**本地修复**：仅重打本地 01/03 包，未推送 GitHub、未新建 Release。
+- 交付顺序：先做本地修复并重打 01/03 包，随后同步 GitHub `main` 并新建 Release `v2.10.42`。
 
 ## 2.10.41
 
