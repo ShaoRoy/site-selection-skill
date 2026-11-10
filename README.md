@@ -16,8 +16,8 @@
 
 | 宿主 | 下载 | 安装方式 | 交付报告 |
 |---|---|---|---|
-| **WorkBuddy** | [`site-selection-workbuddy-v2.10.41.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
-| **DeepSeek Harness** | [`site-selection-dsh-v2.10.41.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
+| **WorkBuddy** | [`site-selection-workbuddy-v2.10.42.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
+| **DeepSeek Harness** | [`site-selection-dsh-v2.10.42.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
 
 > **给 Agent 的判据**：WorkBuddy（能「导入技能」或存在 `~/.workbuddy/`）→ 第一行；DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh`）→ 第二行。两边共用同一套 Python 计算引擎，**数字与口径一致**，仅报告载体不同；DSH 出 HTML 需 `probe.json` 或调研表 CSV，现场采集还需高德 Key。
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
@@ -62,14 +62,14 @@
 
 ## 本地数据位（自己长期维护的官方数据）
 
-项目在 `data/local/` 留了一个**专门放数据的地方**：你常驻的城市（例如广州）可以持续按官方公布数据更新，
+项目在 `local/` 留了一个**专门放数据的地方**：你常驻的城市（例如广州）可以持续按官方公布数据更新，
 其他城市由你自行调取维护。项目**不写爬虫、不主动抓取**。
 
-- 复制 `data/local/_template.json` 为 `<城市>.json`，逐条填 `value / unit / source / published_at / collected_at`。
+- 复制 `local/_template.json` 为 `<城市>.json`，逐条填 `value / unit / source / published_at / collected_at`。
 - 只收**官方公开统计与公开市场数据**，不收自家门店经营数据；数据有延后或不准确，报告会显示发布年份，不假装实时。
 - 取值优先级：**A 本地实测/官方 > B 内置行业基准 > C 模型估算 > D 占位**；报告显示本次实际命中的等级。
 - 按城市隔离，**不要改 `data/cities.json` 的广州基数**（其他 19 城由它缩放推算）。
-- 校验：`node tools/local-data.mjs --check`（CI 也跑）。字段与示例见 `data/local/README.md`。
+- 校验：`node tools/local-data.mjs --check`（CI 也跑）。字段与示例见 `local/README.md`。
 
 ## 报告示例
 <p align="center">
@@ -355,7 +355,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.41.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.42.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -428,7 +428,7 @@ python scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.41.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.42.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -587,6 +587,10 @@ site-selection-skill/
 │   ├── benchmarks.json   # 行业基准库（可补录城市）
 │   ├── cities.json       # 城市系数（投资/租金/客单/客流）
 │   └── formats.json      # 业态规则（可自定义，优先于内置）
+├── local/                # 本地数据位（用户长期维护的官方公开数据，详见「本地数据位」节）
+│   ├── README.md         # 字段说明与示例
+│   ├── _template.json    # 城市数据模板（不计入计算）
+│   └── guangzhou.json    # 示例城市（已脱敏，不参与计算）
 ├── docs/                 # 文档
 │   ├── FEATURES.md
 │   ├── GRID.md
@@ -656,7 +660,7 @@ site-selection-skill/
 <p>
   <strong>关键词</strong>：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告
 </p>
-> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.41
+> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.42
 >
 > 内置 **19 城 × 48 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。

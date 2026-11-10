@@ -113,13 +113,13 @@ function populationBlock(data) {
   if (!pop || !pop.rings) {
     const sk = data.population_skip
     if (!sk) return []
-    return ['**人口核对（本次未执行）**', '',
+    return ['### 4.1 人口核对（本次未执行）', '',
       `> ⚠️ 原因：${sk.reason}`,
       `> 补齐：\`${sk.fix}\``,
       '> 本次报告**缺少独立人口数据源**，上面的需求强度全部来自 POI 代理，请在结论里按「单源」看待。', '']
   }
   const cc = pop.cross_check
-  const out = ['**人口核对（独立数据源交叉验证）**', '']
+  const out = ['### 4.1 人口核对（独立数据源交叉验证）', '']
   out.push('> WorldPop 2020 常住人口栅格（约 93m），已从 GCJ-02 转 WGS84 后采样，偏移 ' +
     String(pop.crs_shift_m ?? '—') + 'm。该指标测「常住人口」，与上面的 POI 代理（测商务活跃度）**不是一回事**，两者要分开看。', '')
   out.push('| 圈层 | 常住人口 | 密度 |', '| --- | --- | --- |')
@@ -206,7 +206,7 @@ function demandSection(data) {
   const out = ['## 4. 需求侧指标', '']
 
   out.push('> ⚠️ **本段 POI 代理指标未计算**：本点位尚未跑需求侧采集，下面只有独立人口源。', '')
-  out.push('补齐方式：在 `scratch-plugin` 目录下运行', '')
+  out.push('补齐方式：在开发工作区运行', '')
   out.push('```')
   out.push('python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/<store_id>.json')
   out.push('```')
@@ -214,6 +214,86 @@ function demandSection(data) {
   out.push(...populationBlock(data))
   out.push('_**禁止用竞品数量反推人口规模**——那是自我循环。_', '')
   return out
+}
+
+// ── 客群结构推断（估算 · 仅供参考）──
+// 只把第 4 节的需求侧代理指标翻译成口语化的客群结构描述；不是实测画像，
+// 不提供「人口档位 / 潮汐 T 值 / 客群画像」这类本包不输出、也未经授权的判据。
+function inferCustomer(data) {
+  const d = data.demand
+  if (!d || !d.demand_score) return null
+  const p = d.proxies ?? {}
+  const jh = Number(p.job_housing_ratio)
+  const coffee = Number(p.coffee_density_per_km2)
+  const prem = Number(p.premium_dining_density_per_km2)
+  const bank = Number(p.bank_density_per_km2)
+  const res = Number(p.residential_density_per_km2)
+  const amenity = p.amenity_count
+  const score = d.demand_score?.score
+  const comp = Math.round((d.data_completeness ?? 0) * 100)
+  const fmt = (v) => Number.isFinite(Number(v)) ? String(Number(v)) : '—'
+  let mainType, timeHint
+  if (Number.isFinite(jh)) {
+    if (jh > 1.15) { mainType = '就业主导型（周围上班的人明显多于住家的人）'; timeHint = '工作日午市、工作日晚市是主力，纯周末相对弱' }
+    else if (jh < 0.85) { mainType = '居住主导型（周围住家的人多于上班的人）'; timeHint = '晚市与周末是主力，工作日午市偏弱' }
+    else { mainType = '混合均衡型（上班与住家的人大致相当）'; timeHint = '工作日与周末都有客，全天相对均衡' }
+  } else { mainType = '职住比缺失，主客群类型暂无法判断'; timeHint = '需现场观察工作日／周末客流差异' }
+  const has = (v) => Number.isFinite(v) && v > 0
+  let tier
+  if (has(coffee) && has(prem) && has(bank)) tier = '中高消费客群聚集'
+  else if (has(coffee) && has(prem)) tier = '中高消费客群有一定聚集'
+  else if (has(res) && !has(prem)) tier = '更偏大众／社区消费客群'
+  else tier = '消费档次暂无法从代理指标判断'
+  const pop = data.population?.rings?.['3000']
+  const popTxt = (pop && pop.in_raster !== false)
+    ? `${(pop.population / 10000).toFixed(1)} 万人（WorldPop 2020 常住人口栅格，是常住人口，不是客流）`
+    : '常住人口未采样'
+  const scoreTxt = Number.isFinite(score) ? `${score}/100（数据完整度 ${comp}%）` : '未给分'
+  return {
+    jhTxt: fmt(jh), coffeeTxt: fmt(coffee), premTxt: fmt(prem), bankTxt: fmt(bank),
+    amenityTxt: fmt(amenity), mainType, timeHint, tier, popTxt, scoreTxt,
+  }
+}
+
+function customerInference(data) {
+  const inf = inferCustomer(data)
+  if (!inf) {
+    return ['### 4.2 客群结构推断（估算 · 仅供参考）', '',
+      '> ⚠️ 本段依赖第 4 节「需求侧代理指标」，本点位尚未计算，无法生成客群结构推断。', '',
+      '> 补齐方式：在开发工作区运行', '> ```',
+      '> python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/<store_id>.json', '> ```', '']
+  }
+  const { jhTxt, coffeeTxt, premTxt, bankTxt, amenityTxt, mainType, timeHint, tier, popTxt, scoreTxt } = inf
+  const out = ['### 4.2 客群结构推断（估算 · 仅供参考）', '']
+  out.push('> 本段是**推断**而非实测画像：仅把第 4 节的代理指标，翻译成「这附近大概率是什么人」的口语化描述，'
+    + '帮你判断品类与营业时段是否对路。**这不构成本包的客群画像**，更不替你决定开不开店。', '')
+  out.push('**推断结论（估算 · 仅供参考）**：', '')
+  out.push(`- **主客群类型**：${mainType}。职住比 ${jhTxt}，${timeHint}。`)
+  out.push(`- **消费档次**：${tier}（依据：咖啡密度 ${coffeeTxt}、高端餐饮密度 ${premTxt}、银行密度 ${bankTxt} 个/km²）。`)
+  out.push(`- **客群规模量级**：周边 3000m 约 ${popTxt}；综合需求强度 ${scoreTxt}。`)
+  out.push(`- **配套带动**：购物中心、学校、地铁站合计 ${amenityTxt} 个，反映周边配套成熟度，可带来家庭、学生、通勤等混合到访客流。`)
+  out.push('')
+  out.push('> **依据**：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测，详见文末《哪些数是估算》。', '')
+  out.push('> **边界**：本段是数字翻译，不是现场观察。对路与否，请结合实地客流、竞品实际生意、周边人群访谈判断；'
+    + '本包不输出、也未经授权给出「人口档位 / 潮汐 T 值 / 客群画像」这类判据。', '')
+  return out
+}
+
+function customerInferenceHtml(data) {
+  const inf = inferCustomer(data)
+  if (!inf) {
+    return `<h3>4.2 客群结构推断（估算 · 仅供参考）</h3>
+<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ 本段依赖第 4 节「需求侧代理指标」，本点位尚未计算，无法生成客群结构推断。<br>补齐方式：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code></p>`
+  }
+  const { jhTxt, coffeeTxt, premTxt, bankTxt, amenityTxt, mainType, timeHint, tier, popTxt, scoreTxt } = inf
+  return `<h3>4.2 客群结构推断（估算 · 仅供参考）</h3>
+<p style="color:#888">本段是<b>推断</b>而非实测画像：仅把第 4 节的代理指标，翻译成「这附近大概率是什么人」的口语化描述，帮你判断品类与营业时段是否对路。<b>这不构成本包的客群画像</b>，更不替你决定开不开店。</p>
+<p class="concl" style="font-size:15px">主客群类型：${esc(mainType)}。职住比 ${esc(jhTxt)}，${esc(timeHint)}。<br>
+消费档次：${esc(tier)}（依据咖啡密度 ${esc(coffeeTxt)}、高端餐饮密度 ${esc(premTxt)}、银行密度 ${esc(bankTxt)} 个/km²）。<br>
+客群规模量级：周边 3000m 约 ${esc(popTxt)}；综合需求强度 ${esc(scoreTxt)}。<br>
+配套带动：购物中心、学校、地铁站合计 ${esc(amenityTxt)} 个，反映周边配套成熟度，可带来家庭、学生、通勤等混合到访客流。</p>
+<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555"><b>依据</b>：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测。<br>
+<b>边界</b>：本段是数字翻译，不是现场观察。对路与否请结合实地客流、竞品实际生意、周边人群访谈判断；本包不输出、也未经授权给出「人口档位 / 潮汐 T 值 / 客群画像」这类判据。</p>`
 }
 
 function vetoSection(md) {
@@ -708,7 +788,7 @@ export function buildReport(data, profile) {
     const beSrc = '月租 + 人力 + 其他固定 ÷（毛利率 − 税率）'
       + (Number.isFinite(beM) && beM > 0 ? `，本次 ${num(beM)} 元/月` : '')
     return [
-      ['本地数据位（A 级）', 'data/local/<城市>.json，用户按官方公开数据维护', '命中时显示来源与发布年份（可能滞后）；示例记录不参与计算'],
+      ['本地数据位（A 级）', 'local/<城市>.json，用户按官方公开数据维护', '命中时显示来源与发布年份（可能滞后）；示例记录不参与计算'],
       ['竞品 / POI / 地铁站', '高德（+ 腾讯交叉校验）', '检索值，不是实地核查；闭店、搬店会滞后'],
       ['人口 / 客流', 'WorldPop 栅格、小区与写字楼密度', '代理指标，不是实测客流'],
       ['距离与步行时长', '本地路网；无路网时用直线', '直线为【估算】，遇江面 / 快速路会高估'],
@@ -957,6 +1037,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   md.push(`| ${transit.parking_threshold_m ?? 300}m 内停车场 | ${num(transit.parking_near, '0')} 个 |`, '')
 
   md.push(...demandSection(data))
+  md.push(...customerInference(data))
   md.push(...vetoSection(data))
   md.push(...financeSection(data))
 
@@ -1244,7 +1325,7 @@ ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保
 <p class="concl" style="font-size:15px">综合需求强度：${d.demand_score.score}/100（数据完整度 ${Math.round((d.data_completeness ?? 0) * 100)}%，置信度 ${esc(d.confidence ?? '—')}）</p>
 ${caveat}${populationHtml(data)}`
     }
-    return `<h2>4. 需求侧指标</h2>${populationHtml(data)}<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ <b>POI 代理指标未计算</b>：本点位尚未跑需求侧采集。<br>补齐：<code>python tools/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code><br><b>禁止用竞品数量反推人口规模。</b></p>`
+    return `<h2>4. 需求侧指标</h2>${populationHtml(data)}<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ <b>POI 代理指标未计算</b>：本点位尚未跑需求侧采集。<br>补齐：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code><br><b>禁止用竞品数量反推人口规模。</b></p>`
   })()
 
   // HTML 侧章节号按**输出顺序**预先分配（const 构造顺序 ≠ 输出顺序，用计数器会错位）
@@ -1619,6 +1700,7 @@ ${tierHtml}
 <tr><td>最近停车场（≤${transit.parking_threshold_m ?? 300}m）</td><td>${transit.nearest_parking_m >= 0 ? `${transit.nearest_parking_m} m` : '未取到'}</td></tr>
 <tr><td>${transit.parking_threshold_m ?? 300}m 内停车场</td><td>${num(transit.parking_near, '0')} 个</td></tr></table>
 ${popHtml}
+${customerInferenceHtml(data)}
 ${vetoHtml}
 ${finHtml}
 ${estimateHtml}

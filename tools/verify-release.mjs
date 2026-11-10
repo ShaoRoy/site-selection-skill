@@ -8,7 +8,7 @@
  *   1. 两包字节 / 条目数 / SHA-256
  *   2. 两包 ↔ _src 逐条目零差异（调 python 的 zipfile 模块，不装三方库）
  *   3. release\ 两副本 = 根包
- *   4. 四处版本号 = 2.10.39；license 字段；LICENSE 哈希与大小
+ *   4. 版本号（manifest×2 / package.json / SKILL.md×2）= EXPECT_VERSION；license 字段；LICENSE 哈希与大小
  *   5. 发布文本控制字符 0（README / CHANGELOG / 看板）
  *   6. README-先看我.md 里的两包 SHA-12 与实际 zip 自洽
  *   7. 线上 Release 两附件 digest = 本地
@@ -42,13 +42,13 @@ const BOARD = join(UPLOAD, 'README-先看我.md')
 const ARGS = process.argv.slice(2)
 const ONLINE = !ARGS.includes('--no-online')
 
-const EXPECT_VERSION = '2.10.40'
+const EXPECT_VERSION = '2.10.42'
 const EXPECT_LICENSE_SHA = '32bc0352284c'
 const EXPECT_LICENSE_BYTES = 4543
 
 const PACKS = [
-  { file: '01-skill-导入技能.zip', prefix: 'site-report', rel: 'site-selection-workbuddy-v2.10.40.zip', srcDir: '01-skill/site-report' },
-  { file: '03-github-仓库源码.zip', prefix: '', rel: 'site-selection-dsh-v2.10.40.zip', srcDir: '03-source' },
+  { file: '01-skill-导入技能.zip', prefix: 'site-report', rel: 'site-selection-workbuddy-v2.10.42.zip', srcDir: '01-skill/site-report' },
+  { file: '03-github-仓库源码.zip', prefix: '', rel: 'site-selection-dsh-v2.10.42.zip', srcDir: '03-source' },
 ]
 
 const fails = []
@@ -186,6 +186,20 @@ for (const f of versionTargets) {
   if (v !== EXPECT_VERSION) bad(`${f.replace(SRC + '\\', '')} version=${v}，期望 ${EXPECT_VERSION}`)
   else if (lic !== 'LicenseRef-Custom-NonCommercial') bad(`${f.replace(SRC + '\\', '')} license=${lic}`)
   else ok(`${f.replace(SRC + '\\', '')} ${v} / ${lic}`)
+}
+// SKILL.md 的 frontmatter version 是 WorkBuddy / Skill 平台实际读取的版本来源。
+// 必须与 manifest 同步递增，否则平台按「包内版本号」判重而拒收（曾滞留 2.10.39 未被发现）。
+const skillVersionTargets = [
+  join(SRC, '01-skill/site-report/SKILL.md'),
+  join(SRC, '03-source/SKILL.md'),
+]
+for (const f of skillVersionTargets) {
+  const rel = f.replace(SRC + '\\', '')
+  if (!existsSync(f)) { bad(`缺文件 ${rel}`); continue }
+  const m = readFileSync(f, 'utf8').match(/^version:\s*(\d+\.\d+\.\d+)\s*$/m)
+  const v = m ? m[1] : '(frontmatter 未找到 version)'
+  if (v !== EXPECT_VERSION) bad(`${rel} frontmatter version=${v}，期望 ${EXPECT_VERSION}`)
+  else ok(`${rel} frontmatter version=${v}`)
 }
 const licPath = join(SRC, '01-skill/site-report/LICENSE')
 if (existsSync(licPath)) {

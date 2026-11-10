@@ -1,7 +1,7 @@
 /**
  * 本地数据位读取与校验（L2）。
  *
- * 数据源：data/local/<城市>.json，由用户按官方公开数据自行维护。
+ * 数据源：local/<城市>.json，由用户按官方公开数据自行维护。
  * 优先级：A 本地实测/官方 > B 内置行业基准 > C 模型估算 > D 占位。
  * 本模块只负责 A 级的读取、校验与查询，不回写 data/cities.json 的缩放基数。
  *
@@ -12,7 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-export const LOCAL_DIR = resolve(HERE, '..', 'data', 'local')
+export const LOCAL_DIR = resolve(HERE, '..', 'local')
 
 const REQUIRED = ['city', 'scope', 'metric', 'value', 'unit', 'source',
   'published_at', 'collected_at', 'confidence']
