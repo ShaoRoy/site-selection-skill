@@ -3,8 +3,8 @@
 import-benchmarks.py —— 把《餐饮业态分城市GIS数据底稿.xlsx》转成机器可读 JSON 并做质检
 
 产出：
-  tools/base-data/cities.json    城市基准（19 城：人口/租金/客单/增速/商圈）
-  tools/base-data/formats.json   城市×业态矩阵（912 行）
+  tools/base-data/cities.json    城市基准（人口/租金/客单/增速/商圈）
+  tools/base-data/formats.json   城市×业态矩阵
   tools/base-data/density.json   本地业态密度
   tools/base-data/README.md      口径与质检结论
 

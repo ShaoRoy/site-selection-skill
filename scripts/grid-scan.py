@@ -195,12 +195,12 @@ def read_key():
     if key:
         return key.strip()
     if not os.path.isfile(KEY_FILE):
-        _die(f"未找到高德 Key：既没有环境变量 AMAP_API_KEY，也没有 {KEY_FILE}")
+        _die("未找到高德凭据：请通过宿主凭据机制提供 AMAP_API_KEY（见 manifest.json 的 dependencies.envOptional）")
     with open(KEY_FILE, encoding="utf-8") as f:
         for line in f:
             if line.strip() and not line.startswith("#"):
                 return line.strip()
-    _die(f"Key 文件为空：{KEY_FILE}")
+    _die("凭据文件为空：请检查其中是否有有效行")
 
 
 def api_get(path, params):

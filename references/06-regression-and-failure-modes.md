@@ -3,12 +3,13 @@
 > 用途：改完任何口径、模板、脚本后，照这份跑一遍确认没改坏。
 > 这是「评估-反馈闭环」的落点——每次踩过的坑都记在这里，不靠记忆。
 
-## 一、自动化基线（当前 v2.10.36）
+## 一、自动化基线（当前 v2.10.44）
 
 ```bash
 # 技能包内可直接跑（零依赖、离线）
-python scripts/site_core.py selftest        # 48/48
-python scripts/grid-scan.py --self-test     # 17/17（评分纯函数，不联网、不需要 Key）
+python scripts/site_core.py selftest         # 48/48
+python scripts/grid-scan.py --self-test      # 17/17（评分纯函数，不联网、不需要 Key）
+python scripts/grid-registry.py --self-test  # 12/12（注册表，不联网）
 
 # 源码包内：网格链路要按顺序自举（含测试夹具，0 次接口调用）
 node tools/fixtures/make-grid-pool.mjs                                    # 生成 out/grid 夹具
@@ -16,28 +17,23 @@ python scripts/grid-scan.py --city 广州 --district 天河 --rescore          #
 node tools/test-grid.mjs                                                  # 30/30
 node tools/check-text.mjs                                                 # 发布文本控制字符 = 0
 
-# 源码包内跑全量
-cd <源码包>
-pnpm test && pnpm typecheck                 # 250 + 0 error
+# 源码包内跑全量：按 .github/workflows/ci.yml 的 19 个 run 步骤逐条跑
+# （工作区可用 node tools/test-full.mjs 自动照跑；该脚本不随包分发）
 ```
 
 | 组 | 条数 | 覆盖 |
 |---|---|---|
-| test-veto | 13 | 否决规则（提醒语义，不裁决） |
-| test-geo | 17 | 等时圈 / 距离 / 坐标偏移 |
-| test-poi-dedupe | 15 | 去重 / 前置清洗 / 分段 |
-| test-segments | 13 | 竞争分段 × 价位段 |
-| test-finance | 94 | 三档 / 保本 / 回本 / 锚点 / 租期 / 空间 / 比值 / 翻台风险 |
-| test-report | 33 | 报告结构 / 段落完整性 |
-| test-benchmark | 20 | 19 城 × 48 业态对标 |
-| test-grid | 30 | 网格编号公式 + 候选评分双口径 + sidecar 可复算（v2.10.34 由 16 增至 30，+14） |
-| registry --self-test | 12 | 网格注册表自检 |
-| test-tools-smoke | 13 | 渲染链（含默认瓦片路径回归）· **仅源码包（03）可执行**，技能包不含 `tools/` |
-| **合计** | **250** | 其余组条数不变，本轮只记 test-grid 的增量 |
+| `site_core.py selftest` | 48 | 营收 / 毛利 / 现金净流 / 会计净利 / 双口径回本 / 极限租金 / 座位模型 |
+| `grid-scan.py --self-test` | 17 | 网格评分纯函数（权重、归一、缺字段、公式版本） |
+| `test-grid.mjs` | 30 | 网格编号公式 + 候选评分双口径 + sidecar 可复算 |
+| `grid-registry.py --self-test` | 12 | 注册表状态机、编号唯一性、枚举完整性 |
+| `test-survey-csv.mjs` | 12 | 调研表解析（千分位 / 引号 / 空尾列 / 年份开头） |
+| `test-worldpop.py` | 18（+2 跳过） | WGS84 ↔ 栅格行列换算；缺 GDAL 的两项显式跳过，不计入 |
+| `test-tools-smoke.mjs` | 14 | 渲染链（报告生成 / HTML 自包含 / 缺数据报错），仅源码包可执行 |
+| `test-parity.mjs` | 136 | TS ↔ Python 逐字段比对，口径不许分叉 |
+| **合计** | **287** | 2 条因缺 GDAL 跳过，不算通过 |
 
-**基线：250/250 通过 + typecheck 0 error + Python selftest 48/48 + grid-scan self-test 17/17。**
-
-数字变了不是坏事，但**必须能解释为什么变**。解释不了就是改坏了。
+**基线：287/287 通过 + typecheck 0 error + Python selftest 48/48 + grid-scan self-test 17/17。**
 
 ## 二、失败模式台账（踩过的坑，按症状索引）
 

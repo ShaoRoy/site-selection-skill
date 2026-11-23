@@ -20,8 +20,8 @@
 
 | 宿主 | 下载 | 安装方式 | 交付报告 |
 |---|---|---|---|
-| **WorkBuddy** | [`site-selection-workbuddy-v2.10.43.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
-| **DeepSeek Harness** | [`site-selection-dsh-v2.10.43.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
+| **WorkBuddy** | [`site-selection-workbuddy-v2.10.44.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
+| **DeepSeek Harness** | [`site-selection-dsh-v2.10.44.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
 
 > **给 Agent 的判据**：WorkBuddy（能「导入技能」或存在 `~/.workbuddy/`）→ 第一行；DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh`）→ 第二行。两边共用同一套 Python 计算引擎，**数字与口径一致**，仅报告载体不同；DSH 出 HTML 需 `probe.json` 或调研表 CSV，现场采集还需高德 Key。
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
@@ -301,18 +301,19 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 |---|---|---|
 | 核心计算 | `site_core.py selftest`：营收 / 毛利 / 现金净流 / 会计净利 / 双口径回本 / 极限租金 / 座位模型 | 48 |
 | 网格评分 | `grid-scan.py --self-test` 纯函数断言，加「夹具 → 打分 → 链路」端到端（**0 次接口调用**） | 17 + 30 |
+| 网格注册表 | `grid-registry.py --self-test`：状态机、编号唯一性、枚举完整性 | 12 |
 | 调研表解析 | `test-survey-csv.mjs`：千分位、引号、空尾列、年份开头等边界——锁死一次真实的「12750 → NaN → 默认值」误判 | 12 |
 | 坐标换算 | `test-worldpop.py`：WGS84 ↔ 栅格行列换算（缺 GDAL 的 2 项**显式跳过**，不假通过） | 18 + 2 |
 | 渲染链 | `test-tools-smoke.mjs`：报告生成、HTML 自包含、无未渲染占位、缺数据时明确报错 | 14 |
 | 跨引擎契约 | `test-parity.mjs`：TS 引擎 ↔ Python 引擎逐字段比对，口径不许分叉 | 136 |
 
-- **合计 275 条断言通过**（另有 2 条因缺 GDAL 显式跳过，不算通过）。
-- **CI 18 个 `run` 步骤**（`.github/workflows/ci.yml`，含独立契约 job），每次 push 必跑；**不设 `continue-on-error`、不设 `|| true`**，任一步非零即整次失败。
+- **合计 287 条断言通过**（另有 2 条因缺 GDAL 显式跳过，不算通过）。
+- **CI 19 个 `run` 步骤**（`.github/workflows/ci.yml`，含独立契约 job），每次 push 必跑；**不设 `continue-on-error`、不设 `|| true`**，任一步非零即整次失败。
 - **发布门禁**：`verify-release.mjs` 8 类核对——两包 ↔ `_src` ↔ `release` ↔ 线上附件 digest 逐字节比对、看板哈希自洽、homepage 回读；`check-lockstep.py` 强制 01 ↔ 03 同源、两份 README 全文逐字节一致、工作副本不得落后于已发布源码。
 - **可复算**：报告每个数字都给公式 + 代入值 + 结果，附录列出字段来源；用了默认值必须写进假设台账。
 
 > 想自己验一遍：`npm test` 跑快速段（文本 + 14 项渲染冒烟 + 136 项契约，约 3 秒）；
-> 完整门禁以 `.github/workflows/ci.yml` 为准：18 个 `run` 步骤逐条照跑（两条装依赖步骤可跳过，按本机已装处理）。
+> 完整门禁以 `.github/workflows/ci.yml` 为准：19 个 `run` 步骤逐条照跑（两条装依赖步骤可跳过，按本机已装处理）。
 
 ## 依赖与环境
 
@@ -360,7 +361,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.43.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.44.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -422,7 +423,7 @@ python scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.43.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.44.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -468,6 +469,7 @@ python scripts/site_core.py rent --text "租金2万一个月"
 # → {"hit": true, "monthly_rent": 20000, "advice": "enter_stage2"}
 #   认出 20000元/月 / 2w/月租 / 月租两万 / 租金三万五 / 一年租金24万（自动折月）
 #   不认 租金两百五（<1000）/ 面积1200㎡ / 一天卖2万 / 转让费30万
+#   按㎡报价（如 5元/㎡/天）也不识别：先按面积换算成月租总额再传入
 
 # ── 扫一片区域，找候选点位（第 1 筛，只用高德）─────────────────────
 python scripts/grid-scan.py --city 广州 --district 天河 --execute
@@ -655,7 +657,7 @@ site-selection-skill/
 <p>
   <strong>关键词</strong>：餐饮选址评估 · 商圈分析 · 竞品截流 · 极限租金反推 · 财务三档测算 · 实体门店 · 高德 / 腾讯双源 GIS · QGIS · AI Agent Skill · WorkBuddy · DeepSeek Harness · 可复核报告
 </p>
-> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.43
+> 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.44
 >
 > 内置**餐饮业态**基准（正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等），支持国内所有城市、所有业态；城市系数与业态参数按当地情况替换。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。

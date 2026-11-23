@@ -48,11 +48,15 @@
 
 | 口径 | 条数 | 含义 |
 |---|---|---|
-| 源码包全量 `pnpm test` | **250** | 10 组 node 测试之和（`references/06` 为唯一基准） |
+| 全部门禁断言 | **287** | 8 组测试之和（`references/06` 为唯一基准）；`pnpm test` 只跑其中 3 段 |
 | TS ↔ Python 契约 | **136** | 两条引擎逐字段比对；v2.10.34 之前只有 78 且未覆盖 `sensitivity` |
 | Python 侧自检 | **48** | `site_core.py selftest` |
 | 网格评分纯函数 | **17** | `grid-scan.py --self-test` |
 | 网格链路 | **30** | `test-grid.mjs` |
+| 网格注册表 | **12** | `grid-registry.py --self-test` |
+| 调研表解析 | **12** | `test-survey-csv.mjs` |
+| 渲染链冒烟 | **14** | `test-tools-smoke.mjs` |
+| **合计** | **287** | 上列各组之和（48 + 17 + 30 + 12 + 12 + 18 + 14 + 136） |
 | 渲染链 | **13** | `test-tools-smoke.mjs` |
 
 ---

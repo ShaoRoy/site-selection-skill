@@ -42,6 +42,9 @@ jobs:
       - name: 网格评分自检（17 条纯函数断言，不联网）
         run: python scripts/grid-scan.py --self-test
 
+      - name: 网格注册表自检（12 条断言，不联网）
+        run: python scripts/grid-registry.py --self-test
+
       # 网格链路端到端：夹具 → 打分 → 30 条断言。
       # 三步显式串起来，任一步非零即整 job 失败；不设 continue-on-error、不设 || true。
       - name: 网格测试夹具（生成 out/grid，0 次接口调用）

@@ -1,5 +1,32 @@
 > **范围声明**：本文件是版本历史账本，记录各版本当时的真实状态。其中提到的「02 专家包 / 配置专家 / 专家团队」均为历史记录，该包已于 2026-11-08 完全剔除，**不再分发、不作为现行依据**。现行只有 01 技能包与 03 源码包。
 
+## 2.10.44
+
+### 文档：README 与线上对齐（两包同步）
+
+- 以线上 `README.md` 为准回灌三份副本（工作副本、`_src/03-source`、`_src/01-skill/site-report`）：46,463 字节 / 695 行 / 13 个徽章（发布前补两行 ㎡ 报价说明，最终 46,667 / 696）。修正 13 处与实际不符的表述；删掉全部城市/业态数量，改为「支持国内所有城市、所有业态」；撤掉首屏 mermaid 流程图（规则是筛次 × 数据源 × 参数完整性三维，流程图只能压一维，压进去必然画错因果）；徽章行删掉「Offline 零 Key 可跑」，「支持 全国城市·全业态」改指正文覆盖小节。
+- 包内副本不含「## 支持本项目」一节：`assets/sponsor-wechat.jpg` 不在任何发布包内（README 自身也写明 `assets/` 不进技能包），照搬会留坏图；收款码也不宜随包分发。
+- 「看到 `48 passed`」改为「看到 `48/48 通过`」：脚本实际输出的是中文，按原文比对会误判成没通过。
+
+### 修复：帮助文案与实际命令脱节
+
+- `scripts/site_core.py`：顶部 docstring 与无参数 banner 补上 `rent`——该子命令一直存在，只是两处帮助入口漏写，外部审查据此误判成「命令不存在」；banner 抬头「前 6 个不需要任何 API Key」改为「全部不需要」（9 个命令均不联网）；`benchmark` 描述去掉「19 城 × 48 业态」。
+- `benchmark` 帮助行与 README 口径统一为「内置基准，可按城市/业态替换」。
+
+### 维护：文档里的基准库口径统一
+
+- `SKILL.md`、`references/01-env-and-vars.md`、`references/06-regression-and-failure-modes.md`、`references/08-business-guide.md`、`docs/CUSTOMIZE.md`、`docs/FEATURES.md`、`docs/SKILL-FULL.md`、`docs/TEST-REGRESSION.md`、`docs/_02README.md`、`docs/项目目录地图.md`、`scripts/import-benchmarks.py`：删掉「19 城 × 48 业态 / 912 行 / 12 品类」等过时计数（实测为 20 城 × 51 业态 / 1020 条），统一改为「内置行业基准，可按城市/业态替换」。`docs/CUSTOMIZE.md` 的城市清单补上漏掉的**北京**。
+- `tools/check-text.mjs` 的 `EXPECTED_BADGES` 由 14 改为 13，与删掉一个徽章后的 README 对齐。
+- 版本由 `2.10.43` 升至 `2.10.44`：包内 README、SKILL 文档与命令行帮助文案均有实质变更，同名同版本重传会被平台拒绝。
+
+### 维护：测试断言口径统一为 287，凭据文案去路径化
+
+- 断言口径三处不一致（README 275 / `references/06` 250 / `SKILL.md` 246）→ 以实测统一为 **287**（8 组：48 + 17 + 30 + 12 + 12 + 18 + 14 + 136，缺 GDAL 的 2 条不计）。`references/06` 与 `docs/TEST-REGRESSION.md` 的旧 10 组表（test-veto / test-geo 等文件早已不存在）整节重写为现行 8 组；`docs/TEST-REPORT.md`、`docs/项目模块清单.md`、`docs/项目目录地图.md` 同步。
+- `.github/workflows/ci.yml` 新增「网格注册表自检（12 条）」，`run` 步骤 18 → 19；README 与 `references/06` 的「全部断言每次 push 自动执行」由此成立。
+- `scripts/grid-scan.py` / `scripts/demand-fetch.py`：缺凭据报错不再打印宿主密钥文件路径，改为指向 `manifest.json` 的 `dependencies.envOptional`（沿用 2.10.37 平台合规口径）；`demand-fetch.py` 补文件存在性判断，缺文件不再抛栈。
+- `references/01-env-and-vars.md`：删除机器绝对路径与 `setx` 配置步骤，改为「凭据声明表 + 未配置时的一句话」，与 2.10.37 合规改写对齐。
+- `README.md` / `SKILL.md`：补明按 `元/㎡/天`、`元/㎡/月` 报价不识别，需先换算成月租总额并写入假设台账。
+
 ## 2.10.43
 
 ### 文档：首屏换主语，两类读者各一扇门
@@ -32,7 +59,7 @@
 
 - 两包 `SKILL.md` 的 frontmatter `version` 自 `2.10.39` 起历次升版均未同步（WorkBuddy / Skill 平台以该字段判定包版本，报错「包内版本号 2.10.39 必须大于当前最新版本 2.10.39」）。本次统一同步至 `2.10.42`。
 - `tools/verify-release.mjs` 的 [4] 段新增两包 `SKILL.md` frontmatter version 校验，与 `manifest.json` / `package.json` 同批比对，防止再次漏升。
-- 交付顺序：先做本地修复并重打 01/03 包，随后同步 GitHub `main` 并新建 Release `v2.10.42`。
+- 本次为**本地修复**：仅重打本地 01/03 包，未推送 GitHub、未新建 Release。
 
 ## 2.10.41
 

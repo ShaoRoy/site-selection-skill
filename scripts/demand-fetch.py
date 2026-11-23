@@ -89,12 +89,14 @@ def read_key():
     key = os.environ.get("AMAP_API_KEY")
     if key:
         return key.strip()
+    if not os.path.isfile(AMAP_KEY_FILE):
+        raise SystemExit("未找到高德凭据：请通过宿主凭据机制提供 AMAP_API_KEY（见 manifest.json 的 dependencies.envOptional）")
     with open(AMAP_KEY_FILE, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
                 return line
-    raise SystemExit("未找到高德 Key：设 AMAP_API_KEY 或写入 secrets/amap.key")
+    raise SystemExit("凭据文件为空：请检查其中是否有有效行")
 
 
 def api_get(path, params):

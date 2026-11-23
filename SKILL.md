@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.43
+version: 2.10.44
 author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -150,7 +150,7 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
    待确认的假设
    敏感度：各参数 ±20% 对谈判锚点的影响
    空间侧敏感度：各系数 ±20% 对座位与产能的影响
-行业基准对标（19 城 × 48 业态库）
+行业基准对标（内置基准库，可按城市/业态替换）
 附录：计算口径（每个数字怎么来的）
 附：看不懂的话先看这里（白话版）
 ```
@@ -202,6 +202,8 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 判据用 `python scripts/site_core.py rent --text "<用户原话>"`，它已内置：
 `20000元/月`、`租金20000月`、`2w/月租`、`月租两万`、`租金三万五`、`一年租金24万`（自动折月）
 → 全部识别；`租金两百五`（三位数）、`面积1200㎡`、`一天卖2万`、`我投了200万`、`转让费30万` → 一律不认。
+
+按 `元/㎡/天`、`元/㎡/月` 报价不在这张表里：先按面积换算成月租总额（例 5 元/㎡/天 × 1200㎡ × 30 = 180,000 元/月）再传入，换算过程写进假设台账。
 
 **下限 1000 的理由**：三位数与面积数量级重叠（300㎡ / 800㎡），不敢认。
 
@@ -313,7 +315,7 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 | `references/03-data-and-governance.md` | 采数据时：高德/腾讯接口、L3 数据治理、坐标系、空间分析、否决规则包、工具链顺序、翻译层、业态档案 |
 | `references/04-output-templates.md` | 写报告时：九段骨架的填充细则（按第 1 筛 / 第 1.5+2 筛 / 第 3 筛三个场景） |
 | `references/05-ops-and-troubleshooting.md` | 跑不通时：Docker/Valhalla、WorldPop 人口栅格、降级策略 |
-| `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 246 条、失败模式台账（按症状索引）、最近版本变更摘要 |
+| `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 287 条、失败模式台账（按症状索引）、最近版本变更摘要 |
 | `references/07-preferences.md` | **动手前先读**：三条已定口径 + 数据纪律 + 口径细节 + 工程约定。与 SKILL.md 冲突时以它为准 |
 | `references/08-business-guide.md` | **用户问「怎么用」时**：怎么提需求（三句话 + 分档）· 报告怎么读（先看三处 / 四个误读）· 哪些指标能调（A 自填 / B 业态默认 / C 扫描旋钮）。纯业务视角、不含命令，适合直接转给决策人 |
 
