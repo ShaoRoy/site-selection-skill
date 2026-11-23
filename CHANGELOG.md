@@ -1,3 +1,14 @@
+## 2.10.46
+
+### 修复
+
+- `SKILL.md`「一份合格报告必须有的 24 个章节」补归属说明：该清单是 **03 源码包**（含 `tools/report.mjs`）的 HTML 输出标准；其中「空间侧敏感度」章节仅 03 源码包提供，01 技能包不出此项属包形态差异，不是缺功能。
+- 核实依据：01 包不含 `tools/report.mjs`，`site_core.py` 子命令仅 `finance / crs / veto / dedupe / geo / benchmark / formats / rent / selftest`，无 sensitivity。此说明同时避免 01 用户误以为其余 23 项都可直接输出。
+
+### 说明
+
+- 引擎、数据、断言基线（287 条）无变更；02 专家包无此小节，不随本次改动。
+
 ## 2.10.45
 
 ### 新增

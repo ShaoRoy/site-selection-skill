@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.45
+version: 2.10.46
 author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -128,6 +128,8 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 ### 一份合格报告必须有的 24 个章节
 
 `report.mjs` 的标准输出（缺一即不合格）：
+
+> 本节列的是 **03 源码包**（含 `tools/report.mjs`）的 HTML 输出标准。01 技能包不含 Node 渲染链，交付 Markdown 报告；其中「空间侧敏感度」章节仅 03 源码包提供，01 包不出此项属包形态差异，不是缺功能。
 
 ```
 选址评估报告：<地址>
