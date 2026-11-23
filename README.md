@@ -1,6 +1,6 @@
 # 选址智能分析 Skill
 
-<p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/tools/test-parity.mjs"><img alt="tests · parity" src="https://img.shields.io/badge/tests-136%20parity-brightgreen?style=flat-square"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#%E5%AE%89%E8%A3%85"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/data/benchmarks.json"><img alt="基准库 19城×48业态·估算" src="https://img.shields.io/badge/%E5%9F%BA%E5%87%86%E5%BA%93-19%E5%9F%8E%C3%9748%E4%B8%9A%E6%80%81%C2%B7%E4%BC%B0%E7%AE%97-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<img alt="Offline 零 Key 可跑" src="https://img.shields.io/badge/Offline-%E9%9B%B6%20Key%20%E5%8F%AF%E8%B7%91-4c1?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
+<p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/tools/test-parity.mjs"><img alt="tests · parity" src="https://img.shields.io/badge/tests-136%20parity-brightgreen?style=flat-square"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#%E5%AE%89%E8%A3%85"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/data/benchmarks.json"><img alt="基准库 20城×51业态·估算" src="https://img.shields.io/badge/%E5%9F%BA%E5%87%86%E5%BA%93-20%E5%9F%8E%C3%9751%E4%B8%9A%E6%80%81%C2%B7%E4%BC%B0%E7%AE%97-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<img alt="Offline 零 Key 可跑" src="https://img.shields.io/badge/Offline-%E9%9B%B6%20Key%20%E5%8F%AF%E8%B7%91-4c1?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
 
 > 输入铺位地址、业态与租金预算，输出一份可复核的选址报告：每个数字附公式与代入值；缺关键参数就不出财务段，能用行业基准代入的会写进《待确认的假设》，不冒充实测。
 >
@@ -13,7 +13,7 @@ flowchart TD
     B -->|是| D["第 2 筛：腾讯 + 高德双源"]
     C --> E["6 个可复算工具"]
     D --> E
-    E --> F["固定 24 章节报告"]
+    E --> F["固定骨架报告（0–6 段 + 附录）"]
     F --> G{"财务参数齐吗？"}
     G -->|缺| H["标注未计算，列出缺哪几项"]
     G -->|齐| I["三档情景 + 极限租金 + 租期现金流"]
@@ -73,10 +73,10 @@ flowchart TD
 | 类别 | 有哪几个 | 改了影响 |
 |---|---|---|
 | **A · 你自己给的数** | 毛利率、月租金、月人力、月其他固定、初始投资、租期、年递增、目标回本周期 | 直接决定回本与极限租金——这 8 项里有 7 项是你能拿单据核实的 |
-| **B · 业态基准值** | 回本 24 个月、租售比 12%/18%、厨房 30%、每座 2.4 ㎡、翻台 2.5/3.5、每㎡营收 900 元等 | **基准取自行业平均数**（`data/benchmarks.json`，912 行 / 19 城 / 48 业态，行业基数 × 城市系数缩放），不是你拍的也不是某家店的最好成绩；不对就换档案或改键，并在 `param_source` 写明依据 |
+| **B · 业态基准值** | 回本 24 个月、租售比 12%/18%、厨房 30%、每座 2.4 ㎡、翻台 2.5/3.5、每㎡营收 900 元等 | **基准取自行业平均数**（`data/benchmarks.json`，1020 条记录 / 20 城 / 51 业态，行业基数 × 城市系数缩放），不是你拍的也不是某家店的最好成绩；不对就换档案或改键，并在 `param_source` 写明依据 |
 | **C · 找点位的旋钮** | 半径 1000 米（大店 1500/小店 800）、候选 30 个、竞争惩罚 0.8/0.4、需求四项权重（和为 1）、竞品关键词 | 只影响筛哪些点，不影响财务结论 |
 
-**规矩**：参数是校准现实的，不是校准结论的——算出来难看就原样呈现；改过的数必须在报告「待确认假设」里能看到来源。
+**规矩**：算出来难看就原样呈现；改过的数必须在报告「待确认假设」里能看到来源。
 
 ## 本地数据位（自己长期维护的官方数据）
 
@@ -122,9 +122,9 @@ python scripts/site_core.py finance \
 
 ## 📌 适用业态 & 范围
 
-### 内置基准覆盖（19 城 × 48 业态）
+### 内置基准覆盖（20 城 × 51 业态）
 
-全部为**餐饮**业态：正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食、夜宵小龙虾等 48 个细分档。
+全部为**餐饮**业态：正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食、夜宵小龙虾等 51 个细分档。
 
 ```bash
 python scripts/site_core.py formats   # 查系统当前认的全部业态与基准映射
@@ -143,7 +143,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 适用范围
 
-- **全国通用**：不绑定任何单一城市。基准库收录 19 城；未收录城市会**明确告知**并列出可用城市，不静默套用其他城市数据（见下方[在其他城市 / 地区使用](#在其他城市--地区使用)）。
+- **全国通用**：不绑定任何单一城市。基准库收录 20 城；未收录城市会**明确告知**并列出可用城市，不静默套用其他城市数据（见下方[在其他城市 / 地区使用](#在其他城市--地区使用)）。
 - **全流程覆盖**：商圈初选（第 1 筛）→ 单点评估（第 1.5 筛）→ 双源校验（第 2 筛）→ 财务锁盘（第 3 筛）。
 - **判断留给你**：系统只列证据与缺口，不替你决定「能不能开」。
 
@@ -155,7 +155,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 |---|---|
 | **城市网格扫描** | 按网格批量扫一片区域，自动筛候选点位 |
 | **需求侧采集** | POI 代理指标：周边小区、写字楼、学校、交通 |
-| **竞品格局分析** | 步行圈内竞品数量、距离、品类分布、份额 Top8 |
+| **竞品格局分析** | 步行圈内竞品数量、距离、品类分布、份额 Top20（上限 20 家，不足按实际家数） |
 | **截流两轴** | 内圈步行圈 + 外圈车行圈，双口径客流截流评估 |
 | **财务双口径测算** | 保本营业额、毛利、回本周期、投产 ROI |
 | **行业基准对标** | 同业态、同城市、同面积的行业均值对标 |
@@ -168,7 +168,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 |---|---|
 | **多坐标系转换** | WGS84 ↔ GCJ02（高德系火星坐标）互转，`export-geojson.py --crs` 一条参数切换，解决底图偏移 |
 | **步行圈 / 车行圈** | 内圈步行 10 分钟 + 外圈车行 5 分钟，双口径截流评估 |
-| **等时圈估算** | 基于路网的步行可达范围分析，未接本地路网时降级为直线估算（标注【估算】） |
+| **等时圈估算** | 默认直线估算（标注【估算】）；部署本地 Valhalla / OSRM 后改用真实路网等时圈 |
 | **POI 空间聚合** | 按距离 / 时间范围聚合周边 POI，自动统计品类分布、密度、最近距离 |
 | **空间去重** | 同品类 POI 自动去重，白名单品类保留，避免竞品重复计数 |
 | **动线阻断分析** | 点位到地铁口 / 竞品 / 小区大门的步行距离与路径阻断识别 |
@@ -177,11 +177,11 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ## 数据源与对接能力
 
-本项目的数据维度参照商用选址平台设计，用公开数据源实现同一套分析框架。
+本项目的分析维度对标商用选址平台，数据用公开源代理；哪些维度是代理、精度边界在哪，见下表。
 
 ### 数据维度对标（个人版实现方式）
 
-商用选址平台的核心维度是：客群画像、到访洞察、商圈成熟度。本项目用公开数据源实现**同一套分析框架**。
+商用选址平台的核心维度是：客群画像、到访洞察、商圈成熟度。本项目用公开数据源逐项代理，**不是同一套数据**。
 
 | 维度 | 商用平台 | 本项目 |
 |---|---|---|
@@ -198,7 +198,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 | **高德步行路径规划** | 动线阻断初判（点位 → 地铁口 / 竞品 / 小区大门） | ✅ 已接入，供第 1/1.5 筛使用 |
 | **腾讯位置服务 POI** | 竞品交叉校验（第 2 筛，抽样） | ✅ 已接入；四个 POI 接口各 200/日 |
 | **腾讯步行路径规划** | 动线阻断精算，`steps[].type` 给结构化过街设施 | ✅ 已接入，供第 2 筛使用 |
-| **行业基准库（19 城 × 48 业态）** | 财务结论的现实性对标 | ✅ 已内置 `data/benchmarks.json` |
+| **行业基准库（20 城 × 51 业态）** | 财务结论的现实性对标 | ✅ 已内置 `data/benchmarks.json` |
 
 > **联网调用只有上面两家（高德 + 腾讯），都用个人免费额度**——不需要企业认证、不需要付费、Key 互不通用。
 > 包内还有两个**不联网、不占额度、默认关闭**的可选环节，不用开通任何账号：
@@ -233,9 +233,9 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 | 数据源 | 官方入口 | 凭证怎么给 | 常见坑 |
 |---|---|---|---|
-| **高德** POI / 地理编码 / 步行路径 | 开放平台 [lbs.amap.com](https://lbs.amap.com/)　·　Key 管理 [console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) | 环境变量 `AMAP_API_KEY`，或文件 `~/.dsh/secrets/amap.key`（单行纯文本） | 创建 Key 时**服务平台必须选「Web 服务」**；选成「Web端(JS API)」调用会直接鉴权失败 |
-| **腾讯位置服务** POI / 步行路线 / 距离矩阵 | 官网 [lbs.qq.com](https://lbs.qq.com/)　·　Key 管理 [lbs.qq.com/dev/console/key/manage](https://lbs.qq.com/dev/console/key/manage) | 环境变量 `TENCENT_MAP_KEY`，或文件 `~/.dsh/secrets/tencent.key` | 建 Key 后要勾选 **WebServiceAPI**；四个 POI 接口各 200/日，别拿腾讯做全量采集 |
-| **行业基准库** | 无外部调用 | 内置 `data/benchmarks.json` | 19 城 × 48 业态均为**估算值不是实测**，报告会标注 |
+| **高德** POI / 地理编码 / 步行路径 | 开放平台 [lbs.amap.com](https://lbs.amap.com/)　·　Key 管理 [console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) | 环境变量 `AMAP_API_KEY`（变量声明见 `manifest.json` → `dependencies.envOptional`） | 创建 Key 时**服务平台必须选「Web 服务」**；选成「Web端(JS API)」调用会直接鉴权失败 |
+| **腾讯位置服务** POI / 步行路线 / 距离矩阵 | 官网 [lbs.qq.com](https://lbs.qq.com/)　·　Key 管理 [lbs.qq.com/dev/console/key/manage](https://lbs.qq.com/dev/console/key/manage) | 环境变量 `TENCENT_MAP_KEY`（同上，见 `manifest.json`） | 建 Key 后要勾选 **WebServiceAPI**；四个 POI 接口各 200/日，别拿腾讯做全量采集 |
+| **行业基准库** | 无外部调用 | 内置 `data/benchmarks.json` | 20 城 × 51 业态均为**估算值不是实测**，报告会标注 |
 
 > 只做财务测算、不采集数据时，**一个 Key 都不需要**——`site_core.py` 的全部计算都能用手输参数跑通。
 
@@ -266,14 +266,14 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 | **节流** | 高德 0.6 s/次、腾讯 1.2 s/次（`walk-matrix.py`）；`demand-fetch.py` 0.6 s/次；`grid-scan.py` 按内置 `QUOTA` | 个人 Key 的 QPS 普遍 ≤3，节流写死在代码里，不靠用户自觉 |
 | **限流重试** | 腾讯 `status=120` → 退避 2/4/6/8 s 且**批次减半**重试；高德 `10021` 同样退避 | 不静默丢点；降到 1 对仍失败则整步失败退出 |
 | **缓存** | 网格扫描结果落 `out/grid/*.json`，分 `anchors` / `pool` / `competitors` 三段 | 任一段缺失即判「缓存不可读」→ 重新采集，**不会拿半份数据算出完整结论** |
-| **缺 Key** | 直接 `exit 1`，并打印修复命令（`未找到高德 Key：设 AMAP_API_KEY 或写入 …`） | 不静默降级、不套用其他城市基准 |
+| **缺 Key** | 直接 `exit 1`，并说明缺哪个凭证；不打印 Key 内容 | 不静默降级、不套用其他城市基准 |
 | **坐标系** | 内部统一 WGS84；`export-geojson.py --crs gcj02` 可保持高德坐标对齐底图 | 只做 WGS84 ↔ GCJ02 互转，不涉及其他坐标系 |
 | **数据落地** | `probe.json`（采集结果）+ `out/`（网格、地图、报告） | 报告附录逐条列字段来源，可回查是哪一次调用 |
 
 调用一次第 2 筛的真实开销：POI 双源约 3 次腾讯请求 + 若干次高德请求，步行比较约 5 对。
 按上面的日额度，单日可支撑约 66 个双源点位；超过就先分批，不要硬撞限额。
 
-**免费额度够不够个人用？够，而且是明确够。** 高德 + 腾讯两家全部只用免费个人额度，不需要企业认证、不需要付费：
+**个人免费额度够用**：两家都只用免费个人额度，不需要企业认证、不需要付费；按下面的消耗，单日约 66 个双源点位，超过就分批：
 
 | 源 | 免费额度 | 一次评估实际消耗 | 能吃多少 |
 |---|---|---|---|
@@ -308,7 +308,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ## 质量保障（数字为什么不飘）
 
-这个项目的结论是数字，测试就是它的护栏。全部断言在每次 push 时自动执行，不靠人工触发：
+这个项目的结论是数字，测试是这些数字的复核机制。全部断言在每次 push 时自动执行，不靠人工触发：
 
 | 层 | 内容 | 条数 |
 |---|---|---|
@@ -316,16 +316,16 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 | 网格评分 | `grid-scan.py --self-test` 纯函数断言，加「夹具 → 打分 → 链路」端到端（**0 次接口调用**） | 17 + 30 |
 | 调研表解析 | `test-survey-csv.mjs`：千分位、引号、空尾列、年份开头等边界——锁死一次真实的「12750 → NaN → 默认值」误判 | 12 |
 | 坐标换算 | `test-worldpop.py`：WGS84 ↔ 栅格行列换算（缺 GDAL 的 2 项**显式跳过**，不假通过） | 18 + 2 |
-| 渲染链 | `test-tools-smoke.mjs`：报告生成、HTML 自包含、无未渲染占位、缺数据时明确报错 | 13 |
+| 渲染链 | `test-tools-smoke.mjs`：报告生成、HTML 自包含、无未渲染占位、缺数据时明确报错 | 14 |
 | 跨引擎契约 | `test-parity.mjs`：TS 引擎 ↔ Python 引擎逐字段比对，口径不许分叉 | 136 |
 
-- **合计 274 条断言通过**（另有 2 条因缺 GDAL 显式跳过，不算通过）。
-- **CI 18 步**（`.github/workflows/ci.yml`）+ 独立契约 job，每次 push 必跑；**不设 `continue-on-error`、不设 `|| true`**，任一步非零即整次失败。
+- **合计 275 条断言通过**（另有 2 条因缺 GDAL 显式跳过，不算通过）。
+- **CI 18 个 `run` 步骤**（`.github/workflows/ci.yml`，含独立契约 job），每次 push 必跑；**不设 `continue-on-error`、不设 `|| true`**，任一步非零即整次失败。
 - **发布门禁**：`verify-release.mjs` 8 类核对——两包 ↔ `_src` ↔ `release` ↔ 线上附件 digest 逐字节比对、看板哈希自洽、homepage 回读；`check-lockstep.py` 强制 01 ↔ 03 同源、两份 README 全文逐字节一致、工作副本不得落后于已发布源码。
 - **可复算**：报告每个数字都给公式 + 代入值 + 结果，附录列出字段来源；用了默认值必须写进假设台账。
 
-> 想自己验一遍：`npm test` 跑快速段（文本 + 渲染冒烟 + 136 项契约，约 3 秒）；
-> `node tools/test-full.mjs` 按 CI 的步骤全量跑一遍（命令直接从 `ci.yml` 解析，不另存一份）。
+> 想自己验一遍：`npm test` 跑快速段（文本 + 14 项渲染冒烟 + 136 项契约，约 3 秒）；
+> 完整门禁以 `.github/workflows/ci.yml` 为准：18 个 `run` 步骤逐条照跑（两条装依赖步骤可跳过，按本机已装处理）。
 
 ## 依赖与环境
 
@@ -334,12 +334,12 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 | 依赖 | 版本 | 用途 | 缺失后果 |
 |---|---|---|---|
 | **Python** | ≥ 3.9 | 全部计算脚本 | 脚本类功能不可用（SKILL.md 方法论仍可读） |
-| **高德开放平台 Key** | 免费注册（[lbs.amap.com](https://lbs.amap.com/)） | POI 检索 / 地理编码 / 步行路径 | 采集类脚本报缺凭证 |
 
 ### 可选（按需安装）
 
 | 依赖 | 用途 | 缺失后果 |
 |---|---|---|
+| **高德开放平台 Key** | POI 检索 / 地理编码 / 步行路径（**仅采集类脚本**） | 采集类脚本报缺凭证；财务 / 商圈计算不受影响 |
 | **openpyxl** | import-benchmarks.py 读取 Excel 底稿 | 仅更换行业基准数据时需要，日常运行不受影响 |
 | **Node.js ≥ 18 + pnpm** | DSH 原生插件、运行测试套件 | 只能用 Python 脚本模式，无原生工具 |
 | **Docker + Valhalla / OSRM** | 真实路网等时圈（本地部署） | 降级为直线估算，报告标注【估算】 |
@@ -369,7 +369,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 ### 前置依赖
 
 - **Python 3.9+**（脚本类功能需要；纯方法论模式可不用）
-- **高德开放平台 Web 服务 Key**（POI / 地理编码 / 步行路径必需；无 Key 时脚本会报缺凭证，但 Skill 方法论本身可读）
+- **高德开放平台 Web 服务 Key**（仅采集类脚本需要；只做财务测算时可不填，Skill 方法论本身可读）
 
 ### 方式 A：一键脚本（推荐，Windows）
 
@@ -401,21 +401,10 @@ cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 pip install openpyxl
 ```
 
-### 配置高德 Key
+### 配置凭证
 
-二选一：
-
-```powershell
-# 方式 1：环境变量（当前会话）
-$env:AMAP_API_KEY = "你的高德 Web 服务 Key"
-
-# 方式 1 持久化（用户级，重启终端生效）
-[Environment]::SetEnvironmentVariable("AMAP_API_KEY", "你的高德 Web 服务 Key", "User")
-
-# 方式 2：写入密钥文件（推荐，避免环境变量泄露到子进程）
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dsh\secrets" | Out-Null
-"你的高德 Web 服务 Key" | Out-File -FilePath "$env:USERPROFILE\.dsh\secrets\amap.key" -Encoding ascii -NoNewline
-```
+高德 / 腾讯各需要一个 Key，**只在采集类脚本里用到**。变量名与用途见 `manifest.json` 的 `dependencies.envOptional`：
+在运行环境里设置 `AMAP_API_KEY` / `TENCENT_MAP_KEY` 即可；Key 只留在你自己的机器上，不要写进仓库、报告或对话。
 
 > 注意：高德控制台要选 **「Web 服务」** 类型的 Key，不要用 Android / iOS / Web端(JS API) 类型，否则接口会报 `INVALID_USER_KEY`。
 
@@ -511,8 +500,9 @@ python scripts/walk-matrix.py --origin "23.1035,113.2361" \
   --targets targets.csv --out barriers.csv --method matrix
 
 # ── 跑完整流程（自动判定筛次；带租金才启用双源）───────────────────
+# test-500m 是「扬韬广场 500m 半径」的测试档案；换自己的场地时改 --profile 与 --address
 node tools/run-site.mjs --profile=test-500m \
-  --address="广州市荔湾区扬韬广场" --survey="survey/xxx.csv"
+  --address="广州市荔湾区扬韬广场" --survey="survey/你的调研表.csv"
 # 输出会明确写：
 #   筛次判定：第 2 筛（检出月租金 290000 元）→ 腾讯+高德双源校验
 #   源模式：双源（高德 + 腾讯交叉校验）
@@ -551,7 +541,7 @@ python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 |---|---|
 | **结论** | 一句话定性 + 三个支撑数字；下方附**术语白话速查表** |
 | **数据质量** | 原始/去重/剔除条数、双源覆盖率、**数据源模式（单源还是双源）** |
-| **竞品分布** | 势力份额 Top20、截流两轴、三级分层 |
+| **竞品分布** | 势力份额 Top20（上限 20 家，不足按实际家数）、截流两轴、三级分层 |
 | **交通可达** | 最近地铁、停车场 |
 | **需求侧** | POI 代理指标 + WorldPop 人口交叉校验 |
 | **场地核查** | 待核实清单（**提醒，不裁决**） |
@@ -648,7 +638,7 @@ site-selection-skill/
 
 | 项 | 广东现状 | 换地区要做的事 |
 |---|---|---|
-| **城市基准数据** | 19 城，含青岛；**无济南 / 烟台 / 潍坊 / 临沂** | 用 import-benchmarks.py 补录，或接受「无基准」并在报告中写明来源 |
+| **城市基准数据** | 20 城，含青岛；**无济南 / 烟台 / 潍坊 / 临沂** | 用 import-benchmarks.py 补录，或接受「无基准」并在报告中写明来源 |
 | **业态关键词** | 粤菜 / 早茶 / 茶楼 / 点心有专属参数 | 换成当地业态词；未命中会落到通用默认值 |
 | **业态参数文件** | params/large_yuecai.json、`tea_house.json` | 复制 params/_template.json 改名，改回本目标与租售比区间 |
 | **行政区名** | --city 广州 --district 天河 | 用高德 `adname` 原名，如 --city 济南 --district 历下 |
@@ -680,7 +670,7 @@ site-selection-skill/
 </p>
 > 参数驱动的实体门店**选址评估** Agent 能力包 · v2.10.43
 >
-> 内置 **19 城 × 48 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
+> 内置 **20 城 × 51 个餐饮业态**基准，覆盖正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食等细分档。
 > 非餐饮业态（零售 / 生活服务 / 教培 / 仓配）可用自定义参数测算财务与商圈，但**没有内置基准可对标**——报告会明确标注，不会拿餐饮基准冒充。
 
 Tool 硬算 + Skill 只翻译。所有确定性计算交给脚本，Skill 只负责定口径、组织流程、把结果翻译成人能读的报告。
