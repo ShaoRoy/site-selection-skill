@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.44
+version: 2.10.45
 author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -37,7 +37,10 @@ examples_en:
 
 **先自检**（离线可跑，不需要任何 Key）：
 
+> 以下命令里的 `scripts/` 相对**本 SKILL.md 所在目录**。当前工作目录不是技能目录时务必先切过去（Claude 环境也可用 `${CLAUDE_SKILL_DIR}/scripts/...`），否则会报 `can't open file`。宿主差异见 `INSTALL-CLAUDE.md`。
+
 ```bash
+cd <本 SKILL.md 所在目录>                  # 例：~/.claude/skills/site-report
 python scripts/site_core.py selftest      # 48 条断言，验证引擎可用
 ```
 
@@ -45,7 +48,7 @@ python scripts/site_core.py selftest      # 48 条断言，验证引擎可用
 全部是本地纯计算，零网络依赖。采集类（`grid-scan` / `demand-fetch` / `walk-matrix`）才需要 Key。
 
 ```bash
-python scripts/site_core.py selftest                              # 引擎自检，20 条
+python scripts/site_core.py selftest                              # 引擎自检，48 条
 python scripts/site_core.py finance                              # 财务三档（用内置示例参数）
 python scripts/site_core.py benchmark --format large_yuecai      # 行业对标
 python scripts/site_core.py benchmark --format tea_house         # 茶楼对标

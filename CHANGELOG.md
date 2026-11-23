@@ -1,3 +1,18 @@
+## 2.10.45
+
+### 新增
+
+- `INSTALL-CLAUDE.md`：Claude Code 安装与适配说明。本包结构符合 Claude 的 Agent Skills 目录规范（`~/.claude/skills/site-report/SKILL.md`），零第三方依赖可直接使用。文档记录实测结论、`${CLAUDE_SKILL_DIR}` 路径写法、凭据环境变量，以及上传 claude.ai 时 frontmatter 只能保留 6 个字段的限制（现有 8 个扩展字段会触发硬报错，附可直接替换的 YAML）。三个树同步。
+
+### 修复
+
+- `SKILL.md`：「先自检」代码块补路径基准说明。原文只写 `python scripts/site_core.py`，隐含 cwd = 技能目录；在 Claude 等宿主下 cwd 是用户项目目录，照抄会报 `can't open file`。现补 `cd <本 SKILL.md 所在目录>` 与宿主差异指引，指向 `INSTALL-CLAUDE.md`。
+- `SKILL.md`：命令注释「引擎自检，20 条」与实际不符（`selftest` 实为 48 条），改正。
+
+### 说明
+
+- 引擎、数据、文档口径均无变更；断言基线仍为 287 条（8 组）。
+
 > **范围声明**：本文件是版本历史账本，记录各版本当时的真实状态。其中提到的「02 专家包 / 配置专家 / 专家团队」均为历史记录，该包已于 2026-11-08 完全剔除，**不再分发、不作为现行依据**。现行只有 01 技能包与 03 源码包。
 
 ## 2.10.44
