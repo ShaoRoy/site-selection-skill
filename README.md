@@ -2,7 +2,7 @@
 
 <p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/tools/test-parity.mjs"><img alt="tests · parity" src="https://img.shields.io/badge/tests-136%20parity-brightgreen?style=flat-square"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#%E5%AE%89%E8%A3%85"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill#覆盖范围支持国内所有城市所有业态"><img alt="支持 全国城市·全业态" src="https://img.shields.io/badge/%E6%94%AF%E6%8C%81-%E5%85%A8%E5%9B%BD%E5%9F%8E%E5%B8%82%C2%B7%E5%85%A8%E4%B8%9A%E6%80%81-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
 
-> 参数驱动的实体门店选址分析框架 · v2.10.49
+> 参数驱动的实体门店选址分析框架 · v2.10.50
 >
 > 把连锁选址经验拆成可复现的计算模块：输入铺位地址、业态与租金预算，输出带公式、代入值与数据源标注的选址报告。高德 + 腾讯双源 POI 交叉校验，计算内核纯 Python，可作为 Agent 技能或命令行工具独立运行。
 
@@ -294,8 +294,8 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 | 你的需要 | 选哪个包 | 包内差异 |
 |---|---|---|
-| 导入现成技能（WorkBuddy / Claude / DSH / 其他支持 `SKILL.md` 的宿主） | [`site-selection-workbuddy-v2.10.49.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（01，35 条目） | 引擎 + 方法论 + 文档；报告由宿主按 `SKILL.md` 结构组织 |
-| 改代码 / 出 HTML 报告 / 挂 DSH 原生插件 / 跑测试 | [`site-selection-dsh-v2.10.49.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（03，89 条目） | 额外含 `tools/report.mjs`、`tools/run-site.mjs`、`dsh/`、`install.ps1`、CI 配置 |
+| 导入现成技能（WorkBuddy / Claude / DSH / 其他支持 `SKILL.md` 的宿主） | [`site-selection-workbuddy-v2.10.50.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（01，35 条目） | 引擎 + 方法论 + 文档；报告由宿主按 `SKILL.md` 结构组织 |
+| 改代码 / 出 HTML 报告 / 挂 DSH 原生插件 / 跑测试 | [`site-selection-dsh-v2.10.50.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（03，89 条目） | 额外含 `tools/report.mjs`、`tools/run-site.mjs`、`dsh/`、`install.ps1`、CI 配置 |
 
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
 
@@ -315,7 +315,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 #### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.49.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.50.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -359,7 +359,7 @@ python3 scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.49.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.50.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -793,7 +793,7 @@ site-selection-skill/
 
 - **可复现的 bug / 能力缺口**：走 [Issues](https://github.com/ShaoRoy/site-selection-skill/issues/new/choose)，表单会要求附 `selftest` 输出与复现命令
 - **「怎么用」「适不适合我的场景」**：走 [Discussions](https://github.com/ShaoRoy/site-selection-skill/discussions)，不占 issue
-- **参与方式与 PR 约定**：见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- **参与方式与 PR 约定**：见 [CONTRIBUTING.md](https://github.com/ShaoRoy/site-selection-skill/blob/main/CONTRIBUTING.md)
 - **商业授权**：邮件联系，不走 issue（见 [LICENSE](LICENSE) 第二条）
 
 ## 支持本项目
