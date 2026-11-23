@@ -12,6 +12,8 @@ site_core.py —— 选址核心计算引擎（纯 Python，无第三方依赖�
   python site_core.py geo --center "23.1,113.2" --pois pois.json --minutes 10 --mode walk
   python site_core.py benchmark --city 广州 --format 粤式茶楼早茶 --area 1200 \
          --investment-wan 320 --rent-wan 12 --ticket 230 --revenue-wan 99 --payback 15.5 --margin 0.208
+  python site_core.py rent --text "租金2万一个月"
+  python site_core.py formats
   python site_core.py selftest
 """
 import argparse
@@ -1112,18 +1114,20 @@ site_core.py —— 实体门店选址评估核心引擎（纯标准库，无需
 
 用法：python site_core.py <命令> [参数]
 
-命令（前 6 个不需要任何 API Key，可离线跑）：
+命令（全部不需要任何 API Key，可离线跑）：
   selftest     引擎自检，48 条断言
   finance      财务三档测算：保本 / 回本 / 极限租金 / 租期现金流
+  rent         从口语里识别月租金（≥1000 元/月，年租自动折月）
   crs          坐标系转换与偏移量
   veto         场地条件核查（只提醒，不裁决）
   dedupe       POI 去重与分段
   geo          空间分析：等时圈 / 距离带 / 截流
-  benchmark    行业基准对标（19 城 × 48 业态）
+  benchmark    行业基准对标（内置基准，可按城市/业态替换）
   formats      列出内置业态定义
 
 例：
   python site_core.py selftest
+  python site_core.py rent --text "租金2万一个月"
   python site_core.py finance --format large_yuecai --area 1200 --catchment L2
   python site_core.py benchmark --format large_yuecai
 

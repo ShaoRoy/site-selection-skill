@@ -402,7 +402,7 @@ cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 python scripts/site_core.py selftest
 ```
 
-看到 `48 passed` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
+看到 `48/48 通过` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
 
 ### DSH 原生插件挂载（可选）
 
