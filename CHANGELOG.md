@@ -1,3 +1,19 @@
+## 2.10.50
+
+### 协作入口
+
+- 新增 `.github/ISSUE_TEMPLATE/` 三份表单：`bug_report.yml`（宿主 / 版本 / 环境 / 复现命令 / 期望 vs 实际 / selftest 输出 / 脱敏数据 / 三条确认）、`feature_request.yml`（需求类型 / 场景 / 现有能力卡点 / 可计算性）、`config.yml`（关闭空白 issue，外链 README 部署章、INSTALL-CLAUDE.md、Discussions）。
+- 新增根目录 `CONTRIBUTING.md`：提 issue 前四项自检、可定位报告六要素、四类不受理问题、PR 的五条约定（双引擎同步 / 加断言 / 只改根 README / 不加图片 / 不改历史）、许可与贡献授权。
+- `README.md` 附录「作者 / 联系方式」补四条入口：可复现 bug 走 Issues 表单、用法提问走 Discussions、参与方式见 CONTRIBUTING、商业授权走邮件。
+
+### 说明
+
+- 引擎、数据、断言基线（287 条）无变更；仅文档与仓库元数据。
+- 03 源码包条目 89 → 93（新增 3 份 issue 表单 + CONTRIBUTING.md）；01 技能包条目仍 35。
+- 未新增图片、未改徽章；报告截图仍为唯一内容图。
+- 仓库侧同时创建 4 个标签：`data-source` `formula` `host-compat` `needs-repro`（不进包）。
+- 02 专家包不随本版分发，仍为 v2.10.44。
+
 ## 2.10.49
 
 ### 文档

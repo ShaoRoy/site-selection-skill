@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安装与多宿主接入（README）
+    url: https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#部署与配置python-环境与多宿主接入
+    about: WorkBuddy / DeepSeek Harness / Claude Code / claude.ai / 其他 Agent 的安装方式、Key 配置与常见报错
+  - name: Claude 专用安装说明（INSTALL-CLAUDE.md）
+    url: https://github.com/ShaoRoy/site-selection-skill/blob/main/INSTALL-CLAUDE.md
+    about: ${CLAUDE_SKILL_DIR} 命令基准、frontmatter 6 字段限制、凭据来源与四条自检
+  - name: 使用提问与讨论（Discussions）
+    url: https://github.com/ShaoRoy/site-selection-skill/discussions
+    about: 「怎么用」「适不适合我的场景」类问题请走 Discussions，不占 issue

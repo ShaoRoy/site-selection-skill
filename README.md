@@ -791,6 +791,11 @@ site-selection-skill/
 
 如有问题、建议或合作交流，欢迎邮件联系。
 
+- **可复现的 bug / 能力缺口**：走 [Issues](https://github.com/ShaoRoy/site-selection-skill/issues/new/choose)，表单会要求附 `selftest` 输出与复现命令
+- **「怎么用」「适不适合我的场景」**：走 [Discussions](https://github.com/ShaoRoy/site-selection-skill/discussions)，不占 issue
+- **参与方式与 PR 约定**：见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- **商业授权**：邮件联系，不走 issue（见 [LICENSE](LICENSE) 第二条）
+
 ## 支持本项目
 
 本项目由作者无偿维护。
