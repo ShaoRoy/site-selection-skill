@@ -2,7 +2,7 @@
 
 <p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/tools/test-parity.mjs"><img alt="tests · parity" src="https://img.shields.io/badge/tests-136%20parity-brightgreen?style=flat-square"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#%E5%AE%89%E8%A3%85"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill#覆盖范围支持国内所有城市所有业态"><img alt="支持 全国城市·全业态" src="https://img.shields.io/badge/%E6%94%AF%E6%8C%81-%E5%85%A8%E5%9B%BD%E5%9F%8E%E5%B8%82%C2%B7%E5%85%A8%E4%B8%9A%E6%80%81-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
 
-> 参数驱动的实体门店选址分析框架 · v2.10.48
+> 参数驱动的实体门店选址分析框架 · v2.10.49
 >
 > 把连锁选址经验拆成可复现的计算模块：输入铺位地址、业态与租金预算，输出带公式、代入值与数据源标注的选址报告。高德 + 腾讯双源 POI 交叉校验，计算内核纯 Python，可作为 Agent 技能或命令行工具独立运行。
 
@@ -11,7 +11,7 @@
 - **双源 POI 交叉校验**：高德做全量采集，腾讯在第 2 筛做 POI 与步行距离精算；两源分工按筛次写进流程，不按偏好临时换源。
 - **全链路可审计**：结论、证据、财务逐层附公式与代入值，附录列字段来源；缺省值与估算值进《待确认的假设》台账。
 - **纯 Python 计算内核**：`scripts/site_core.py` 只用标准库，6 个核心工具零第三方依赖；Node / TypeScript 只承担 HTML 渲染与 DSH 原生插件。
-- **多宿主接入**：WorkBuddy 导入技能出 Markdown；DeepSeek Harness 走 `install.ps1` + Node 渲染链出 HTML；两边共用同一套引擎，数字与口径一致。
+- **多宿主接入**：三种装法共用同一套引擎与口径——WorkBuddy 导入技能包；DeepSeek Harness 走 `install.ps1` + 原生插件；Claude Code / claude.ai 按 Agent Skills 目录规范安装（见 [INSTALL-CLAUDE.md](INSTALL-CLAUDE.md)）；其余 Agent 有 shell 即可直接调 `scripts/*.py`。
 - **287 条断言 + 19 步 CI**：每次 push 全跑，不设 `continue-on-error`、不设 `|| true`；2 条缺 GDAL 的用例显式跳过，不计入通过数。
 
 **适用人群**
@@ -258,7 +258,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 - 行业基准为行业平均，单店实际 ±30%
 - POI 数据为公开接口参考值，非精准探针客流
 
-## 部署与配置：Python 环境与双平台接入
+## 部署与配置：Python 环境与多宿主接入
 
 ### 环境依赖
 
@@ -286,25 +286,36 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 | 平台 | 说明 |
 |---|---|
 | Windows 10 / 11 | 推荐，install.ps1 一键安装（PowerShell 5.1 或 7 均可） |
-| macOS / Linux | Python 脚本同样可用，手动复制目录到 ~/.dsh/skills/restaurant-location-analysis |
+| macOS / Linux | Python 脚本同样可用；手动复制目录到 `~/.dsh/skills/restaurant-location-analysis`（DSH）或 `~/.claude/skills/site-report`（Claude Code） |
 
 ### 安装
 
-#### 先选对包：WorkBuddy 还是 DSH
+#### 先选对包：技能包还是源码包
 
-| 宿主 | 下载 | 安装方式 | 交付报告 |
-|---|---|---|---|
-| **WorkBuddy** | [`site-selection-workbuddy-v2.10.48.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | 「导入技能」直接导入 | 文字分析报告（Markdown） |
-| **DeepSeek Harness** | [`site-selection-dsh-v2.10.48.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest) | `install.ps1` / `git clone` | HTML 报告（需 Node ≥ 18） |
+| 你的需要 | 选哪个包 | 包内差异 |
+|---|---|---|
+| 导入现成技能（WorkBuddy / Claude / DSH / 其他支持 `SKILL.md` 的宿主） | [`site-selection-workbuddy-v2.10.49.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（01，35 条目） | 引擎 + 方法论 + 文档；报告由宿主按 `SKILL.md` 结构组织 |
+| 改代码 / 出 HTML 报告 / 挂 DSH 原生插件 / 跑测试 | [`site-selection-dsh-v2.10.49.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（03，89 条目） | 额外含 `tools/report.mjs`、`tools/run-site.mjs`、`dsh/`、`install.ps1`、CI 配置 |
 
-> **给 Agent 的判据**：WorkBuddy（能「导入技能」或存在 `~/.workbuddy/`）→ 第一行；DeepSeek Harness（存在 `~/.dsh/` 或能调用 `dsh`）→ 第二行。两边共用同一套 Python 计算引擎，**数字与口径一致**，仅报告载体不同；DSH 出 HTML 需 `probe.json` 或调研表 CSV，现场采集还需高德 Key。
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
 
-**两边差在哪**：共用同一套计算引擎（`scripts/site_core.py`，口径以其中 `FORMULA_VERSION` 为唯一真源），**数字一致，只是报告载体不同**——01 技能包只有引擎与文档，报告由 Agent 按 `SKILL.md` 的结构自行组织；03 源码包额外带 `tools/run-site.mjs` + `tools/report.mjs`，自动产出 md/html。
+#### 宿主接入矩阵
+
+按宿主能力分四类。**WorkBuddy / DSH / Claude Code 三条路径已实测**；其余宿主按同一判据归位，未逐一实测。
+
+| 宿主 | 接入方式 | 需要什么 | 报告载体 |
+|---|---|---|---|
+| **WorkBuddy** | 「导入技能」直接导入 zip（根目录含 `SKILL.md`） | 支持技能导入的客户端 | Markdown |
+| **DeepSeek Harness** | `install.ps1`，或 `git clone` 到 `~/.dsh/skills/restaurant-location-analysis`；可选挂 `dsh/cordis.patch.yml` 原生插件 | Node ≥ 18（仅 HTML 渲染与插件） | HTML + 同名 md |
+| **Claude Code** | 整个目录复制到 `~/.claude/skills/site-report/`；命令前 `cd`，或改用 `${CLAUDE_SKILL_DIR}/scripts/...` | 无额外依赖 | Markdown |
+| **claude.ai 网页版** | 打包上传；`frontmatter` 只保留 `name` / `description` / `license` / `compatibility` / `metadata` / `allowed-tools` 六个字段 | 见 [INSTALL-CLAUDE.md](INSTALL-CLAUDE.md) 第 5 节 | Markdown |
+| **其他 Agent**（Cursor、Trae、Qoder、扣子、Dify、自建 function calling 等） | 二选一：① 有 shell 工具 → 直接 `python scripts/*.py`，`SKILL.md` 当提示词；② 支持 Agent Skills 目录规范 → 按 Claude Code 的方式放置 | 能读文件 + 能执行命令；纯财务测算零 Key | 由宿主决定 |
+
+> **判据（Agent 自查）**：存在 `~/.claude/skills/` 或能读 `SKILL.md` → 技能目录类；存在 `~/.workbuddy/` → 导入类；存在 `~/.dsh/` 或能调 `dsh` → DSH 类；以上都不满足但有 shell → CLI 类。四类共用同一套 Python 引擎（口径以 `scripts/site_core.py` 的 `FORMULA_VERSION` 为唯一真源），**数字一致，只是报告载体不同**。
 
 #### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.48.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.49.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -324,25 +335,31 @@ powershell -File install.ps1
 #### 方式 B：手动安装
 
 ```powershell
-# 1. clone 仓库
+# DSH（Windows）
 git clone https://github.com/ShaoRoy/site-selection-skill.git "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
 cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
-
-# 2. 安装 Python 依赖（仅 import-benchmarks.py 需要 openpyxl）
-pip install openpyxl
+pip install openpyxl     # 仅 import-benchmarks.py 需要
 ```
 
-#### WorkBuddy 上传：只需打包技能
+```bash
+# Claude Code / macOS / Linux（目录名可自定，必须整套复制，别只拷 SKILL.md）
+git clone https://github.com/ShaoRoy/site-selection-skill.git ~/.claude/skills/site-report
+cd ~/.claude/skills/site-report
+python3 scripts/site_core.py selftest
+```
 
-本包只有一个上传入口：
+#### 打包上传：WorkBuddy / claude.ai
 
-| 入口 | 要求 | 怎么打包 |
+两个入口都要求 **zip 根目录直接有 `SKILL.md`**，且都不要带最外层文件夹：
+
+| 入口 | 额外要求 | 怎么打包 |
 |---|---|---|
-| **导入技能** | zip 根目录直接有 `SKILL.md` | 把仓库**内容**打包，不带最外层文件夹 |
+| **WorkBuddy 导入技能** | 无 | 把仓库**内容**打包，不带最外层文件夹 |
+| **claude.ai 上传 Skill** | `frontmatter` 只留 6 个字段（见 [INSTALL-CLAUDE.md](INSTALL-CLAUDE.md) 第 5 节） | 同上；先改 `SKILL.md` 头部再打包 |
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.48.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.49.zip，不要自己打包
 ```
 
 > ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
@@ -363,16 +380,43 @@ Key 只在采集类脚本里用到，在运行环境里设置 `AMAP_API_KEY` / `
 
 > 只做财务测算、不采集数据时，**一个 Key 都不需要**——`site_core.py` 的全部计算都能用手输参数跑通。
 
-### 双平台接入与验证
+### 多宿主接入与验证
 
 #### 自检（必做）
 
-```powershell
-cd "$env:USERPROFILE\.dsh\skills\restaurant-location-analysis"
+```bash
+cd <技能目录>      # DSH: ~/.dsh/skills/restaurant-location-analysis；Claude Code: ~/.claude/skills/site-report
 python scripts/site_core.py selftest
 ```
 
 看到 `48/48 通过` / 全绿，说明计算内核 OK。如果报错，先看是不是 Python 版本低于 3.9。
+
+#### Claude Code 与 claude.ai：三处必须知道的差异
+
+| 差异点 | Claude Code（本地） | claude.ai（网页上传） |
+|---|---|---|
+| 命令基准 | `SKILL.md` 写作 `python scripts/...`，相对**技能目录**；先 `cd` 进技能目录，或改用 `${CLAUDE_SKILL_DIR}/scripts/...` | 同左 |
+| `frontmatter` | 8 个扩展字段被静默忽略，可直接用 | 只允许 `name` / `description` / `license` / `compatibility` / `metadata` / `allowed-tools`；多余字段会导致上传校验失败 |
+| 凭据 | 由宿主进程环境变量提供 `AMAP_API_KEY` / `TENCENT_MAP_KEY` | 在宿主凭据设置里配置，不写进 `SKILL.md` |
+
+完整步骤、可直接粘贴的 6 字段 YAML、四条自检命令见 [INSTALL-CLAUDE.md](INSTALL-CLAUDE.md)。
+
+#### 通用 CLI 接入（Cursor / Trae / Qoder / 扣子 / Dify / 自建 Agent）
+
+这类宿主没有技能包格式，但只要有**读文件 + 执行命令**两个能力即可使用：
+
+```bash
+# 1. 克隆到任意目录（路径自定，宿主的 cwd 不可假设，命令统一用绝对路径或先 cd）
+git clone https://github.com/ShaoRoy/site-selection-skill.git ~/site-selection-skill
+cd ~/site-selection-skill
+
+# 2. 把 SKILL.md 作为系统提示 / 工具说明交给宿主，命令由宿主的 shell 工具执行
+python scripts/site_core.py selftest
+python scripts/site_core.py finance --format large_yuecai --area 1200 --catchment L2 \
+  --params params.json --space space.json --out finance.json
+```
+
+三个要点：① 采集类脚本需要宿主能把 `AMAP_API_KEY` / `TENCENT_MAP_KEY` 注入进程环境；② 只做财务测算时零 Key；③ 宿主若支持 Agent Skills 目录规范（`.claude/skills/` 或等价目录），优先走目录安装，比纯 CLI 少一层提示词搬运。
 
 #### DSH 原生插件挂载（可选）
 
@@ -610,7 +654,7 @@ CI 共 19 个 `run` 步骤（`.github/workflows/ci.yml`，含独立契约 job）
 ### 完整仓库目录结构
 
 > 下表是**源码仓库**的完整结构。「导入技能」包只带
-> `SKILL.md` / `references/` / `scripts/` / `data/` / `params/` / `templates/`——
+> `SKILL.md` / `INSTALL-CLAUDE.md` / `references/` / `scripts/` / `data/` / `params/` / `templates/`——
 > `dsh/`、`tools/`、`docs/`、`assets/`、`install.ps1`、`PROMPT.md` 都不在技能包里。
 
 ```text
@@ -618,6 +662,7 @@ site-selection-skill/
 ├── SKILL.md              # 方法论、三条已定口径、公式全书、报告交付规则
 ├── CHANGELOG.md          # 版本更新记录
 ├── manifest.json         # Skill 清单与运行时声明
+├── INSTALL-CLAUDE.md     # Claude Code / claude.ai 安装说明（含 6 字段 frontmatter 版）
 ├── PROMPT.md             # Agent 提示词模板
 ├── install.ps1           # Windows 安装脚本
 ├── scripts/              # 9 个可移植 Python 脚本

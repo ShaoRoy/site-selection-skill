@@ -1,3 +1,22 @@
+## 2.10.49
+
+### 文档
+
+- `README.md` 补全多宿主接入说明：原「双平台（WorkBuddy / DSH）」扩为四类宿主，补 Claude Code / claude.ai 与通用 CLI 接入。
+  - 首屏技术特性「多宿主接入」改为三种装法 + CLI 兜底，并链接 `INSTALL-CLAUDE.md`。
+  - 部署章 H2「Python 环境与双平台接入」→「Python 环境与多宿主接入」；新增「宿主接入矩阵」表（WorkBuddy / DeepSeek Harness / Claude Code / claude.ai / 其他 Agent 五行，列接入方式、依赖、报告载体），并保留「判据（Agent 自查）」。
+  - 新增「Claude Code 与 claude.ai：三处必须知道的差异」（命令基准 / frontmatter 字段 / 凭据来源）与「通用 CLI 接入（Cursor / Trae / Qoder / 扣子 / Dify / 自建 Agent）」两节。
+  - 「先选对包」改为按需求选（技能包 vs 源码包），不再按宿主二选一；「WorkBuddy 上传」扩为「打包上传：WorkBuddy / claude.ai」，注明 claude.ai 需 6 字段 frontmatter。
+  - 方式 B 手动安装补 Claude Code / macOS / Linux 的 `~/.claude/skills/` 命令；「支持的平台」表补 Claude 路径；附录目录树补 `INSTALL-CLAUDE.md`。
+- `SKILL.md`「交付物：按宿主分流」补 Claude Code / claude.ai 与其他 Agent 两类；「技能包只交付文字报告」的主体说明补 Claude 与其他技能目录类宿主。
+
+### 说明
+
+- 引擎、数据、断言基线（287 条）无变更；包内仅文档变化。
+- 未改 `manifest.json` 的 `targets` 结构（目前仅 `workbuddy` 一个平台声明）：该字段由 WorkBuddy 导入校验读取，新增未知宿主键存在被拒风险；Claude 侧以 `INSTALL-CLAUDE.md` 与 README 宿主矩阵为准。
+- 未新增图片、未改徽章；报告截图仍为唯一内容图。
+- 02 专家包不随本版分发，仍为 v2.10.44。
+
 ## 2.10.48
 
 ### 文档

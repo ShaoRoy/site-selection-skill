@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.48
+version: 2.10.49
 author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -82,9 +82,11 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 
 ## 交付物：按宿主分流
 
-**分析口径与数字两边完全一致，报告载体按宿主能力分流**：
+**分析口径与数字在各宿主完全一致，报告载体按宿主能力分流**：
 
 - **WorkBuddy（01 技能包）**：默认交付**结构化文字报告（Markdown）**。01 包不含 Node 渲染链，不生成 HTML。
+- **Claude Code / claude.ai（Agent Skills 目录规范）**：同样交付 **Markdown**；命令基准按 `INSTALL-CLAUDE.md` 的 `${CLAUDE_SKILL_DIR}` 写法。
+- **其他 Agent（Cursor / Trae / Qoder / 扣子 / Dify / 自建）**：按「有渲染链就出 HTML，没有就出 Markdown」判据执行；默认 Markdown。
 - **DeepSeek Harness（03 源码包 / 完整工作区）**：交付 `tools/report.mjs` 生成的**自包含单文件 HTML**。
 
 ### 三条硬性规则
@@ -107,7 +109,7 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 
 ### 技能包（01）只交付文字报告
 
-01 技能包（WorkBuddy「导入技能」）**只带 Python 侧，不含 `tools/` 与 Node 渲染链**。
+01 技能包（WorkBuddy「导入技能」/ Claude「Agent Skills」/ 其他技能目录类宿主）**只带 Python 侧，不含 `tools/` 与 Node 渲染链**。
 
 按上节分流，此时交付 **Markdown 报告**。具体做法：
 
