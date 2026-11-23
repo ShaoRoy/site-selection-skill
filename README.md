@@ -2,24 +2,20 @@
 
 <p><a href="https://github.com/ShaoRoy/site-selection-skill/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ShaoRoy/site-selection-skill?style=flat-square&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/ShaoRoy/site-selection-skill/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ShaoRoy/site-selection-skill/actions/workflows/ci.yml/badge.svg"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/tools/test-parity.mjs"><img alt="tests · parity" src="https://img.shields.io/badge/tests-136%20parity-brightgreen?style=flat-square"></a>&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Custom%20NonCommercial-ef9421?style=flat-square"></a>&nbsp;<img alt="Agent Skill · WorkBuddy" src="https://img.shields.io/badge/Agent%20Skill-WorkBuddy-2ea44f?style=flat-square">&nbsp;<img alt="AI Agent · LLM ready" src="https://img.shields.io/badge/AI%20Agent-LLM%20ready-8957e5?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/README.md#%E5%AE%89%E8%A3%85"><img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square"></a>&nbsp;<img alt="GIS · 高德 / 腾讯" src="https://img.shields.io/badge/GIS-%E9%AB%98%E5%BE%B7%20%C2%B7%20%E8%85%BE%E8%AE%AF-2ea44f?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/data/benchmarks.json"><img alt="基准库 19城×48业态·估算" src="https://img.shields.io/badge/%E5%9F%BA%E5%87%86%E5%BA%93-19%E5%9F%8E%C3%9748%E4%B8%9A%E6%80%81%C2%B7%E4%BC%B0%E7%AE%97-brightgreen?style=flat-square"></a>&nbsp;<img alt="Finance 三档测算" src="https://img.shields.io/badge/Finance-%E4%B8%89%E6%A1%A3%E6%B5%8B%E7%AE%97-ffd33d?style=flat-square">&nbsp;<img alt="Rent 极限租金反推" src="https://img.shields.io/badge/Rent-%E6%9E%81%E9%99%90%E7%A7%9F%E9%87%91%E5%8F%8D%E6%8E%A8-fe7d37?style=flat-square">&nbsp;<img alt="Offline 零 Key 可跑" src="https://img.shields.io/badge/Offline-%E9%9B%B6%20Key%20%E5%8F%AF%E8%B7%91-4c1?style=flat-square">&nbsp;<a href="https://github.com/ShaoRoy/site-selection-skill/blob/main/references/03-data-and-governance.md"><img alt="Evidence 可复核" src="https://img.shields.io/badge/Evidence-%E5%8F%AF%E5%A4%8D%E6%A0%B8-blueviolet?style=flat-square"></a></p>
 
-> **这不是会聊天的选址机器人，是一条把结论压成算式的流水线。**
-> 三句话输入 → 6 个可复算工具 → 固定 24 章节报告；缺参数就拒绝出财务段，每个数字给公式与代入值。
-
-| 你是 | 从这儿开始 |
-|---|---|
-| 要评估一个具体铺位的开店人 / 连锁拓展 | [业务侧：3 分钟用起来](#业务侧3-分钟用起来) |
-| 想知道「数字为什么不飘」的开发者 | [质量保障](#质量保障数字为什么不飘) · [命令行快速开始](#命令行快速开始开发者) |
+> 输入铺位地址、业态与租金预算，输出一份可复核的选址报告：每个数字附公式与代入值；缺关键参数就不出财务段，能用行业基准代入的会写进《待确认的假设》，不冒充实测。
+>
+> 要评估具体铺位 → [业务侧：3 分钟用起来](#业务侧3-分钟用起来)；想复用这套可审计方法 → [质量保障](#质量保障数字为什么不飘) · [命令行快速开始](#命令行快速开始开发者)。
 
 ```mermaid
 flowchart TD
-    A["三句话：在哪 / 做什么 / 多少钱"] --> B{"月租金能换算成元/月？"}
+    A["输入：铺位地址 / 业态 / 租金预算"] --> B{"月租金能换算成元/月？"}
     B -->|否| C["第 1.5 筛：高德单源"]
     B -->|是| D["第 2 筛：腾讯 + 高德双源"]
     C --> E["6 个可复算工具"]
     D --> E
     E --> F["固定 24 章节报告"]
     F --> G{"财务参数齐吗？"}
-    G -->|缺| H["拒绝出财务段，列出缺哪几项"]
+    G -->|缺| H["标注未计算，列出缺哪几项"]
     G -->|齐| I["三档情景 + 极限租金 + 租期现金流"]
 ```
 
