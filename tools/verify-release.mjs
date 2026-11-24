@@ -42,13 +42,13 @@ const BOARD = join(UPLOAD, 'README-先看我.md')
 const ARGS = process.argv.slice(2)
 const ONLINE = !ARGS.includes('--no-online')
 
-const EXPECT_VERSION = '2.10.51'
+const EXPECT_VERSION = '2.10.52'
 const EXPECT_LICENSE_SHA = '32bc0352284c'
 const EXPECT_LICENSE_BYTES = 4543
 
 const PACKS = [
-  { file: '01-skill-导入技能.zip', prefix: 'site-report', rel: 'site-selection-workbuddy-v2.10.51.zip', srcDir: '01-skill/site-report' },
-  { file: '03-github-仓库源码.zip', prefix: '', rel: 'site-selection-dsh-v2.10.51.zip', srcDir: '03-source' },
+  { file: '01-skill-导入技能.zip', prefix: 'site-report', rel: 'site-selection-workbuddy-v2.10.52.zip', srcDir: '01-skill/site-report' },
+  { file: '03-github-仓库源码.zip', prefix: '', rel: 'site-selection-dsh-v2.10.52.zip', srcDir: '03-source' },
 ]
 
 const fails = []

@@ -37,7 +37,7 @@ body:
     attributes:
       label: 版本
       description: 取 manifest.json 的 version 字段，或 git tag
-      placeholder: "2.10.51"
+      placeholder: "2.10.52"
     validations:
       required: true
   - type: input

@@ -38,7 +38,7 @@ const SKIP_DIR_PATTERNS = [/^release$/, /^_backup-/, /^_archive-/]
 // U+0000–0008 / 000B / 000C / 000E–001F / 007F
 const FATAL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
 const BADGE_HOST = 'img.shields.io'
-const EXPECTED_BADGES = 13
+const EXPECTED_BADGES = 12
 
 /**
  * 已知历史存档豁免（docs/ 下实测存在的 6 处表格列数不齐）。
@@ -228,7 +228,7 @@ if (fatalHits.length) {
   for (const h of fatalHits) console.log('  ' + h)
   console.log('\n修复提示：控制字符通常来自 `` `x `` 被当作转义序列（`a=BEL `f=FF `r=CR `t=TAB），')
   console.log('          按语义换回「反引号 + 对应字母」并补回右反引号；')
-  console.log('          徽章必须压在同一行 <p> 内、链接用绝对 https、主 README 固定 14 个徽章。')
+  console.log('          徽章必须压在同一行 <p> 内、链接用绝对 https、主 README 固定 12 个徽章。')
   process.exitCode = 1
 } else {
   console.log('\n✅ 控制字符 0 处；README 徽章与 Markdown 结构合规')

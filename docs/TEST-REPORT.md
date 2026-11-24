@@ -18,7 +18,7 @@
 
 | 层次 | 内容 | 命令 |
 |---|---|---|
-| 发布文本守卫 | 控制字符 / 孤立 CR / README 徽章（单行·14 个·绝对 https）/ Markdown 表格与标题层级 / docs 白名单 | `node tools/check-text.mjs` |
+| 发布文本守卫 | 控制字符 / 孤立 CR / README 徽章（单行·12 个·绝对 https）/ Markdown 表格与标题层级 / docs 白名单 | `node tools/check-text.mjs` |
 | 评分纯函数 | 退化分支 / 量纲不漂移 / 跨批次恒定 / 零竞争 / 复算 / 参数来源 / 缓存兼容 | `python scripts/grid-scan.py --self-test` |
 | 核心计算库 | 财务口径、坐标系、否决规则、去重、空间分析、交叉判定 | `python scripts/site_core.py selftest` |
 | 语法 | 9 个 Python 脚本 | `python -m py_compile scripts/*.py` |
@@ -34,7 +34,7 @@
 
 | # | 测试项 | 结果 | 退出码 |
 |---|---|---|---|
-| 1 | `check-text.mjs` | **控制字符 0 / 徽章 14 / TAB 0 / docs 白名单 6/6** | 0 |
+| 1 | `check-text.mjs` | **控制字符 0 / 徽章 12 / TAB 0 / docs 白名单 6/6** | 0 |
 | 2 | `grid-scan.py --self-test` | **17/17 通过**（FORMULA_VERSION=grid-v1） | 0 |
 | 3 | `py_compile`（9 个脚本） | **0 错误** | 0 |
 | 4 | `site_core.py selftest` | **48/48 通过** | 0 |
@@ -103,7 +103,7 @@
 | 规则 | 判定 |
 |---|---|
 | 控制字符 `U+0000–0008 / 000B / 000C / 000E–001F / 007F`、孤立 CR | 致命 |
-| README 徽章必须单行 `<p>`、`<img` = 14、`href` 全 `https://`、无 `vercel.app` | 致命 |
+| README 徽章必须单行 `<p>`、`<img` = 12、`href` 全 `https://`、无 `vercel.app` | 致命 |
 | Markdown 表格同块竖线数一致、标题层级不跳级 | 致命（docs 白名单 6 处除外） |
 | `dist` 精确跳过 `release/` `_backup-*` `_archive-*` `node_modules/` | 保证发布看板进扫描 |
 
