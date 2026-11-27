@@ -9,7 +9,130 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-const num = (v, d = '—') => (typeof v === 'number' && Number.isFinite(v) ? String(v) : d)
+// 千分位只用于千以上的数，小数保持两位；避免 1035000 这种要数零的写法
+const num = (v, d = '—') => {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return d
+  return Math.abs(v) >= 1000
+    ? v.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+    : String(v)
+}
+
+/**
+ * 白话术语表：报告里的行业口径 → 大白话。
+ * 每项 = [术语, 正文锚点(|兜底锚点), 解释]。解释里的 **…** 按输出格式转加粗。
+ * 术语左列在 HTML 里是可点击链接，点一下跳回正文对应小节；
+ * 该小节本单未渲染时（如竞品为 0 没有截流定级），JS 自动退到兜底锚点，不会点空。
+ */
+const GLOSSARY = [
+  ['截流 / 截流定级', 'sec-capture|sec-2',
+    '你的店能"拦下"多少本来要路过的人。**重度截流**＝这条街上抢客的店太多，客人还没走到你门口就被别人截走了'],
+  ['截流两轴', 'sec-capture|sec-2',
+    '第一轴看**这个铺位本身**（位置显不显眼、好不好进、在几楼）；第二轴看**周围对手**（多少家在抢同一批人）。'
+    + '一个管"人流进不进得来"，一个管"进来后会不会被抢走"，两回事'],
+  ['势力份额 / Voronoi 归属', 'sec-capture|sec-2',
+    '把这块地切成小格子，每格算给离它最近的那家店。某店分到的格子越多＝它的"地盘"越大。'
+    + '**这不是营业额，也不是市占率**，只说明"谁离得近"'],
+  ['Top3 集中度', 'sec-conc|sec-2',
+    '前 3 名加起来占多少地盘。占比高＝头部几家把客抓得牢，新店难插进去；占比低＝碎片化，靠差异化就能站住'],
+  ['同段 / 异段', 'sec-segment|sec-2',
+    '「段」是按"菜系 × 价位"分的类。同段＝跟你同类同价，是真正抢客的人；异段＝不同类或不同价，多数是互补不是对手'],
+  ['直接 / 替代 / 间接竞品', 'sec-tier|sec-2',
+    '直接＝同类同价，客人只能二选一；替代＝同类不同价，平时不抢、办宴席时会流动；间接＝不同品类，抢的是同一笔"吃饭预算"'],
+  ['翻台率', 'sec-space|sec-7',
+    '一个座位一天被坐了几轮。1.998 次 ≈ 每座一天接待两拨客人。**座位翻台 ≠ 桌翻台**：一桌 4 人，空 1 个座就拉低座位翻台'],
+  ['坪效', 'sec-space|sec-7',
+    '每平方米每个月能做多少营业额。用来看"这块地方有没有被浪费"'],
+  ['保本日营业额', 'sec-6|sec-space',
+    '一天至少卖多少钱才不亏。低于这个数就是在赔钱'],
+  ['极限租金', 'sec-rentcap|sec-6',
+    '**保本那档**＝租金再高一分钱就开始亏；**目标回本那档**＝租金到这个数，就没法在目标月数内回本'],
+  ['谈判锚点', 'sec-rentcap|sec-6',
+    '谈租金的参考上限，**不是"砍到这个价就签"**——高于它，按常规经营预期就回不了本（压力下限另列，不是出价依据）'],
+  ['租售比', 'sec-6|sec-ratio',
+    '月租金 ÷ 月营业额。租金占营业额几成。餐饮大店经验：10% 以内健康，15% 以上警戒'],
+  ['现金口径 / 会计口径', 'sec-6',
+    '现金口径＝只算钱进出，回本快，看"多久能周转开"；会计口径＝把装修设备的折旧摊进去，回本慢，看"这笔投资账面划不划算"。两个都要看'],
+  ['摊销', 'sec-6',
+    '装修和设备的一次性投入，按月摊到成本里。450 万 ÷ 60 个月＝每月 7.5 万'],
+  ['容量利用率', 'sec-space',
+    '店里能坐的位子实际坐满了多少。66.6% ≈ 每 3 个位子有 1 个空着'],
+  ['职住比', 'sec-crowd|sec-4',
+    '写字楼数量 ÷ 住宅数量。>1 上班的人多（工作日午市好做），<1 住家的人多（晚市和周末好做）'],
+  ['等时圈 / 圈层', 'sec-map',
+    '从点位出发走 N 分钟能到的范围，按真实路网算，不是画个圆'],
+  ['单方造价', 'sec-space',
+    '每平方米投了多少钱（装修＋设备＋其他初始投入）'],
+  ['保本客单量', 'sec-space',
+    '一天至少接待多少单才不亏'],
+  ['敏感度「会翻转」', 'sec-sens|sec-7',
+    '这个参数只要估错 20%，结论就从"能做"变"不能做"——所以它必须实测，不能拍脑袋估'],
+  ['截流系数', 'sec-scenario|sec-6',
+    '算营业额时乘的一个折扣：路过的人里有多少比例真会进你的店'],
+  ['硬伤 / 待核实', 'sec-5',
+    '硬伤＝明确不满足的硬条件；待核实＝还没拿到数据、需要现场确认的项——**是待办清单，不是否决**'],
+  ['规模档推定，无人均实证', 'sec-segment|sec-2',
+    '这家店人均多少我们没拿到真实数据，是按店名和规模"猜"的档位，别太当真'],
+  ['ROI', 'sec-6',
+    '年化投资回报率：一年赚的钱 ÷ 投进去的钱'],
+]
+
+/** HTML 版术语行：左列术语做成锚点链接，右列按 **…** 转 <b> */
+const glossaryHtmlRows = GLOSSARY.map(([term, anchors, plain]) => {
+  const [id, fb] = anchors.split('|')
+  const body = esc(plain).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  return `<tr><td><a class="gl" href="#${id}"${fb ? ` data-fb="${fb}"` : ''}>${term}</a></td><td>${body}</td></tr>`
+}).join('\n')
+
+/** MD 版术语行：表格语法，强调保留 **…** */
+const glossaryMdRows = GLOSSARY.map(([term, , plain]) => `| **${term}** | ${plain} |`).join('\n')
+
+/** 硬件字段的中文名：报告只给人看的名字，技术代号放 title 里备查 */
+const FIELD_LABELS = {
+  exhaust: '排烟', power_kw: '电力容量', area_sqm: '面积', frontage_m: '门宽',
+  ceiling_m: '层高', gas_m3h: '燃气', water_supply: '供水', fire_egress_m: '消防通道',
+}
+function fieldLabel(key) {
+  return FIELD_LABELS[key] ? `<span title="${key}">${FIELD_LABELS[key]}</span>` : `<span title="${key}">${key}</span>`
+}
+
+/** 等时圈来源的人话标签（三级引擎） */
+function isoSourceLabel(source) {
+  if (source === 'valhalla') return '本地 Valhalla 路网'
+  if (source === 'osrm') return '本地 OSRM 路网'
+  if (source === 'cloud') return '云端真实路网（腾讯/高德）'
+  return '直线估算【估算】'
+}
+
+/** Markdown 版降级提示：cloud 是告知，straight 是告警 */
+function isoNoticeMd(notice) {
+  if (!notice) return ''
+  if (notice.engine === 'cloud') {
+    const who = notice.provider === 'tencent' ? '腾讯 matrix' : '高德 direction'
+    return `> ℹ️ **等时圈为云端真实路网**（${who}）：本单消耗 ${notice.calls} 对，`
+      + `当日累计 ${notice.quota_used}/${notice.daily_max} 对。${notice.impact}。`
+  }
+  return `> ⚠️ **等时圈引擎未启用**（${notice.reason}）\n`
+    + `> 本次圈层为【直线估算】：${notice.impact}。\n`
+    + `> 启动：\`${notice.fix}\`（首次：\`${notice.first_time}\`）`
+}
+
+/** HTML 版降级提示：cloud 蓝色告知，straight 黄色告警 */
+function isoNoticeHtml(notice) {
+  if (!notice) return ''
+  if (notice.engine === 'cloud') {
+    const who = notice.provider === 'tencent' ? '腾讯 matrix' : '高德 direction'
+    return `<div class="tip tip-info">
+<b>ℹ️ 等时圈为云端真实路网</b>（${esc(who)}）：本单消耗 <b>${esc(String(notice.calls))}</b> 对，
+当日累计 ${esc(String(notice.quota_used))}/${esc(String(notice.daily_max))} 对。<br>
+${esc(notice.impact)}。
+</div>`
+  }
+  return `<div class="tip tip-warn">
+<b>⚠️ 等时圈引擎未启用</b>（${esc(notice.reason)}）<br>
+本次圈层为<b>直线估算</b>：${esc(notice.impact)}。<br>
+启动：<code>${esc(notice.fix)}</code>　首次：<code>${esc(notice.first_time)}</code>
+</div>`
+}
 
 /** 把分段 key（如 yuecai_large）翻译成人话 */
 const CUISINE_LABEL = { yuecai: '粤菜', chaoshan: '潮汕', other: '其他菜系', snack: '小吃' }
@@ -113,13 +236,13 @@ function populationBlock(data) {
   if (!pop || !pop.rings) {
     const sk = data.population_skip
     if (!sk) return []
-    return ['### 4.1 人口核对（本次未执行）', '',
+    return ['### 人口核对（本次未执行）', '',
       `> ⚠️ 原因：${sk.reason}`,
       `> 补齐：\`${sk.fix}\``,
       '> 本次报告**缺少独立人口数据源**，上面的需求强度全部来自 POI 代理，请在结论里按「单源」看待。', '']
   }
   const cc = pop.cross_check
-  const out = ['### 4.1 人口核对（独立数据源交叉验证）', '']
+  const out = ['### 人口核对（独立数据源交叉验证）', '']
   out.push('> WorldPop 2020 常住人口栅格（约 93m），已从 GCJ-02 转 WGS84 后采样，偏移 ' +
     String(pop.crs_shift_m ?? '—') + 'm。该指标测「常住人口」，与上面的 POI 代理（测商务活跃度）**不是一回事**，两者要分开看。', '')
   out.push('| 圈层 | 常住人口 | 密度 |', '| --- | --- | --- |')
@@ -142,8 +265,8 @@ function populationHtml(data) {
   if (!pop || !pop.rings) {
     const sk = data.population_skip
     if (!sk) return ''
-    return `<h3>4.1 人口核对（本次未执行）</h3>
-<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ <b>原因</b>：${esc(sk.reason)}<br><b>补齐</b>：<code>${esc(sk.fix)}</code><br>本次报告<b>缺少独立人口数据源</b>，上面的需求强度全部来自 POI 代理，请在结论里按「单源」看待。</p>`
+    return `<h3 id="sec-pop">人口核对（本次未执行）</h3>
+<p class="tip tip-warn">⚠️ <b>原因</b>：${esc(sk.reason)}<br><b>补齐</b>：<code>${esc(sk.fix)}</code><br>本次报告<b>缺少独立人口数据源</b>，上面的需求强度全部来自 POI 代理，请在结论里按「单源」看待。</p>`
   }
   const cc = pop.cross_check
   const rows = ['500', '1000', '3000'].map((r) => {
@@ -153,10 +276,10 @@ function populationHtml(data) {
   }).join('')
   if (!rows) return ''
   const verdict = cc
-    ? `<p class="concl" style="font-size:15px">交叉判定：${esc(cc.verdict)}（WorldPop 人口${esc(cc.worldpop_level)} × POI 代理强度${esc(String(cc.proxy_level ?? '未提供'))}）${cc.interpretation ? '<br><span style="font-size:13px;color:#666">' + esc(cc.interpretation) + '</span>' : ''}</p>`
+    ? `<p class="concl">交叉判定：${esc(cc.verdict)}（WorldPop 人口${esc(cc.worldpop_level)} × POI 代理强度${esc(String(cc.proxy_level ?? '未提供'))}）${cc.interpretation ? '<br><span style="font-size:13px;color:var(--ink2)">' + esc(cc.interpretation) + '</span>' : ''}</p>`
     : ''
-  return `<h3>4.1 人口核对（独立数据源交叉验证）</h3>
-<p style="color:#888">WorldPop 2020 常住人口栅格（约 93m），已从 GCJ-02 转 WGS84 后采样，偏移 ${esc(String(pop.crs_shift_m ?? '—'))}m。该指标测「常住人口」，与上面的 POI 代理（测商务活跃度）<b>不是一回事</b>，两者要分开看。</p>
+  return `<h3 id="sec-pop">人口核对（独立数据源交叉验证）</h3>
+<p class="ttline"><span class="tt" tabindex="0">人口栅格口径<span class="tt-body">WorldPop 2020 常住人口栅格（约 93m），已从 GCJ-02 转 WGS84 后采样，偏移 ${esc(String(pop.crs_shift_m ?? '—'))}m。该指标测「常住人口」，与上面的 POI 代理（测商务活跃度）<b>不是一回事</b>，两者要分开看。</span></span></p>
 <table><tr><th>圈层</th><th>常住人口</th><th>密度</th></tr>${rows}</table>${verdict}`
 }
 
@@ -164,11 +287,11 @@ function demandSection(data) {
   const d = data.demand
   if (d && d.demand_score) {
     const p = d.proxies ?? {}
-    // 密度分母必须写明实际半径：demand.inner_radius_m 与报告的「内圈·步行N分」不是同一个圈
+    // 密度分母必须写明实际半径：demand.inner_radius_m 与报告的「步行10分圈」不是同一个圈
     const innerR = d.inner_radius_m
     const innerLabel = typeof innerR === 'number' && innerR > 0
       ? `${innerR}m 圆（≈${(Math.PI * (innerR / 1000) ** 2).toFixed(2)} km²）`
-      : '内圈面积'
+      : '圈内面积'
     const out = ['## 4. 需求侧代理指标', '']
     out.push(`> 数据源：高德 POI 自动采集（${d.captured_at ?? '—'}）｜扫描半径 ${d.radius_m ?? '—'}m。**以下全部为代理指标，不是实测人口。**`, '')
     out.push('| 指标 | 值 | 怎么来的 |', '| --- | --- | --- |')
@@ -203,7 +326,7 @@ function demandSection(data) {
 
   // 没有代理数据时：先把「缺什么 + 怎么补」说在前面，再给已有的人口核对
   const p = undefined
-  const out = ['## 4. 需求侧指标', '']
+  const out = ['## 4. 需求侧代理指标', '']
 
   out.push('> ⚠️ **本段 POI 代理指标未计算**：本点位尚未跑需求侧采集，下面只有独立人口源。', '')
   out.push('补齐方式：在开发工作区运行', '')
@@ -258,13 +381,13 @@ function inferCustomer(data) {
 function customerInference(data) {
   const inf = inferCustomer(data)
   if (!inf) {
-    return ['### 4.2 客群结构推断（估算 · 仅供参考）', '',
+    return ['### 客群结构推断（估算 · 仅供参考）', '',
       '> ⚠️ 本段依赖第 4 节「需求侧代理指标」，本点位尚未计算，无法生成客群结构推断。', '',
       '> 补齐方式：在开发工作区运行', '> ```',
       '> python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/<store_id>.json', '> ```', '']
   }
   const { jhTxt, coffeeTxt, premTxt, bankTxt, amenityTxt, mainType, timeHint, tier, popTxt, scoreTxt } = inf
-  const out = ['### 4.2 客群结构推断（估算 · 仅供参考）', '']
+  const out = ['### 客群结构推断（估算 · 仅供参考）', '']
   out.push('> 本段是**推断**而非实测画像：仅把第 4 节的代理指标，翻译成「这附近大概率是什么人」的口语化描述，'
     + '帮你判断品类与营业时段是否对路。**这不构成本包的客群画像**，更不替你决定开不开店。', '')
   out.push('**推断结论（估算 · 仅供参考）**：', '')
@@ -273,7 +396,7 @@ function customerInference(data) {
   out.push(`- **客群规模量级**：周边 3000m 约 ${popTxt}；综合需求强度 ${scoreTxt}。`)
   out.push(`- **配套带动**：购物中心、学校、地铁站合计 ${amenityTxt} 个，反映周边配套成熟度，可带来家庭、学生、通勤等混合到访客流。`)
   out.push('')
-  out.push('> **依据**：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测，详见文末《哪些数是估算》。', '')
+  out.push('> **依据**：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测，详见第 7 节《哪些数是估算》。', '')
   out.push('> **边界**：本段是数字翻译，不是现场观察。对路与否，请结合实地客流、竞品实际生意、周边人群访谈判断；'
     + '本包不输出、也未经授权给出「人口档位 / 潮汐 T 值 / 客群画像」这类判据。', '')
   return out
@@ -282,18 +405,18 @@ function customerInference(data) {
 function customerInferenceHtml(data) {
   const inf = inferCustomer(data)
   if (!inf) {
-    return `<h3>4.2 客群结构推断（估算 · 仅供参考）</h3>
-<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ 本段依赖第 4 节「需求侧代理指标」，本点位尚未计算，无法生成客群结构推断。<br>补齐方式：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code></p>`
+    return `<h3 id="sec-crowd">客群结构推断（估算 · 仅供参考）</h3>
+<p class="tip tip-warn">⚠️ 本段依赖第 4 节「需求侧代理指标」，本点位尚未计算，无法生成客群结构推断。<br>补齐方式：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code></p>`
   }
   const { jhTxt, coffeeTxt, premTxt, bankTxt, amenityTxt, mainType, timeHint, tier, popTxt, scoreTxt } = inf
-  return `<h3>4.2 客群结构推断（估算 · 仅供参考）</h3>
-<p style="color:#888">本段是<b>推断</b>而非实测画像：仅把第 4 节的代理指标，翻译成「这附近大概率是什么人」的口语化描述，帮你判断品类与营业时段是否对路。<b>这不构成本包的客群画像</b>，更不替你决定开不开店。</p>
-<p class="concl" style="font-size:15px">主客群类型：${esc(mainType)}。职住比 ${esc(jhTxt)}，${esc(timeHint)}。<br>
-消费档次：${esc(tier)}（依据咖啡密度 ${esc(coffeeTxt)}、高端餐饮密度 ${esc(premTxt)}、银行密度 ${esc(bankTxt)} 个/km²）。<br>
-客群规模量级：周边 3000m 约 ${esc(popTxt)}；综合需求强度 ${esc(scoreTxt)}。<br>
-配套带动：购物中心、学校、地铁站合计 ${esc(amenityTxt)} 个，反映周边配套成熟度，可带来家庭、学生、通勤等混合到访客流。</p>
-<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555"><b>依据</b>：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测。<br>
-<b>边界</b>：本段是数字翻译，不是现场观察。对路与否请结合实地客流、竞品实际生意、周边人群访谈判断；本包不输出、也未经授权给出「人口档位 / 潮汐 T 值 / 客群画像」这类判据。</p>`
+  return `<h3 id="sec-crowd">客群结构推断（估算 · 仅供参考）</h3>
+<div class="qblock">
+<p><b>主客群类型</b>：${esc(mainType)}。职住比 ${esc(jhTxt)}，${esc(timeHint)}。</p>
+<p><b>消费档次</b>：${esc(tier)}（依据咖啡密度 ${esc(coffeeTxt)}、高端餐饮密度 ${esc(premTxt)}、银行密度 ${esc(bankTxt)} 个/km²）。</p>
+<p><b>客群规模量级</b>：周边 3000m 约 ${esc(popTxt)}；综合需求强度 ${esc(scoreTxt)}。</p>
+<p><b>配套带动</b>：购物中心、学校、地铁站合计 ${esc(amenityTxt)} 个，反映周边配套成熟度，可带来家庭、学生、通勤等混合到访客流。</p>
+</div>
+<p class="ttline"><span class="tt" tabindex="0">本段的性质、依据与边界<span class="tt-body"><b>性质</b>：本段是<b>推断</b>而非实测画像——仅把第 4 节的代理指标，翻译成「这附近大概率是什么人」的口语化描述，帮你判断品类与营业时段是否对路。<b>这不构成本包的客群画像</b>，更不替你决定开不开店。<br><br><b>依据</b>：高德 POI 代理指标（职住比、各类密度）＋ WorldPop 常住人口栅格。代理指标不等于实测。<br><br><b>边界</b>：本段是数字翻译，不是现场观察。对路与否请结合实地客流、竞品实际生意、周边人群访谈判断；本包不输出、也未经授权给出「人口档位 / 潮汐 T 值 / 客群画像」这类判据。</span></span></p>`
 }
 
 function vetoSection(md) {
@@ -738,7 +861,8 @@ export function buildReport(data, profile) {
   const d = data.dedupe ?? {}
   const cov = data.coverage ?? {}
   const inner = data.rings?.[0] ?? {}
-  const outer = data.rings?.[data.rings.length - 1] ?? {}
+  // 单圈档案（餐饮步行圈）没有外圈：置空，避免 outer === inner 把内圈重复渲染成「外圈」
+  const outer = (data.rings?.length ?? 0) > 1 ? data.rings[data.rings.length - 1] : {}
   const transit = data.transit ?? {}
   const now = new Date().toLocaleString('zh-CN')
   const m = (transit.metro ?? [])[0]
@@ -748,19 +872,17 @@ export function buildReport(data, profile) {
   md.push(`- 业态档案：**${profile?.name ?? '未指定'}**`)
   if (data.site_mode !== 'area') md.push(`- 坐标（GCJ-02）：${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`)
   md.push(`- 生成时间：${now}`)
-  md.push(`- 等时圈来源：${inner.source === 'valhalla' ? '本地 Valhalla 路网' : inner.source === 'osrm' ? '本地 OSRM 路网' : '直线估算【估算】'}（行走范围按真实道路路径算出来的，不是在地图上画个圆；导航引擎名字不影响结论）`)
+  md.push(`- 等时圈来源：${isoSourceLabel(inner.source)}（行走范围按真实道路路径算出来的，不是在地图上画个圆；导航引擎名字不影响结论）`)
   const isoN = data.isochrone_notice
   if (isoN) {
     md.push('')
-    md.push(`> ⚠️ **等时圈引擎未启用**（${isoN.reason}）`)
-    md.push(`> 本次圈层为【直线估算】：${isoN.impact}。`)
-    md.push(`> 启动：\`${isoN.fix}\`（首次：\`${isoN.first_time}\`）`)
+    md.push(isoNoticeMd(isoN))
   }
   md.push('')
-  md.push('## 0. 参考判断（估算 · 仅供参考）', '')
+  md.push('## 参考判断（估算 · 仅供参考）', '')
   md.push(`**${v.line}**`, '')
   md.push('> 依据：高德 POI 检索（腾讯交叉校验如启用）；「势力份额」是距离归属，不是营业额份额。'
-    + '数据来源等级见文末《哪些数是估算》。', '')
+    + '数据来源等级见第 7 节《哪些数是估算》。', '')
   md.push('> 边界：本报告提供数据参考，**不构成是否开店的决定**；'
     + '是否进入请结合现场客流、租金与自身经营判断。', '')
   if (v.split) md.push(v.split, '')
@@ -772,8 +894,47 @@ export function buildReport(data, profile) {
   }
 
   // 指引：白话表排在最下方，必须让读者在开头就知道它存在
-  md.push('> 看不惯行业黑话的话，**文末《附：白话版》**有 24 条术语对照表；'
+  md.push(`> 看不惯行业黑话的话，**文末《附：白话版》**有 ${GLOSSARY.length} 条术语对照表；`
     + '内文重要行也已就地注成「原说法 —— 大白话」。', '')
+
+  // ── 地图与竞品排名：HTML 版是交互地图 + 榜单；Markdown 版只保留榜单与圈层说明 ──
+  md.push('## 地图与竞品排名', '')
+  md.push('> HTML 版这一节是一张交互地图 + 竞品榜单；Markdown 版没有地图，只保留榜单与圈层说明。', '')
+  {
+  // 章节号按实际存在的段落顺延：只配一个圈层时不会出现 2.1 → 2.3 跳号
+  const _topList = inner.top ?? []
+  const _tieMark = () => ""
+  const _nTop = _topList.length
+  const _topTitle = _nTop > 20 ? '势力份额 Top20' : `势力份额（共 ${_nTop} 家）`
+  if (_nTop === 0) {
+    // 0 家时不打印空表头与「无数据」：直接给一句能读的结论
+    const _sameType = data.dedupe?.same_type_count ?? 0
+    const _segSelf = (data.dedupe?.segments ?? []).find((x) => x.is_self)
+    const _segName = _segSelf?.label ?? _segSelf?.key ?? '同段'
+    // 采集范围用 scan_radius（实际扫了多远），不是圈层半径——两者差一倍会把「1.0km」写成「0.5km」
+    const _scanM = Number(data.scan_radius) || (((data.rings ?? [])[data.rings.length - 1]?.radius) ?? 0)
+    const _maxKm = (_scanM / 1000).toFixed(1)
+    md.push(`### ${inner.label ?? '内圈'}（无同段竞品）`, '')
+    md.push(`> 这个圈层内扫不到「${_segName}」对手。全扫描范围（约 ${_maxKm}km）内同段有 **${_sameType}** 家，最近的一家在圈外。`, '')
+    md.push('> 圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。', '')
+  } else {
+    md.push(`### ${inner.label ?? '内圈'}（${_topTitle}）`, '')
+  md.push('> **「份额」是本系统自算的势力覆盖占比**：把圈内切成网格，每格归给最近的一家店，该店分到的格子数 ÷ 总格子数。')
+  md.push('> 它衡量「这块地方谁离得最近」——**不是营业额份额，也不是市占率**。')
+  md.push('> 列表里可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。', '')
+  // 左右两栏：Top1–10 ｜ Top11–20
+  const _l = _topList.slice(0, 10)
+  const _r = _topList.slice(10, 20)
+  const _cell = (t, idx) => (t
+    ? `Top${idx + 1}${_tieMark(idx)} | ${String(t.name).replace(/\|/g, '\\|')} | ${t.share_pct}%`
+    : ' |  | ')
+  md.push('| # | 竞品 | 份额 | # | 竞品 | 份额 |', '| --- | --- | --- | --- | --- | --- |')
+  for (let k = 0; k < Math.max(_l.length, _r.length); k += 1) {
+    md.push(`| ${_cell(_l[k], k)} | ${_cell(_r[k], k + 10)} |`)
+  }
+  md.push('')
+  }
+  }
 
   // ── 估算披露：报告里每个非实测数字都要说清来源（用户要求：没开店的人不知道能做多少营业额）──
   const estimateRows = (() => {
@@ -799,8 +960,8 @@ export function buildReport(data, profile) {
       ['月租、毛利率、初始投入', '你提供的数', '输入值，签约前最好对一遍单据'],
     ]
   })()
-  const estimateHtml = `<h2>哪些数是估算</h2>
-<p style="color:#555">没开店，本来不知道能做多少营业额——所以每一项都写明来源。括号里的「估算」不是免责，是提醒你别拿它当实测去谈价。</p>
+  const estimateHtml = `<h2 id="sec-7">7. 哪些数是估算（明细与口径）</h2>
+<p style="color:var(--ink2)">没开店，本来不知道能做多少营业额——所以每一项都写明来源。括号里的「估算」不是免责，是提醒你别拿它当实测去谈价。</p>
 <table><tr><th>数据</th><th>来源</th><th>性质</th></tr>
 ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2].replace(/\*\*/g, ''))}</td></tr>`).join('')}</table>`
 
@@ -809,13 +970,6 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   md.push(`| 去重后有效 | ${num(d.effective)} |`)
   md.push(`| 剔除 / 合并 | ${num(d.dropped)} / ${num(d.merged)} |`)
   md.push(`| 同段竞品 / 异段 | ${num(d.same_type_count)} / ${num(d.other_type_count)} |`)
-  if (Array.isArray(d.segments) && d.segments.length > 0) {
-    md.push(`| 竞争分段（★=你所在段） | ${d.segments.map((s) => `${scaleLabelBy(s)}${s.is_self ? '★' : ''} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost} 元）` : ''}`).join(' ｜ ')} |`)
-    const selfSeg = d.segments.find((s) => s.is_self)
-    if (selfSeg) {
-      md.push(`| 直接对手 | ${scaleLabelBy(selfSeg)}：${selfSeg.count} 家${selfSeg.avg_cost > 0 ? `，人均 ${selfSeg.avg_cost} 元` : ''} |`)
-    }
-  }
   md.push(`| 高德覆盖率 | ${cov.amap >= 0 ? `${cov.amap}%` : '多关键词扫描'} |`)
   md.push(`| 腾讯覆盖率 | ${num(cov.tencent)}% |`)
   // 数据源模式必须写明：单源不许声称「双源交叉验证」
@@ -828,14 +982,31 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   } else {
     md.push('| 数据源模式 | 未标注（旧版 probe 输出），按单源看待 |')
   }
-  md.push('')
   const dq = data.data_quality
   if (dq) {
     const mark = dq.verdict === 'ok' ? '✅ 正常' : dq.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'
-    md.push(`| 采集可信度 | ${mark}（${dq.verdict}）${dq.warnings?.length ? `：${dq.warnings.join('；')}` : ''} |`, '')
+    md.push(`| 采集可信度 | ${mark}（${dq.verdict}）${dq.warnings?.length ? `：${dq.warnings.join('；')}` : ''} |`)
   }
+  md.push('')
 
   md.push('## 2. 竞品分布', '')
+  {
+    const _segs = Array.isArray(d.segments) ? d.segments : []
+    if (_segs.length > 0) {
+      md.push('### 竞争分段（品类 × 规模）', '')
+      md.push('| 分段 | 家数 | 人均 | 有价率 |', '| --- | --- | --- | --- |')
+      for (const s of _segs) {
+        md.push(`| ${scaleLabelBy(s)}${s.is_self ? ' ★' : ''} | ${s.count} | ${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'} | ${s.cost_coverage ?? 0}% |`)
+      }
+      md.push('')
+      const _self = _segs.find((s) => s.is_self)
+      if (_self) {
+        const _rest = _segs.reduce((a, x) => a + x.count, 0) - _self.count
+        md.push(`> 你的直接对手是「${scaleLabelBy(_self)}」：${_self.count} 家${_self.avg_cost > 0 ? `，平均人均 ${_self.avg_cost} 元` : '，该段无高德人均数据'}。`
+          + `其余 ${_rest} 家属于别的段——同品类不同规模、或不同菜系，是「协同或弱竞争」，不是直接对手。`, '')
+      }
+    }
+  }
   // 20.5 竞争集中度：一眼看出这块地是「有头部」还是「一堆碎片」
   {
     const _t = inner.top ?? []
@@ -849,7 +1020,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
         : _t3 >= 30 ? '中度集中：有头部但没垄断，还有切入口'
           : _t3 >= 15 ? '较分散：头部优势弱，靠差异化就能站住'
             : '极度分散：没有真正的头部，谁都能切一块，但也谁都不占优'
-      md.push('**竞争集中度**', '', '| 指标 | 值 |', '| --- | --- |')
+      md.push('### 竞争集中度', '', '| 指标 | 值 |', '| --- | --- |')
       md.push(`| 圈内竞品（主圈） | ${_n} 家 —— 你正常做生意的那个范围里有多少家竞品 |`)
       md.push(`| Top1 势力份额 | ${_t[0].share_pct}%（${_t[0].name}） |`)
       md.push(`| Top3 合计 | ${_t3}% |`)
@@ -859,41 +1030,11 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
       md.push('', '> 势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。', '')
     }
   }
-  // 章节号按实际存在的段落顺延：只配一个圈层时不会出现 2.1 → 2.3 跳号
-  let _sec = 0
-  const secNo = () => `2.${++_sec}`
-  const _topList = inner.top ?? []
-  const _tieMark = () => ""
-  const _nTop = _topList.length
-  const _topTitle = _nTop > 20 ? '势力份额 Top20' : `势力份额（共 ${_nTop} 家）`
-  if (_nTop === 0) {
-    // 0 家时不打印空表头与「无数据」：直接给一句能读的结论
-    const _sameType = data.dedupe?.same_type_count ?? 0
-    const _segSelf = (data.dedupe?.segments ?? []).find((x) => x.is_self)
-    const _segName = _segSelf?.label ?? _segSelf?.key ?? '同段'
-    const _maxKm = (((data.rings ?? [])[data.rings.length - 1]?.radius ?? 0) / 1000).toFixed(1)
-    md.push(`### ${secNo()} ${inner.label ?? '内圈'}（无同段竞品）`, '')
-    md.push(`> 这个圈层内扫不到「${_segName}」对手。全扫描范围（约 ${_maxKm}km）内同段有 **${_sameType}** 家，最近的一家在圈外。`, '')
-    md.push('> 圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。', '')
-  } else {
-    md.push(`### ${secNo()} ${inner.label ?? '内圈'}（${_topTitle}）`, '')
-  md.push('> **「份额」是本系统自算的势力覆盖占比**：把圈内切成网格，每格归给最近的一家店，该店分到的格子数 ÷ 总格子数。')
-  md.push('> 它衡量「这块地方谁离得最近」——**不是营业额份额，也不是市占率**。')
-  md.push('> 列表里可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。', '')
-  // 左右两栏：Top1–10 ｜ Top11–20
-  const _l = _topList.slice(0, 10)
-  const _r = _topList.slice(10, 20)
-  const _cell = (t, idx) => (t
-    ? `Top${idx + 1}${_tieMark(idx)} | ${String(t.name).replace(/\|/g, '\\|')} | ${t.share_pct}%`
-    : ' |  | ')
-  md.push('| # | 竞品 | 份额 | # | 竞品 | 份额 |', '| --- | --- | --- | --- | --- | --- |')
-  for (let k = 0; k < Math.max(_l.length, _r.length); k += 1) {
-    md.push(`| ${_cell(_l[k], k)} | ${_cell(_r[k], k + 10)} |`)
-  }
-  md.push('')
-  }
   if (outer.distance_bands?.length) {
-    md.push(`### ${secNo()} ${outer.label ?? '外圈'}（不报份额，只报距离带）`, '', '| 距离带 | 家数 |', '| --- | --- |')
+    const outerSrc = outer.source === 'cloud' ? ' · 云端真实路网'
+      : (outer.source === 'valhalla' || outer.source === 'osrm') ? ' · 本地路网'
+        : ' · 直线估算【估算】'
+    md.push(`### ${outer.label ?? '外圈'}（不报份额，只报距离带${outerSrc}）`, '', '| 距离带 | 家数 |', '| --- | --- |')
     outer.distance_bands.forEach((b) => md.push(`| ${b.label} | ${b.count} |`))
     md.push('')
   }
@@ -924,7 +1065,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   // 2.4 的正文延后到 2.3 之后输出（编号与阅读顺序要保持一致）
   const tierLines = []
   if (tier !== null) {
-    tierLines.push('### __TIER_NO__ 竞品三级分层', '')
+    tierLines.push('### 竞品三级分层', '')
     tierLines.push('> **分类规则**：按「菜系 × 价位段」切分。同价位段且目标客群高度重叠的，即使菜系不同也按**直接竞品**对待；'
       + '只有客群明显不同的才算间接。', '')
     tierLines.push('| 层级 | 划分依据 | 家数 | 对选址的含义 |', '| --- | --- | --- | --- |')
@@ -939,7 +1080,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
 
   const comp = competitionOf(inner)
   if (comp) {
-    md.push(`### ${secNo()} 截流判定（两轴）`, '')
+    md.push(`### 截流判定（两轴）`, '')
     // 第一轴：点位截流力。优先取财务结果，其次取现场判定（不依赖财务参数）
     const CAP = {
       L1: ['顶级截流（千分点）', 1.3], L2: ['强截流（A 类点）', 1.1], L3: ['中等截流（B 类·基准）', 1.0],
@@ -969,16 +1110,13 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
     md.push('> 前者调客流，后者调风险，报告里必须分开写。', '')
   }
 
-  if (tierLines.length > 0) {
-    tierLines[0] = tierLines[0].replace('__TIER_NO__', secNo())
-  }
   md.push(...tierLines)
 
   // 2.5 动线阻断（现场实测，优先于路网估算）
   const barriers = Array.isArray(data.barriers) ? data.barriers : []
   const blockedGoals = barriers.filter((b) => String(b.barrier_type ?? '') !== '')
   if (barriers.length > 0) {
-    md.push(`### ${secNo()} 动线阻断（现场实测）`, '')
+    md.push(`### 动线阻断（现场实测）`, '')
     md.push('| 目标 | 类型 | 直线 | 实际步行 | 绕行倍数 | 阻断 |', '| --- | --- | --- | --- | --- | --- |')
     for (const b of barriers) {
       const ratio = String(b.detour_ratio ?? '') !== '' ? `${b.detour_ratio}×` : '—'
@@ -1042,7 +1180,7 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   md.push(...financeSection(data))
 
   // 「哪些数是估算」放在财务段之后：财务参数里的估算项最多、最需要当场核对
-  md.push('### 哪些数是估算（别把估算当实测）', '')
+  md.push('## 7. 哪些数是估算（别把估算当实测）', '')
   md.push('> 没开店，本来不知道能做多少营业额——每一项都写清来源；括号里标「估算」的，拿到实测值就该替换。', '')
   md.push('| 数据 | 来源 | 性质 |', '| --- | --- | --- |')
   for (const r of estimateRows) md.push(`| ${r[0]} | ${r[1]} | ${r[2]} |`)
@@ -1095,47 +1233,14 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
   md.push('## 附：看不懂的话先看这里（白话版）', '')
   md.push('> 这节不用记，遇到不懂的词回来查一眼就行。', '')
   md.push('| 报告里的说法 | 大白话 |', '| --- | --- |')
-  md.push('| **截流 / 截流定级** | 你的店能"拦下"多少本来要路过的人。'
-    + '**重度截流**＝这条街上抢客的店太多，客人还没走到你门口就被别人截走了 |')
-  md.push('| **截流两轴** | 第一轴看**这个铺位本身**（位置显不显眼、好不好进、在几楼）；'
-    + '第二轴看**周围对手**（多少家在抢同一批人）。一个管"人流进不进得来"，一个管"进来后会不会被抢走"，两回事 |')
-  md.push('| **势力份额 / Voronoi 归属** | 把这块地切成小格子，每格算给离它最近的那家店。'
-    + '某店分到的格子越多＝它的"地盘"越大。**这不是营业额，也不是市占率**，只说明"谁离得近" |')
-  md.push('| **Top3 集中度** | 前 3 名加起来占多少地盘。占比高＝头部几家把客抓得牢，新店难插进去；'
-    + '占比低＝碎片化，靠差异化就能站住 |')
-  md.push('| **同段 / 异段** | 「段」是按"菜系 × 价位"分的类。同段＝跟你同类同价，是真正抢客的人；'
-    + '异段＝不同类或不同价，多数是互补不是对手 |')
-  md.push('| **直接 / 替代 / 间接竞品** | 直接＝同类同价，客人只能二选一；'
-    + '替代＝同类不同价，平时不抢、办宴席时会流动；间接＝不同品类，抢的是同一笔"吃饭预算" |')
-  md.push('| **翻台率** | 一个座位一天被坐了几轮。1.998 次 ≈ 每座一天接待两拨客人。'
-    + '**座位翻台 ≠ 桌翻台**：一桌 4 人，空 1 个座就拉低座位翻台 |')
-  md.push('| **坪效** | 每平方米每个月能做多少营业额。用来看"这块地方有没有被浪费" |')
-  md.push('| **保本日营业额** | 一天至少卖多少钱才不亏。低于这个数就是在赔钱 |')
-  md.push('| **极限租金** | **保本那档**＝租金再高一分钱就开始亏；'
-    + '**目标回本那档**＝租金到这个数，就没法在目标月数内回本 |')
-  md.push('| **谈判锚点** | 谈租金的参考上限，**不是"砍到这个价就签"**——高于它，按常规经营预期就回不了本（压力下限另列，不是出价依据） |')
-  md.push('| **租售比** | 月租金 ÷ 月营业额。租金占营业额几成。餐饮大店经验：10% 以内健康，15% 以上警戒 |')
-  md.push('| **现金口径 / 会计口径** | 现金口径＝只算钱进出，回本快，看"多久能周转开"；'
-    + '会计口径＝把装修设备的折旧摊进去，回本慢，看"这笔投资账面划不划算"。两个都要看 |')
-  md.push('| **摊销** | 装修和设备的一次性投入，按月摊到成本里。450 万 ÷ 60 个月＝每月 7.5 万 |')
-  md.push('| **容量利用率** | 店里能坐的位子实际坐满了多少。66.6% ≈ 每 3 个位子有 1 个空着 |')
-  md.push('| **职住比** | 写字楼数量 ÷ 住宅数量。>1 上班的人多（工作日午市好做），<1 住家的人多（晚市和周末好做） |')
-  md.push('| **等时圈 / 圈层** | 从点位出发走 N 分钟能到的范围，按真实路网算，不是画个圆 |')
-  md.push('| **单方造价** | 每平方米投了多少钱（装修＋设备＋其他初始投入） |')
-  md.push('| **保本客单量** | 一天至少接待多少单才不亏 |')
-  md.push('| **敏感度「会翻转」** | 这个参数只要估错 20%，结论就从"能做"变"不能做"——'
-    + '所以它必须实测，不能拍脑袋估 |')
-  md.push('| **截流系数** | 算营业额时乘的一个折扣：路过的人里有多少比例真会进你的店 |')
-  md.push('| **硬伤 / 待核实** | 硬伤＝明确不满足的硬条件；'
-    + '待核实＝还没拿到数据、需要现场确认的项——**是待办清单，不是否决** |')
-  md.push('| **规模档推定，无人均实证** | 这家店人均多少我们没拿到真实数据，是按店名和规模"猜"的档位，别太当真 |')
-  md.push('| **ROI** | 年化投资回报率：一年赚的钱 ÷ 投进去的钱 |')
+  md.push(glossaryMdRows)
   md.push('')
 
   md.push('---', '')
-  md.push(inner.source === 'valhalla' || inner.source === 'osrm'
-    ? '> 等时圈为本地路网计算，已去除沿主干道走廊的细长尖刺；外圈因范围过大不报份额。'
-    : '> 等时圈为直线估算【估算】，遇江面/快速路会高估可达范围；外圈因范围过大不报份额。')
+  const _outerTail = outer.distance_bands?.length ? '；外圈因范围过大不报份额' : ''
+  md.push(inner.source === 'valhalla' || inner.source === 'osrm' || inner.source === 'cloud'
+    ? `> 等时圈为${inner.source === 'cloud' ? '云端真实路网' : '本地路网'}计算，已去除沿主干道走廊的细长尖刺${_outerTail}。`
+    : `> 等时圈为直线估算【估算】，遇江面/快速路会高估可达范围${_outerTail}。`)
   md.push('> 数据来源：高德/腾讯 POI、本地路网引擎、用户录入调研表。'
     + '—— 竞品和配套是从地图公司的商家库抓的，距离和走路时间是用本地导航引擎按真实道路算的，'
     + '财务参数是你自己填的。建议拿这份跟现场实测对一遍再拍板。')
@@ -1149,26 +1254,26 @@ ${estimateRows.map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${e
     : ''
 
   const segRows = Array.isArray(d.segments) && d.segments.length > 0
-    ? `<h2>竞争分段（品类 × 规模）</h2>
-<p style="color:#555">同一家餐厅，<b>品类相同但规模不同就不是竞品</b>：人均 28 元的粿条店和人均 252 元的粤菜馆，客群完全不重叠。
+    ? `<h3 id="sec-segment">竞争分段（品类 × 规模）</h3>
+<p style="color:var(--ink2)">同一家餐厅，<b>品类相同但规模不同就不是竞品</b>：人均 28 元的粿条店和人均 252 元的粤菜馆，客群完全不重叠。
 下表按「菜系 + 规模」把人分成几段，<b>★ = 你所在的段（直接竞品）</b>，其余段是协同或弱竞争。</p>
-${segPlain ? `<div class="concl" style="font-size:14px">${esc(segPlain)}</div>` : ''}
-<table><tr><th>分段</th><th>家数</th><th>人均</th><th>评分</th><th>有价率</th><th title="档案里的技术标识，只在改 profile 时用得上">档案键</th></tr>
-${d.segments.map((s) => `<tr><td>${esc(scaleLabelBy(s))}${s.is_self ? ' ★' : ''}</td><td>${s.count}</td><td>${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'}</td><td>${s.avg_rating > 0 ? s.avg_rating : '—'}</td><td>${s.cost_coverage ?? 0}%</td><td style="color:#aaa;font-size:12px">${esc(s.key)}</td></tr>`).join('')}</table>`
+${segPlain ? `<p class="tip tip-note">${esc(segPlain)}</p>` : ''}
+<table><tr><th>分段</th><th>家数</th><th>人均</th><th>评分</th><th>有价率</th></tr>
+${d.segments.map((s) => `<tr><td>${esc(scaleLabelBy(s))}${s.is_self ? ' ★' : ''}</td><td>${s.count}</td><td>${s.avg_cost > 0 ? `${s.avg_cost} 元` : '—'}</td><td>${s.avg_rating > 0 ? s.avg_rating : '—'}</td><td>${s.cost_coverage ?? 0}%</td></tr>`).join('')}</table>`
     : ''
 
   const vetoHtml = data.veto
-    ? `<h2>5. 场地核查（提醒，非否决）</h2><p>规则来源：${esc(data.veto.rule_source === 'custom' ? '用户自定义' : '内置示例')}（${esc(data.veto.rule_version)}）</p>
-<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555">本段是<b>备忘录，不是裁决</b>：缺什么就补什么，签约前补齐即可。证照与合规由承租方办理，本系统只陈述事实。</p>
-<table><tr><th>项</th><th>内容</th></tr>
+    ? `<h2 id="sec-5">5. 场地核查（提醒，非否决）</h2><p class="ttline"><span class="tt" tabindex="0">规则来源<span class="tt-body">规则来源：${esc(data.veto.rule_source === 'custom' ? '用户自定义' : '内置示例')}（${esc(data.veto.rule_version)}）</span></span></p>
+<p class="tip tip-note">本段是<b>备忘录，不是裁决</b>：缺什么就补什么，签约前补齐即可。证照与合规由承租方办理，本系统只陈述事实。</p>
+<table class="kv"><tr><th>项</th><th>内容</th></tr>
 <tr><td>硬伤</td><td><b>${data.veto.hard_reasons.length} 项</b></td></tr>
 <tr><td>风险</td><td>${data.veto.major_risks.length} 项</td></tr>
-<tr><td>待核实字段</td><td><b>${data.veto.missing_fields.length} 项</b>${data.veto.missing_fields.length > 0 ? `：${esc(data.veto.missing_fields.map((x) => x.field_key).join('、'))}` : ''}</td></tr>
+<tr><td>待核实字段</td><td><b>${data.veto.missing_fields.length} 项</b>${data.veto.missing_fields.length > 0 ? `：${data.veto.missing_fields.map((x) => fieldLabel(x.field_key)).join('、')}` : ''}</td></tr>
 ${data.veto.hard_reasons.map((h) => `<tr><td>硬伤 ${esc(h.rule_id)}</td><td>${esc(h.rule_desc)}（${esc(h.field_key)}｜${esc(h.data_basis)}）</td></tr>`).join('')}
 ${data.veto.major_risks.map((r) => `<tr><td>风险 ${esc(r.rule_id)}</td><td>${esc(r.rule_desc)}（${esc(r.field_key)}）</td></tr>`).join('')}
 </table>`
-    : `<h2>5. 场地核查（本段未执行）</h2>
-<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;margin:12px 0">
+    : `<h2 id="sec-5">5. 场地核查（本段未执行）</h2>
+<p class="tip tip-warn">
 未提供调研表，<b>消防 / 排烟 / 电量 / 燃气 / 层高 / 门宽 等硬性条件未核查</b>。<br>
 这不是「没问题」，是「还没查」。<br>
 补齐：复制 <code>survey/_template.csv</code> 填好，跑
@@ -1195,7 +1300,7 @@ ${data.veto.major_risks.map((r) => `<tr><td>风险 ${esc(r.rule_id)}</td><td>${e
           max_rent_ratio: '极限租金占营业额',
         }
         const sfHtml = data.finance.scenario_factors
-        const sfTableHtml = !sfHtml ? '' : `<h3 style="font-size:15px;margin:18px 0 6px">三档情景参数（报告据此可复算每一档）</h3>
+        const sfTableHtml = !sfHtml ? '' : `<h3 id="sec-scenario">三档情景参数（报告据此可复算每一档）</h3>
 <table><tr><th>情景</th><th>营收乘数</th><th>成本乘数</th><th>说明</th></tr>
 ${['base', 'pessimistic', 'optimistic'].map((k) => {
           const x = sfHtml[k]
@@ -1205,18 +1310,20 @@ ${['base', 'pessimistic', 'optimistic'].map((k) => {
               : '营收上调、成本下调（乐观假设）'
           return `<tr><td>${esc(x.label ?? k)}</td><td>×${x.revenue}</td><td>×${x.cost}</td><td>${note}</td></tr>`
         }).join('')}</table>
-<p style="color:#666;font-size:13px">保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此<b>不相同</b>，差异全部来自成本乘数。</p>`
-        return `<h2>6. 财务测算</h2>${sfTableHtml}<table><tr><th>指标</th>${order.map((k) => `<th>${label[k]}</th>`).join('')}</tr>
+<p class="ttline"><span class="tt" tabindex="0">三档保本额为什么不同<span class="tt-body">保本日营业额 = 固定成本 × 成本乘数 ÷ (毛利率 − 税费率) ÷ 30；三档保本额因此<b>不相同</b>，差异全部来自成本乘数。</span></span></p>`
+        return `<h2 id="sec-6">6. 财务测算</h2>${sfTableHtml}<table class="fin"><tr><th>指标</th>${order.map((k) => `<th>${label[k]}</th>`).join('')}</tr>
 ${keys.map((key) => `<tr><td>${esc(metric[key] ?? key)}</td>${order.map((k) => {
           const v = sc[k]?.[key]
-          if (key === 'roi' && typeof v === 'number') return `<td>${(v * 100).toFixed(1)}%</td>`
-          if (key === 'max_rent_ratio' && typeof v === 'number') return `<td>${(v * 100).toFixed(1)}%</td>`
+          // 负数标红：亏损、负现金流、负 ROI 是真正的坏消息；回本期为 −1 哨兵值不标
+          const neg = typeof v === 'number' && v < 0 && !key.startsWith('payback') ? ' class="neg"' : ''
+          if (key === 'roi' && typeof v === 'number') return `<td${neg}>${(v * 100).toFixed(1)}%</td>`
+          if (key === 'max_rent_ratio' && typeof v === 'number') return `<td${neg}>${(v * 100).toFixed(1)}%</td>`
           if ((key === 'payback_static_months' || key === 'accounting_payback_months') && typeof v === 'number') return `<td>${v > 0 ? v : '无法回本（−1 为哨兵值）'}</td>`
-          return `<td>${num(v)}</td>`
+          return `<td${neg}>${num(v)}</td>`
         }).join('')}</tr>`).join('')}</table>
-${Array.isArray(data.finance.low_confidence_params) && data.finance.low_confidence_params.length > 0 ? `<p style="color:#c62828">低置信参数（<b>相关数值按【预估】看待，须现场核实</b>）：${esc(data.finance.low_confidence_params.join('、'))}</p>` : ''}
-${data.finance.rent_ceiling ? `<h3 style="font-size:15px;margin:18px 0 6px">极限租金反推（${esc(data.finance.rent_ceiling.scenario)} 档｜目标回本 ${data.finance.rent_ceiling.target_payback_months} 个月）</h3>
-<table><tr><th>项</th><th>值</th></tr>
+${Array.isArray(data.finance.low_confidence_params) && data.finance.low_confidence_params.length > 0 ? `<p class="ttline"><span class="tt" tabindex="0">⚠️ 低置信参数（${data.finance.low_confidence_params.length} 项）<span class="tt-body">低置信参数（<b>相关数值按【预估】看待，须现场核实</b>）：${esc(data.finance.low_confidence_params.join('、'))}</span></span></p>` : ''}
+${data.finance.rent_ceiling ? `<h3 id="sec-rentcap">极限租金反推（${esc(data.finance.rent_ceiling.scenario)} 档｜目标回本 ${data.finance.rent_ceiling.target_payback_months} 个月）</h3>
+<table class="kv"><tr><th>项</th><th>值</th></tr>
 <tr><td>净利=0 时的租金上限</td><td>${num(data.finance.rent_ceiling.rent_ceiling_breakeven)} 元/月</td></tr>
 <tr><td>目标回本时的租金上限</td><td>${num(data.finance.rent_ceiling.rent_ceiling_at_target)} 元/月</td></tr>
 <tr><td>当前租金</td><td>${num(data.finance.rent_ceiling.current_rent)} 元/月</td></tr>
@@ -1231,7 +1338,7 @@ ${(() => {
     very_risky: '❌ 按本次估算明显偏长', no_value: '⛔ 按本次估算超出常见经验区间', never: '⛔ 无法回本',
   }[lv] ?? lb)
   const pvc = b.payback_verdict_cash
-  return `<h3 style="font-size:15px;margin:18px 0 6px">回本周期参考标尺（估算 · 仅供参考）</h3>
+  return `<h3 id="sec-payback">回本周期参考标尺（估算 · 仅供参考）</h3>
 ${(() => {
   const tgt = data.finance?.rent_ceiling?.target_payback_months ?? data.finance?.space_model?.target_payback_months
   const bmkH = data.benchmark ?? {}
@@ -1240,21 +1347,21 @@ ${(() => {
   const bmMax = typeof bmkH.payback_max === 'number' ? bmkH.payback_max : null
   const ratioTxt = (bmMed !== null && tgt > 0) ? (bmMed / tgt).toFixed(1) : '—'
   if (typeof tgt !== 'number' || tgt <= 0) return ''
-  return `<p style="color:#555;background:#f5f5f5;padding:8px 10px;border-left:3px solid #999;font-size:13px">`
+  return `<p style="color:var(--ink2);background:#f5f5f5;padding:8px 10px;border-left:3px solid #999;font-size:13px">`
     + `📐 <b>两套标尺</b>：本报告用的「目标回本 ${tgt} 个月」来自业态参数库；`
     + `而行业基准库里高端中餐酒楼的回本中位是 <b>${bmMed} 个月</b>`
     + (bmMin !== null && bmMax !== null ? `（区间 ${bmMin}~${bmMax}，20 城估算值）` : '（20 城估算值）')
     + `。两者差 <b>${ratioTxt} 倍</b>——<b>${tgt} 个月不是行业常态，是偏紧的要求</b>。</p>`
 })()}
-<table><tr><th>项</th><th>值</th></tr>
+<table class="kv"><tr><th>项</th><th>值</th></tr>
 <tr><td>会计口径回本（基准档）</td><td><b>${b.accounting_payback_months > 0 ? num(b.accounting_payback_months) + ' 个月' : '无法回本（−1 为哨兵值）'}</b> → <b>${mk(pv.level, pv.label)}</b></td></tr>
 ${pvc ? `<tr><td>现金流口径回本（基准档）</td><td>${b.payback_static_months > 0 ? num(b.payback_static_months) + ' 个月' : '无法回本（−1 为哨兵值）'} → ${mk(pvc.level, pvc.label)}</td></tr>` : ''}
 <tr><td>判读依据</td><td>${esc(pv.note)}</td></tr></table>
-<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555;margin:10px 0">
+<p class="tip tip-note">
 <b>行业实操标尺</b>（装修投入几百万的重资产大店）<br>
 ✅ <b>24–36 个月（2–3 年）＝ 优秀门店</b>　🟡 <b>≤48 个月（4 年）＝ 可勉强接受的上限</b><br>
 ⚠️ 49–60 个月＝风险偏高　❌ 61–84 个月（5–7 年）＝风险极高　⛔ <b>&gt;84 个月（7–8 年）＝按经验标尺明显偏长（估算）</b><br>
-<span style="color:#888">经验标尺，只用来给算出来的回本月数贴标签，不反过来影响测算结果。</span>
+<span style="color:var(--ink3)">经验标尺，只用来给算出来的回本月数贴标签，不反过来影响测算结果。</span>
 </p>`
 })()}
 ${data.finance.recommendation ? (() => {
@@ -1268,18 +1375,18 @@ ${data.finance.recommendation ? (() => {
           ? `（当前租金 ${num(data.finance.rent_ceiling.current_rent)} 元/月，锚点 ${num(rec.target_rent)} 元/月，`
             + `安全余量占锚点 ${(Math.abs(rec.rent_headroom_pct) * 100).toFixed(0)}%）`
           : '')
-  return `<h3 style="font-size:15px;margin:18px 0 6px">参考测算值（估算 · 仅供参考）</h3>
-<p style="color:#666;font-size:13px">边界：以下数字随输入变化，敏感度中标「会翻转」的参数需先实测；<b>不是出价建议</b>，谈多少由你决定。</p>
-<table><tr><th>项</th><th>值</th></tr>
+  return `<h3 id="sec-refcalc">参考测算值（估算 · 仅供参考）</h3>
+<p class="ttline"><span class="tt" tabindex="0">边界<span class="tt-body">边界：以下数字随输入变化，敏感度中标「会翻转」的参数需先实测；<b>不是出价建议</b>，谈多少由你决定。</span></span></p>
+<table class="kv"><tr><th>项</th><th>值</th></tr>
 <tr><td>谈判锚点</td><td>${rec.anchor_unreachable ? '<b>不可达</b>（即便零租金，压力测试档也达不到目标回本）' : `<b>${num(rec.target_rent)}</b> 元/月（取自 ${rec.based_on_scenario} 档）`}</td></tr>
 <tr><td>保本红线</td><td>${num(rec.ceiling_rent)} 元/月</td></tr>
 ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保守档）</td><td>锚点 ${num(rec.target_rent_conservative)} 元/月 ｜ 保本 ${num(rec.ceiling_rent_conservative)} 元/月 —— 「营收降 15% 且成本涨 5%」时的最坏情况，<b>不作为谈判出价</b></td></tr>` : ''}
 <tr><td>距锚点</td><td>${gapCell}</td></tr>
 <tr><td>当前租售比</td><td>${(rec.current_rent_ratio * 100).toFixed(1)}%（${esc(rec.rent_ratio_label)}健康线 ${(rec.rent_ratio_healthy_max * 100).toFixed(0)}%，警戒线 ${(rec.rent_ratio_warning_max * 100).toFixed(0)}%）→ <b>${esc({ healthy: '健康', watch: '偏高', breach: '高于内置经验阈值' }[rec.rent_ratio_verdict] ?? rec.rent_ratio_verdict)}</b></td></tr>
 </table>
-<p style="color:#666">${esc(rec.rent_ratio_hint)}</p>
-<p style="color:#666"><b>取值方式</b>：谈判锚点取<b>基准档</b>。保守档不参与取锚点，它只是压力测试下的下限，单独列出供风险参考——拿压力测试值出价等于按最坏情况要价，谈不成。</p>
-<p style="background:#f5f5f5;border-left:4px solid #999;padding:10px 14px;color:#555">锚点不是「砍到这个价就签」，而是「高于这个价，按常规经营预期就回不了本（压力下限另列，不是出价依据）」。${(() => {
+<p style="color:var(--ink2)">${esc(rec.rent_ratio_hint)}</p>
+<p class="ttline"><span class="tt" tabindex="0">取值方式<span class="tt-body"><b>取值方式</b>：谈判锚点取<b>基准档</b>。保守档不参与取锚点，它只是压力测试下的下限，单独列出供风险参考——拿压力测试值出价等于按最坏情况要价，谈不成。</span></span></p>
+<p class="tip tip-note">锚点不是「砍到这个价就签」，而是「高于这个价，按常规经营预期就回不了本（压力下限另列，不是出价依据）」。${(() => {
       const cur = rec.target_rent + rec.gap_to_target
       const pct = cur > 0 ? rec.gap_to_target / cur : 0
       if (pct > 0.3) return `需降幅度达当前租金的 ${Math.round(pct * 100)}%：这通常不是「租金贵」，而是这笔交易结构不成立——应重核人力与投入，或改谈免租期、装修补贴、保底+抽成。`
@@ -1288,8 +1395,8 @@ ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保
     })()}</p>`
 })() : ''}`
       })()
-    : `<h2>6. 财务测算（本段未执行）</h2>
-<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;margin:12px 0">
+    : `<h2 id="sec-6">6. 财务测算（本段未执行）</h2>
+<p class="tip tip-warn">
 未提供财务参数，<b>回本周期 / 极限租金 / 租期现金流 / 敏感度 全部未计算</b>。<br>
 缺了这几个数，报告只能回答「周边有多少对手」，回答不了「这个价能不能租」。<br>
 需要 6 个数：<code>daily_revenue</code> <code>gross_margin</code> <code>monthly_rent</code>
@@ -1302,11 +1409,11 @@ ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保
     const d = data.demand
     if (d && d.demand_score) {
       const p = d.proxies ?? {}
-  // 密度分母写明实际半径（与「内圈·步行N分」不是同一个圈）
+  // 密度分母写明实际半径（与「步行10分圈」不是同一个圈）
   const _innerR = d.demand?.inner_radius_m
   const innerLabel = typeof _innerR === 'number' && _innerR > 0
     ? `${_innerR}m 圆（≈${(Math.PI * (_innerR / 1000) ** 2).toFixed(2)} km²）`
-    : '内圈面积'
+    : '圈内面积'
       const rows = [
         `<tr><td>住宅密度</td><td>${p.residential_density_per_km2 ?? '—'} 个/km²</td><td>住宅区 POI ÷ 扫描面积</td></tr>`,
         `<tr><td>职住比</td><td>${p.job_housing_ratio ?? '—'}</td><td>写字楼 POI ÷ 住宅区 POI（&gt;1 偏就业型）</td></tr>`,
@@ -1317,70 +1424,66 @@ ${typeof rec.target_rent_conservative === 'number' ? `<tr><td>压力下限（保
       ]
       if (d.nearest?.metro) rows.push(`<tr><td>最近地铁</td><td>${esc(d.nearest.metro.name)} ${d.nearest.metro.distance_m}m</td><td>高德最近站点检索</td></tr>`)
       const caveat = d.proxy_caveat && typeof d.proxy_caveat === 'object'
-        ? `<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;color:#555"><b>代理指标的已知偏差：</b><br>${Object.entries(d.proxy_caveat).map(([k, v]) => `· ${esc(k)}：${esc(v)}`).join('<br>')}</p>`
+        ? `<p class="tip tip-warn"><b>代理指标的已知偏差：</b><br>${Object.entries(d.proxy_caveat).map(([k, v]) => `· ${esc(k)}：${esc(v)}`).join('<br>')}</p>`
         : ''
-      return `<h2>4. 需求侧代理指标</h2>
-<p style="color:#888">数据源：高德 POI 自动采集（${esc(d.captured_at ?? '—')}）｜扫描半径 ${d.radius_m ?? '—'}m。以下全部为<b>代理指标，不是实测人口</b>。</p>
+      return `<h2 id="sec-4">4. 需求侧代理指标</h2>
+<p class="ttline"><span class="tt" tabindex="0">数据源与口径<span class="tt-body">数据源：高德 POI 自动采集（${esc(d.captured_at ?? '—')}）｜扫描半径 ${d.radius_m ?? '—'}m。以下全部为<b>代理指标，不是实测人口</b>。</span></span></p>
 <table><tr><th>指标</th><th>值</th><th>怎么来的</th></tr>${rows.join('')}</table>
-<p class="concl" style="font-size:15px">综合需求强度：${d.demand_score.score}/100（数据完整度 ${Math.round((d.data_completeness ?? 0) * 100)}%，置信度 ${esc(d.confidence ?? '—')}）</p>
+<p class="concl">综合需求强度：${d.demand_score.score}/100（数据完整度 ${Math.round((d.data_completeness ?? 0) * 100)}%，置信度 ${esc(d.confidence ?? '—')}）</p>
 ${caveat}${populationHtml(data)}`
     }
-    return `<h2>4. 需求侧指标</h2>${populationHtml(data)}<p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px">⚠️ <b>POI 代理指标未计算</b>：本点位尚未跑需求侧采集。<br>补齐：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code><br><b>禁止用竞品数量反推人口规模。</b></p>`
+    return `<h2 id="sec-4">4. 需求侧代理指标</h2>${populationHtml(data)}<p class="tip tip-warn">⚠️ <b>POI 代理指标未计算</b>：本点位尚未跑需求侧采集。<br>补齐：在开发工作区运行 <code>python scripts/demand-fetch.py "地址" --radius 3000 --out survey/demand/&lt;store_id&gt;.json</code><br><b>禁止用竞品数量反推人口规模。</b></p>`
   })()
 
-  // HTML 侧章节号按**输出顺序**预先分配（const 构造顺序 ≠ 输出顺序，用计数器会错位）
-  const _hasOuter = Boolean(outer.distance_bands?.length)
-  const _base = _hasOuter ? 1 : 0
-  const secOuter = `2.1`
-  const secCap = `2.${_base + 1}`
-  const secTier = `2.${_base + 2}`
-  const tierHtml = tier === null ? '' : `<h3>${secTier} 竞品三级分层</h3><table><tr><th>层级</th><th>划分依据</th><th>家数</th><th>对选址的含义</th></tr>
-<tr><td>直接竞品</td><td>同品类 + 同价位段（档案段 <code>${esc(tier.selfSegKey)}</code>）</td><td><b>${tier.directCount}</b></td><td>真正的对手，决定你能拿多少份额</td></tr>
+  // 编号规则：只有 h2 章节编号（1–7），所有 h3 一律不编号。
+  // 原按「2.1/2.2/2.3」递推的写法在缺节时会跳号，且与 Markdown 版编号对不上，已废除。
+  const tierHtml = tier === null ? '' : `<h3 id="sec-tier">竞品三级分层</h3><table><tr><th>层级</th><th>划分依据</th><th>家数</th><th>对选址的含义</th></tr>
+<tr><td>直接竞品</td><td>同品类 + 同价位段</td><td><b>${tier.directCount}</b></td><td>真正的对手，决定你能拿多少份额</td></tr>
 <tr><td>替代竞品</td><td>同品类、不同价位段</td><td>${tier.substituteCount}</td><td>客群会互相流动（聚餐/宴请档期最明显）</td></tr>
 <tr><td>间接竞品</td><td>不同品类</td><td>${tier.indirectCount}</td><td>抢同一笔餐饮预算，但不是同一场景</td></tr></table>
-${tier.subList.length > 0 ? `<p style="color:#666">替代层明细：${esc(tier.subList.map((s) => `${s.key} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost}）` : ''}`).join('；'))}</p>` : ''}`
+${tier.subList.length > 0 ? `<p style="color:var(--ink2)">替代层明细：${esc(tier.subList.map((s) => `${s.key} ${s.count} 家${s.avg_cost > 0 ? `（人均 ${s.avg_cost}）` : ''}`).join('；'))}</p>` : ''}`
 
   const compHtml = comp
-    ? `<h2>${secCap} 截流定级与势力归属</h2><table>
+    ? `<h3 id="sec-capture">截流定级与势力归属</h3><table>
 <tr><td>截流定级</td><td><b>${esc(comp.label)}</b>（${esc(comp.level)}）</td></tr>
 <tr><td>圈内最近竞品</td><td>${esc(comp.nearestName)} ${comp.nearestM} m</td></tr>
 <tr><td>Top1 势力份额</td><td>${esc(comp.top1Name)} ${comp.top1Pct}%</td></tr>
 <tr><td>Top3 合计势力份额</td><td>${comp.top3Pct}%</td></tr>
 <tr><td>Voronoi 归属</td><td>本点位落在「${esc(comp.centerCell)}」的势力范围内</td></tr></table>
-<p style="color:#555">${comp.reasons.map((r) => esc(r)).join('；')}</p>`
+<p style="color:var(--ink2)">${comp.reasons.map((r) => esc(r)).join('；')}</p>`
     : ''
 
   const leaseLm = data.finance?.lease_model
   const leaseHtml = leaseLm
     ? (() => {
         const verdict = { healthy: '回本充分', tight: '回本偏晚', fail: '租期内收不回投资' }[leaseLm.verdict] ?? leaseLm.verdict
-        return `<h3 style="font-size:15px;margin:18px 0 6px">租期现金流（${leaseLm.term_years} 年合同）</h3>
-<table><tr><th>项</th><th>值</th></tr>
+        return `<h3 id="sec-lease">租期现金流（${leaseLm.term_years} 年合同）</h3>
+<table class="kv"><tr><th>项</th><th>值</th></tr>
 <tr><td>租金年递增</td><td>${(leaseLm.rent_escalation_pct * 100).toFixed(1)}%</td></tr>
 <tr><td>翻新</td><td>每 ${leaseLm.renovation_cycle_years} 年 ${num(leaseLm.renovation_cost)} 元</td></tr>
 <tr><td>租期内回本</td><td><b>${leaseLm.payback_month > 0 ? `${leaseLm.payback_month} 个月（${leaseLm.payback_year} 年）` : '未回本'}</b> → ${esc(verdict)}</td></tr>
 <tr><td>累计付租</td><td>${num(leaseLm.total_rent_paid)} 元</td></tr>
 <tr><td>累计翻新</td><td>${num(leaseLm.total_renovation)} 元</td></tr>
 <tr><td>期末累计现金</td><td>${num(leaseLm.ending_cumulative)} 元</td></tr></table>
-${leaseLm.term_warning ? `<p style="color:#c62828">⚠️ ${esc(leaseLm.term_warning)}</p>` : ''}
-${leaseLm.term_capacity_warning ? `<p style="color:#c62828">⚠️ ${esc(leaseLm.term_capacity_warning)}</p>` : ''}
-${leaseLm.target_payback_mismatch ? `<p style="color:#c62828">⚠️ ${esc(leaseLm.target_payback_note)}</p>` : ''}
-<table><tr><th>年</th><th>月租金</th><th>年度现金净流</th><th>翻新</th><th>累计现金</th></tr>
+${leaseLm.term_warning ? `<p style="color:var(--danger)">⚠️ ${esc(leaseLm.term_warning)}</p>` : ''}
+${leaseLm.term_capacity_warning ? `<p style="color:var(--danger)">⚠️ ${esc(leaseLm.term_capacity_warning)}</p>` : ''}
+${leaseLm.target_payback_mismatch ? `<p style="color:var(--danger)">⚠️ ${esc(leaseLm.target_payback_note)}</p>` : ''}
+<table class="yearly"><caption>逐年现金流（元）</caption><tr><th>年</th><th>月租金</th><th>年度现金净流</th><th>翻新</th><th>累计现金</th></tr>
 ${leaseLm.yearly.map((y) => `<tr><td>${y.year}</td><td>${num(y.rent_monthly)}</td><td>${num(y.net_profit)}</td><td>${y.renovation ? num(y.renovation) : '—'}</td><td>${num(y.cumulative)}</td></tr>`).join('')}</table>`
       })()
     : ''
 
   const spLm = data.finance?.space_model
   const spaceHtml = spLm && spLm.available
-    ? `<h3 style="font-size:15px;margin:18px 0 6px">空间容量（面积 ↔ 营收对账）</h3>
-<table><tr><th>项</th><th>值</th></tr>
+    ? `<h3 id="sec-space">空间容量（面积 ↔ 营收对账）</h3>
+<table class="kv"><tr><th>项</th><th>值</th></tr>
 <tr><td>建筑 / 厨房 / 营业</td><td>${num(spLm.area_sqm)} / ${num(spLm.kitchen_area_sqm)}（${(spLm.kitchen_ratio * 100).toFixed(0)}%）/ ${num(spLm.operating_area_sqm)} ㎡</td></tr>
 <tr><td>座位数</td><td>${spLm.seats}（${spLm.seat_source === 'derived' ? '按每座面积推算' : spLm.seat_source === 'input' ? '调用方提供' : '无法确定'}）</td></tr>
 ${spLm.turnover_per_day >= 0 ? `<tr><td>翻台率</td><td>座口径 ${spLm.turnover_per_day} 次/日 ｜ 桌口径 ${spLm.turnover_tables_per_day} 次/日（${spLm.tables} 桌 × ${spLm.table_size} 人） ｜ 业态常规 ${spLm.normal_turnover_per_day} ／ 上限 ${spLm.turnover_cap_per_day}</td></tr>
 <tr><td>日均客流 / 容量利用率</td><td>${num(spLm.daily_customers)} 人 / ${spLm.utilization_pct}%</td></tr>` : ''}
 ${spLm.implied_daily_revenue_normal > 0 ? `<tr><td>面积产能校验</td><td>该面积按常规翻台应做 ${num(spLm.implied_daily_revenue_normal)} 元/日；当前假设为其 <b>${(spLm.revenue_vs_normal_ratio * 100).toFixed(1)}%</b>${spLm.input_consistency === 'ok' ? '' : ' ⚠️ 不自洽'}</td></tr>` : ''}
 ${spLm.breakeven_turnover_per_day >= 0 ? `<tr><td>建议翻台率</td><td>保本 ${spLm.breakeven_turnover_per_day} 次/日（会计口径） ｜ ${spLm.target_payback_months} 个月回本需 ${spLm.target_turnover_per_day} 次/日 ｜ 业态上限 ${spLm.turnover_cap_per_day}</td></tr>` : ''}
-${spLm.ticket_matches_format === false ? `<tr><td>客单价校验</td><td style="color:#c62828">${spLm.avg_ticket} 元 ｜ 该业态典型 ${spLm.typical_ticket_min}~${spLm.typical_ticket_max} 元 ｜ ⚠️ 与业态标签不符</td></tr>` : ''}
+${spLm.ticket_matches_format === false ? `<tr><td>客单价校验</td><td style="color:var(--danger)">${spLm.avg_ticket} 元 ｜ 该业态典型 ${spLm.typical_ticket_min}~${spLm.typical_ticket_max} 元 ｜ ⚠️ 与业态标签不符</td></tr>` : ''}
 ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
   const mk = {
     red: "⛔ 现实可行性低", yellow: "⚠️ 偏低薄利", green: "✅ 合理",
@@ -1399,27 +1502,26 @@ ${spLm.turnover_risk && spLm.turnover_risk !== "unknown" ? (() => {
 <tr><td>单方造价</td><td>${num(spLm.investment_per_sqm)} 元/㎡</td></tr>
 <tr><td><b>保本业绩（估算）</b></td><td>每日最低 <b>${num(Math.round(spLm.breakeven_revenue_monthly / 30))} 元</b> / 每月最低 <b>${num(spLm.breakeven_revenue_monthly)} 元</b> —— 卖不到这个数就是亏；用月租、人力、毛利率反推，不是预测值</td></tr>
 ${spLm.breakeven_customers_daily >= 0 ? `<tr><td>保本客单量</td><td>${spLm.breakeven_customers_daily} 单/日</td></tr>` : ''}</table>
-${spLm.defaults_used.length > 0 ? `<p style="color:#888">空间模型缺省系数：${esc(spLm.defaults_used.join('、'))}</p>` : ''}
-${spLm.warnings.map((w) => `<p style="color:#c62828">⚠️ ${esc(w)}</p>`).join('')}`
-    : (spLm ? `<h3 style="font-size:15px;margin:18px 0 6px">空间容量</h3><p style="color:#999">未计算（${esc(spLm.note)}）</p>` : '')
+${spLm.defaults_used.length > 0 ? `<p class="ttline"><span class="tt" tabindex="0">空间模型缺省系数（${spLm.defaults_used.length} 项）<span class="tt-body">空间模型缺省系数：${esc(spLm.defaults_used.join('、'))}</span></span></p>` : ''}
+${spLm.warnings.map((w) => `<p style="color:var(--danger)">⚠️ ${esc(w)}</p>`).join('')}`
+    : (spLm ? `<h3 id="sec-space">空间容量</h3><p style="color:var(--ink3)">未计算（${esc(spLm.note)}）</p>` : '')
 
   const bmRows = data.benchmark?.matched ? data.benchmark : null
   const bmHtml = bmRows
-    ? `<h3>行业基准对标（20 城 × 51 业态库）</h3>
-<p style="color:#a15c00;background:#fff8e1;padding:8px 10px;border-left:3px solid #ffb300;font-size:13px">
-⚠️ <b>数据性质</b>：本库不是 20 城实测样本——同业态跨城的净利率、面积、备注完全相同，实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看<b>偏离方向</b>，不能当作该城市实测水位。</p>
+    ? `<h3 id="sec-bench">行业基准对标（20 城 × 51 业态库）</h3>
+<p class="ttline"><span class="tt" tabindex="0">⚠️ 数据性质<span class="tt-body"><b>数据性质</b>：本库不是 20 城实测样本——同业态跨城的净利率、面积、备注完全相同，实质是「1 列行业基数 × 城市系数缩放」的估算值。对标结论只能看<b>偏离方向</b>，不能当作该城市实测水位。</span></span></p>
 <p>对标业态：<b>${esc(bmRows.matched_format)}</b>（${esc(bmRows.category)}）｜样本 ${bmRows.sample_size} 城｜该业态回本中位 ${bmRows.payback_median} 月（区间 ${bmRows.payback_min}~${bmRows.payback_max}）</p>
 <table><tr><th>指标</th><th>本项目</th><th>行业基准</th><th>偏离</th><th>判定</th></tr>
 ${bmRows.compares.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.ours}${esc(c.unit)}</td><td>${c.benchmark}${esc(c.unit)}</td><td>${c.deviation_pct > 0 ? '+' : ''}${c.deviation_pct}%</td><td>${c.verdict === 'ok' ? '✅ 正常' : c.verdict === 'high' ? '⚠️ 偏高' : '⚠️ 偏低'}</td></tr>`).join('')}</table>
-<p style="color:#666">基准为行业估算区间（单店实际 ±30%），<b>只作现实性校验，不替代单店实测</b>。</p>`
+<p class="ttline"><span class="tt" tabindex="0">基准口径<span class="tt-body">基准为行业估算区间（单店实际 ±30%），<b>只作现实性校验，不替代单店实测</b>。</span></span></p>`
     : ''
 
   const traceRows = Array.isArray(data.finance?.formula_trace) ? data.finance.formula_trace : []
   const traceHtml = traceRows.length > 0
-    ? `<h2>附录：计算口径（每个数字怎么来的）</h2>
-<p style="color:#555">参数搞错时看这张表最快——每行都给了公式和本次代入的数值。</p>
+    ? `<h2 id="sec-appendix">附录：计算口径（每个数字怎么来的）</h2>
+<p class="ttline"><span class="tt" tabindex="0">怎么用这张表<span class="tt-body">参数搞错时看这张表最快——每行都给了公式和本次代入的数值。</span></span></p>
 <table><tr><th>组</th><th>指标</th><th>计算口径</th><th>本次代入</th><th>结果</th></tr>
-${traceRows.map((r) => `<tr><td>${esc(r.group)}</td><td>${esc(r.metric)}</td><td>${esc(r.formula)}</td><td style="color:#666">${esc(r.substituted)}</td><td><b>${esc(r.result)}</b></td></tr>`).join('')}</table>`
+${traceRows.map((r) => `<tr><td>${esc(r.group)}</td><td>${esc(r.metric)}</td><td>${esc(r.formula)}</td><td style="color:var(--ink2)">${esc(r.substituted)}</td><td><b>${esc(r.result)}</b></td></tr>`).join('')}</table>`
     : ''
 
   const ledgerRows = Array.isArray(data.finance?.assumption_ledger)
@@ -1429,7 +1531,7 @@ ${traceRows.map((r) => `<tr><td>${esc(r.group)}</td><td>${esc(r.metric)}</td><td
   const spaceSensRows = Array.isArray(data.finance?.space_sensitivity) ? data.finance.space_sensitivity : []
   const ratioRows = Array.isArray(data.finance?.ratio_checks) ? data.finance.ratio_checks : []
   const ratioHtml = ratioRows.length > 0
-    ? `<h3 style="font-size:15px;margin:18px 0 6px">内部比值校验（不抓外部数据，靠参数互锁）</h3>
+    ? `<h3 id="sec-ratio">内部比值校验（不抓外部数据，靠参数互锁）</h3>
 <table><tr><th>指标</th><th>当前值</th><th>该业态常规</th><th>判定</th><th>说明</th></tr>
 ${ratioRows.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.value}${esc(c.unit)}</td><td>${c.healthy_min}~${c.healthy_max}${esc(c.unit)}</td><td>${c.status === 'ok' ? '✅ 正常' : c.status === 'low' ? '⚠️ 偏低' : '⚠️ 偏高'}</td><td>${esc(c.note)}</td></tr>`).join('')}</table>`
     : ''
@@ -1441,8 +1543,8 @@ ${ratioRows.map((c) => `<tr><td>${esc(c.item)}</td><td>${c.value}${esc(c.unit)}<
   const ledgerInternalRows = ledgerRows.filter((r) => !LEDGER_USER_CHECKABLE.has(r.item))
 
   const ledgerUserHtml = ledgerUserRows.length > 0
-    ? `<h3 style="font-size:15px;margin:18px 0 6px">待确认的假设（不是你亲口给的数）</h3>
-<p style="margin:0 0 8px;color:#555;font-size:13.5px">下面这几项你能自己去核实——合同、报价单、收款记录上看得到的数。核实完整份结论会跟着变。</p>
+    ? `<h3 id="sec-assume">待确认的假设（不是你亲口给的数）</h3>
+<p style="margin:0 0 8px;color:var(--ink2);font-size:13px">下面这几项你能自己去核实——合同、报价单、收款记录上看得到的数。核实完整份结论会跟着变。</p>
 <table><tr><th>项</th><th>当前取值</th><th>数据来源</th><th>核实后影响</th></tr>
 ${ledgerUserRows.map((r) => {
   const g = ledgerGloss(r.item)
@@ -1452,41 +1554,112 @@ ${ledgerUserRows.map((r) => {
     : ''
 
   const ledgerInternalHtml = ledgerInternalRows.length > 0
-    ? `<details style="margin:14px 0"><summary style="cursor:pointer;font-size:13.5px;color:#2f5d50;font-weight:600">另有 ${ledgerInternalRows.length} 项是测算时用的内部口径（税率、摊销月数、租期系数等）——点开查看</summary>
-<p style="margin:10px 0 8px;color:#666;font-size:13px">这些不是「你给的」也不是「你能改的」，是我们算账时统一采用的规则；如果和你的实际情况差很多，告诉我们可以重算。</p>
+    ? `<details style="margin:14px 0"><summary style="cursor:pointer;font-size:13px;color:#2f5d50;font-weight:600">另有 ${ledgerInternalRows.length} 项是测算时用的内部口径（税率、摊销月数、租期系数等）——点开查看</summary>
+<p style="margin:10px 0 8px;color:var(--ink2);font-size:13px">这些不是「你给的」也不是「你能改的」，是我们算账时统一采用的规则；如果和你的实际情况差很多，告诉我们可以重算。</p>
 <table><tr><th>项</th><th>含义</th><th>当前取值</th><th>影响</th></tr>
 ${ledgerInternalRows.map((r) => {
   const g = ledgerGloss(r.item)
-  return `<tr><td>${esc(g[0])}<br><span style="color:#999;font-size:11.5px">${esc(r.item)}</span></td><td>${esc(g[1])}</td><td>${esc(r.value)}</td><td>${esc(g[2] || '—')}</td></tr>`
+  return `<tr><td>${esc(g[0])}<br><span style="color:var(--ink3);font-size:12px">${esc(r.item)}</span></td><td>${esc(g[1])}</td><td>${esc(r.value)}</td><td>${esc(g[2] || '—')}</td></tr>`
 }).join('')}
 </table></details>`
     : ''
 
   const auditHtml = (ledgerRows.length > 0 || sensRows.length > 0 || spaceSensRows.length > 0 || ratioRows.length > 0)
     ? `${ratioHtml}${ledgerUserHtml}${ledgerInternalHtml}
-${sensRows.length > 0 ? `<h3 style="font-size:15px;margin:18px 0 6px">敏感度：各参数 ±20% 对谈判锚点的影响</h3>
+${sensRows.length > 0 ? `<h3 id="sec-sens">敏感度：各参数 ±20% 对谈判锚点的影响</h3>
 <table><tr><th>参数</th><th>锚点 −20%</th><th>锚点 基准</th><th>锚点 +20%</th><th>结论</th></tr>
-${sensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${num(s.anchor_low)}</td><td>${num(s.anchor_base)}</td><td>${num(s.anchor_high)}</td><td>${s.conclusion_flips ? '<b style="color:#c62828">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}
-${spaceSensRows.length > 0 ? `<h3 style="font-size:15px;margin:18px 0 6px">空间侧敏感度：各系数 ±20% 对座位与产能的影响</h3>
+${sensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${num(s.anchor_low)}</td><td>${num(s.anchor_base)}</td><td>${num(s.anchor_high)}</td><td>${s.conclusion_flips ? '<b style="color:var(--danger)">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}
+${spaceSensRows.length > 0 ? `<h3 id="sec-sens-space">空间侧敏感度：各系数 ±20% 对座位与产能的影响</h3>
 <table><tr><th>系数</th><th>座位 −20%</th><th>座位 基准</th><th>座位 +20%</th><th>应有日营收 −20%</th><th>基准</th><th>+20%</th><th>结论</th></tr>
-${spaceSensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${s.seats_low}</td><td>${s.seats_base}</td><td>${s.seats_high}</td><td>${num(s.revenue_low)}</td><td>${num(s.revenue_base)}</td><td>${num(s.revenue_high)}</td><td>${s.conclusion_flips ? '<b style="color:#c62828">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}`
+${spaceSensRows.map((s) => `<tr><td>${esc(s.param)}</td><td>${s.seats_low}</td><td>${s.seats_base}</td><td>${s.seats_high}</td><td>${num(s.revenue_low)}</td><td>${num(s.revenue_base)}</td><td>${num(s.revenue_high)}</td><td>${s.conclusion_flips ? '<b style="color:var(--danger)">会翻转</b>' : '不变'}</td></tr>`).join('')}</table>` : ''}`
     : ''
 
   const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>选址报告 · ${esc(data.address)}</title>
 <style>
-body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;max-width:1100px;margin:28px auto;padding:0 20px;color:#222;line-height:1.75}
-h1{font-size:22px;border-bottom:2px solid #eee;padding-bottom:10px}
-h2{font-size:17px;margin-top:28px;color:#b00000;border-left:4px solid #b00000;padding-left:8px}
-table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
-td,th{border:1px solid #eee;padding:7px 10px;text-align:left}
-blockquote{background:#fff8e1;border-left:4px solid #ffb300;margin:14px 0;padding:10px 14px;color:#555}
-.concl{background:#fff3f3;border-left:4px solid #d40000;padding:12px 16px;font-size:15px;font-weight:600;margin:12px 0}
+:root{
+  --ink:#1f2328; --ink2:#5f6368; --ink3:#9aa0a6; --line:#e8eaed;
+  --danger-bg:#fdecea; --danger-bd:#c62828; --danger-ink:#a3170f;
+  --warn-bg:#fff8e1;   --warn-bd:#e8a11c;   --warn-ink:#8a5a00;
+  --note-bg:#f5f6f7;   --note-bd:#b6bcc4;   --note-ink:#4a5158;
+  --info-bg:#e8f0fe;   --info-bd:#1565c0;   --info-ink:#0f4c9c;
+  --danger:#c62828;    --ink-strong:#2f3944;
+}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;max-width:1100px;margin:28px auto;padding:0 20px;color:var(--ink);line-height:1.75;font-size:14px}
+h1{font-size:22px;color:#111;border-bottom:1px solid var(--line);padding-bottom:12px;letter-spacing:.2px}
+h2{font-size:18px;margin-top:34px;color:#111;border-left:3px solid #94a3b8;padding-left:10px;letter-spacing:.2px}
+h3{font-size:16px;margin:22px 0 6px;color:var(--ink-strong);font-weight:600}
+/* ── 术语表跳转：标题留出滚动余量，跳过去不被固定工具栏压住 ── */
+h2[id],h3[id]{scroll-margin-top:16px}
+html{scroll-behavior:smooth}
+a.gl{color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink3);font-weight:600}
+a.gl:hover,a.gl:focus-visible{color:var(--info-ink);border-bottom-color:var(--info-ink)}
+a.gl::after{content:"↑";font-size:11px;margin-left:3px;color:var(--ink3);font-weight:400}
+/* 正文里指名「文末《附：白话版》」的地方：同样是可点的，方向标改成向下 */
+a.ref{color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink3);font-weight:600}
+a.ref:hover,a.ref:focus-visible{color:var(--info-ink);border-bottom-color:var(--info-ink)}
+a.ref::after{content:"↓";font-size:11px;margin-left:2px;color:var(--ink3);font-weight:400}
+#glback{position:fixed;left:18px;bottom:18px;z-index:99;display:none;padding:9px 15px;border-radius:20px;
+  border:1px solid var(--line);background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.14);
+  font-size:13px;color:var(--ink);text-decoration:none}
+#glback:hover{border-color:var(--info-ink);color:var(--info-ink)}
+p{margin:8px 0}
+/* ── 表格：一套基座 + 三种语义变体（kv＝项值表 / fin＝财务表 / stat＝纯数值表） ── */
+table{border-collapse:collapse;width:100%;margin:14px 0 10px;font-size:14px}
+caption{caption-side:top;text-align:left;padding:0 0 6px;font-size:12px;color:var(--ink2);line-height:1.5}
+th,td{border:1px solid var(--line);padding:7px 12px;text-align:left;vertical-align:top;line-height:1.55;font-variant-numeric:tabular-nums}
+th{background:#f8f9fa;font-weight:600;color:var(--ink-strong);white-space:nowrap}
+/* 项值表：标签列固定 28%，各表的值都在同一条竖线上起排（不按标签长短跳动） */
+table.kv{table-layout:fixed}
+table.kv th:first-child,table.kv td:first-child{width:28%;white-space:nowrap;padding-right:20px;color:var(--ink-strong)}
+/* 逐年表：年份列窄，数值列等宽右对齐 */
+table.yearly{table-layout:fixed}
+table.yearly th:first-child,table.yearly td:first-child{width:12%}
+table.yearly td:not(:first-child),table.yearly th:not(:first-child){text-align:right}
+/* 财务表：首列固定 34%，三档等宽右对齐，便于横向对比 */
+table.fin{table-layout:fixed}
+table.fin th:first-child,table.fin td:first-child{width:34%}
+table.fin td:not(:first-child),table.fin th:not(:first-child){text-align:right}
+.neg{color:var(--danger-ink);font-variant-numeric:tabular-nums}
+blockquote{background:var(--note-bg);border-left:3px solid var(--note-bd);margin:14px 0;padding:10px 14px;color:var(--note-ink);font-size:13px}
+.concl{background:#f8fafc;border:1px solid var(--line);border-left:4px solid #334155;padding:14px 16px;font-size:15px;font-weight:600;margin:14px 0;line-height:1.75}
+/* 说明性要点（客群推断等）：中性引文块，不抢结论的视觉权重 */
+.qblock{border-left:3px solid #cbd5e1;padding:6px 0 6px 16px;margin:14px 0;line-height:1.9}
+.qblock p{margin:4px 0;font-size:14px}
+/* ── 元信息 tooltip：依据/边界这类审计说明收进悬停层，不占正文；打印时还原为脚注 ── */
+.tt{position:relative;display:inline-flex;align-items:baseline;gap:4px;color:var(--ink2);font-size:12px;cursor:help;border-bottom:1px dashed #b6bcc4;line-height:1.6}
+.tt::after{content:"ⓘ";font-size:12px;color:var(--ink3)}
+.tt:hover,.tt:focus{color:var(--ink-strong);border-bottom-color:var(--ink2);outline:none}
+.tt-body{visibility:hidden;opacity:0;position:absolute;left:0;top:1.9em;z-index:40;width:min(560px,78vw);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 26px rgba(15,23,42,.14);padding:12px 14px;font-size:13px;line-height:1.75;color:var(--note-ink);font-weight:400;transition:opacity .12s ease}
+.tt-body b{color:var(--ink-strong)}
+.tt:hover .tt-body,.tt:focus .tt-body,.tt:focus-within .tt-body{visibility:visible;opacity:1}
+/* 元信息标签独占一行时：贴住它注释的那块内容，不与下一个标题抢距离 */
+.ttline{margin:4px 0 12px;line-height:1.5}
+/* 贴近视口底部时向上展开（JS 加 .up） */
+.tt-body.up{top:auto;bottom:1.9em}
+@media print{
+  .tt{display:block;border:none;color:var(--ink2)}
+  table{font-size:12px}
+  th{white-space:normal}
+  .toolbar,.mapzoom{display:none !important}
+  .tt::after{content:""}
+  .tt-body{display:block;visibility:visible;opacity:1;position:static;width:auto;box-shadow:none;border:none;border-left:3px solid var(--note-bd);border-radius:0;background:var(--note-bg);padding:8px 12px;margin:6px 0 0;font-size:12px}
+}
+/* ── 四级提示块：红=否决/硬伤，橙=估算/待核实，灰=依据/说明，蓝=补充信息 ── */
+.tip{padding:10px 14px;margin:12px 0;font-size:13px;line-height:1.7;border-left:4px solid}
+.tip-danger{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--danger-ink)}
+.tip-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn-ink)}
+.tip-note{background:var(--note-bg);border-color:var(--note-bd);color:var(--note-ink)}
+.tip-info{background:var(--info-bg);border-color:var(--info-bd);color:var(--info-ink)}
+.tip b{color:inherit}
+.est{color:var(--warn-ink)}
+.weak{color:var(--ink3)}
+.sec{color:var(--ink2)}
 iframe{width:100%;height:520px;border:1px solid #ddd;margin:10px 0}
 .toolbar{position:fixed;right:18px;top:18px;display:flex;gap:8px;align-items:center;z-index:99}
 .toolbar button{border:1px solid #1565c0;background:#1565c0;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px}
 .toolbar button.ghost{background:#fff;color:#1565c0}
 .toolbar button:hover{opacity:.88}
-.savehint{position:fixed;right:18px;top:58px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:12px 14px;max-width:320px;font-size:12.5px;color:#444;line-height:1.6;display:none;z-index:99}
+.savehint{position:fixed;right:18px;top:58px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:12px 14px;max-width:320px;font-size:12px;color:#444;line-height:1.6;display:none;z-index:99}
 .savehint b{color:#1565c0}
 .savehint code{background:#f2f4f7;padding:1px 5px;border-radius:3px;font-size:12px}
 button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer}
@@ -1499,22 +1672,22 @@ button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;
 .mapzoom button{width:30px;height:30px;padding:0;font-size:15px;line-height:1;border:1px solid #cfd8dc;background:rgba(255,255,255,.96);border-radius:6px;cursor:pointer;color:#37474f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .mapzoom button:hover{background:#fff;border-color:#90a4ae;color:#0277bd}
 .mapzoom button:active{transform:translateY(1px)}
-#mapzoomlv{font-size:10.5px;color:#546e7a;background:rgba(255,255,255,.9);padding:1px 4px;border-radius:3px;font-variant-numeric:tabular-nums}
+#mapzoomlv{font-size:12px;color:#546e7a;background:rgba(255,255,255,.9);padding:1px 4px;border-radius:3px;font-variant-numeric:tabular-nums}
 .shareside{flex:0 0 520px;max-width:520px}
 .sharecols{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:start}
-.tienote{margin:8px 0 0;font-size:11.5px;color:#78909c;line-height:1.5;border-top:1px dashed #e0e0e0;padding-top:6px}
+.tienote{margin:8px 0 0;font-size:12px;color:#78909c;line-height:1.5;border-top:1px dashed #e0e0e0;padding-top:6px}
 
-.sharetable{font-size:11.5px;border-collapse:collapse;table-layout:fixed;width:100%}
+.sharetable{font-size:12px;border-collapse:collapse;table-layout:fixed;width:100%}
 .sharetable col.c-rk{width:44px}
 .sharetable col.c-pc{width:46px}
 .sharetable td{border:none;padding:2px 3px;line-height:1.35;border-bottom:1px solid #f2f2f2}
-.sharetable td.rk{text-align:left;padding-right:0;color:#78909c;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11.5px}
+.sharetable td.rk{text-align:left;padding-right:0;color:#78909c;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px}
 .sharetable td.nm{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sharetable td.pc{text-align:right;padding-left:2px;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;color:#37474f}
 .sharetable tr.poirow:nth-child(even){background:#fafafa}
 .sharetable tr.poirow:hover{background:#fff3e0;cursor:pointer}
 .sharetable tr.poirow.on{background:#ffe0b2;font-weight:600}
-.pinhint{color:#888;font-size:11.5px;margin:8px 0 0;line-height:1.5}
+.pinhint{color:var(--ink3);font-size:12px;margin:8px 0 0;line-height:1.5}
 
 /* ───────── 打印专用 ───────── */
 @media print{
@@ -1522,12 +1695,19 @@ button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;
   .savehint{display:none !important}
   iframe{height:420px;page-break-inside:avoid}
   h2{page-break-after:avoid}
-  .maprow{display:flex;gap:10px}
-  .shareside{flex:0 0 300px;max-width:300px}
+  /* 地图与榜单改为上下排列，且允许在此处断页：
+     will-change / overflow:hidden 会把整块变成不可分割的图层，导致前一页留出半页空白 */
+  .maprow{display:block}
+  .shareside{max-width:none;margin-top:12px}
   .sharecols{display:grid;grid-template-columns:1fr 1fr}
-  .staticmap svg{max-height:150mm}
-  .mapinner{transform:none !important}
+  .staticmap{overflow:visible}
+  .staticmap svg{max-height:95mm}
+  .mapinner{transform:none !important;will-change:auto !important}
   .mapzoom{display:none}
+  /* 术语表的跳转提示在纸上没意义：去掉箭头和下划线，保留纯文字 */
+  #glback{display:none !important}
+  a.gl,a.ref{border-bottom:none}
+  a.gl::after,a.ref::after{content:none}
 }
 
 /* ───────── 窄屏 ───────── */
@@ -1535,6 +1715,13 @@ button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;
   .maprow{display:block}
   .shareside{max-width:none;margin-top:14px}
   .sharecols{grid-template-columns:1fr 1fr}
+  /* 手机端：屏幕上表头原为 nowrap，5~6 列表格按 min-content 撑到 630px，把整页顶宽、
+     右侧正文被裁。窄屏一律允许换行，表格回到 100% 宽。 */
+  th{white-space:normal}
+  table.kv th:first-child,table.kv td:first-child{white-space:normal}
+  /* 地图 SVG 固定 width=1000，跟随容器缩放，避免横向溢出 */
+  .staticmap svg{width:100%;height:auto}
+  #glback{left:12px;bottom:12px}
 }
 </style></head><body>
 <div class="toolbar">
@@ -1546,23 +1733,18 @@ button{padding:7px 14px;border:1px solid #ccc;background:#fff;border-radius:6px;
   <b>怎么把报告发出去</b><br>
   1. 点「💾 下载这份报告」→ 得到一个单独的 .html 文件<br>
   2. 把这个文件发微信 / 邮件即可，对方双击就能看<br>
-  <span style="color:#777">底图已内嵌，不联网也能显示；点击排名联动也在里面。</span><br><br>
+  <span style="color:var(--ink2)">底图已内嵌，不联网也能显示；点击排名联动也在里面。</span><br><br>
   <b>要 PDF</b>：先点排名固定标识，再点「🖨 存为 PDF」<br><br>
   <b>浏览器自带另存</b>：<code>Ctrl+S</code> 选「网页，仅 HTML」效果一样<br>
-  <span style="color:#c62828">别选「网页，全部」——会多出一个文件夹，发出去容易漏图。</span>
+  <span style="color:#8a5a00">别选「网页，全部」——会多出一个文件夹，发出去容易漏图。</span>
 </div>
 <h1>${data.site_mode === 'area' ? '选址区域初筛' : '选址评估报告'}：${esc(data.address)}</h1>
 <p>业态档案：<b>${esc(profile?.name ?? '未指定')}</b>${data.site_mode === 'area' ? '' : `｜坐标 ${data.center?.lat?.toFixed(6)}, ${data.center?.lng?.toFixed(6)}`}｜${esc(now)}</p>
-${data.isochrone_notice ? `<div style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;margin:12px 0;font-size:13px">
-<b>⚠️ 等时圈引擎未启用</b>（${esc(data.isochrone_notice.reason)}）<br>
-本次圈层为<b>直线估算</b>：${esc(data.isochrone_notice.impact)}。<br>
-启动：<code>${esc(data.isochrone_notice.fix)}</code>　首次：<code>${esc(data.isochrone_notice.first_time)}</code>
-</div>` : ''}
+${isoNoticeHtml(data.isochrone_notice)}
 <div class="concl">${esc(v.line)}</div>
-<p style="color:#666;font-size:13px;margin:6px 0 0">参考判断（估算 · 仅供参考）。依据：高德 POI 检索（腾讯交叉校验如启用）；「份额」是距离归属，不是营业额份额。数据来源等级见《哪些数是估算》。</p>
-<p style="color:#666;font-size:13px;margin:4px 0 0">边界：本报告提供数据参考，<b>不构成是否开店的决定</b>；是否进入请结合现场客流与租金判断。</p>
+<div class="ttline"><span class="tt" tabindex="0">参考判断的依据与边界<span class="tt-body"><b>参考判断（估算 · 仅供参考）</b><br><b>依据</b>：高德 POI 检索（腾讯交叉校验如启用）；「份额」是距离归属，不是营业额份额。数据来源等级见第 7 节《哪些数是估算》。<br><br><b>边界</b>：本报告提供数据参考，<b>不构成是否开店的决定</b>；是否进入请结合现场客流与租金判断。</span></span></div>
 ${v.split ? `<p>${esc(v.split)}</p>` : ''}
-<h2>地图与竞品排名</h2>
+<h2 id="sec-map">地图与竞品排名</h2>
 ${data._staticMapSvg
   ? `<div class="maprow">
   <div class="staticmap">
@@ -1582,16 +1764,17 @@ ${data._staticMapSvg
         const sameType = data.dedupe?.same_type_count ?? 0
         const segSelf = (data.dedupe?.segments ?? []).find((x) => x.is_self)
         const segName = segSelf?.label ?? segSelf?.key ?? '同段'
-        const maxKm = ((data.rings?.[data.rings.length - 1]?.radius ?? 0) / 1000).toFixed(1)
+        // 采集范围用 scan_radius，不是圈层半径
+        const maxKm = ((Number(data.scan_radius) || (data.rings?.[data.rings.length - 1]?.radius ?? 0)) / 1000).toFixed(1)
         return `<div style="font-weight:600;font-size:13px;margin:0 0 8px">${esc((data.rings?.[0]?.label) ?? '内圈')} · 无同段竞品</div>
-    <div style="font-size:12px;color:#666;line-height:1.8">
+    <div style="font-size:12px;color:var(--ink2);line-height:1.8">
       这个圈层内扫不到「${esc(segName)}」对手。<br>
       全扫描范围（约 ${maxKm}km）内同段有 <b>${sameType}</b> 家，最近的一家在圈外。<br>
-      <span style="color:#999">圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。</span>
+      <span style="color:var(--ink3)">圈内没对手≠没需求，但也意味着没有同行在附近验证过这条需求。</span>
     </div>`
       }
       return `<div style="font-weight:600;font-size:13px;margin:0 0 4px">${esc((data.rings?.[0]?.label) ?? '内圈')} · ${top.length > 20 ? '势力份额 Top20' : `势力份额（共 ${top.length} 家）`}</div>
-    <div style="font-size:11px;color:#888;margin:0 0 8px;line-height:1.5">份额＝圈内网格中该店为最近店的比例，<b>不是营业额份额</b>。</div>`
+    <div style="font-size:12px;color:var(--ink3);margin:0 0 8px;line-height:1.5">份额＝圈内网格中该店为最近店的比例，<b>不是营业额份额</b>。</div>`
     })()}
     ${(() => {
       const top = ((data.rings?.[0]?.top) ?? [])
@@ -1634,22 +1817,22 @@ ${data._staticMapSvg
       }
       return `<div class="sharecols">${col(left)}${right.length > 0 ? col(right) : ''}</div>${tieNote}`
     })()}
-    <p class="pinhint"><b>点一行</b>固定标识到左侧地图（再点取消）——打印 / 存 PDF 会保留标识与门店名。<span id="pin-note" style="color:#c62828"></span></p>
+    <p class="pinhint"><b>点一行</b>固定标识到左侧地图（再点取消）——打印 / 存 PDF 会保留标识与门店名。<span id="pin-note" style="color:var(--ink2)"></span></p>
   </div>
 </div>`
   : data._mapTilesMissing
-    ? `<div style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;margin:14px 0">
+    ? `<div class="tip tip-warn">
 <b>⚠️ 本报告不含地图底图</b>（${esc(data._mapTilesMissing.reason)}）<br>
 补齐：<code>${esc(data._mapTilesMissing.fix)}</code><br>
-<span style="color:#777;font-size:12px">底图按点位单独缓存，每张瓦片约 13 KB，1.5 km 半径约 20~60 张。</span>
+<span style="color:var(--ink2);font-size:12px">底图按点位单独缓存，每张瓦片约 13 KB，1.5 km 半径约 20~60 张。</span>
 </div>`
-    : '<p style="color:#999">未生成静态地图（缺 map-static.svg，跑 <code>node tools/render-static-map.mjs --probe=probe.json</code>）</p>'}
-${data._staticMapSvg ? '<p style="color:#777;font-size:12px;margin:6px 0 0">地图已内嵌瓦片，<b>打印 / 存 PDF 会一并保留</b>；圈层按主圈绘制。</p>' : ''}
+    : '<p style="color:var(--ink3)">未生成静态地图（缺 map-static.svg，跑 <code>node tools/render-static-map.mjs --probe=probe.json</code>）</p>'}
+${data._staticMapSvg ? '<p style="color:var(--ink2);font-size:12px;margin:6px 0 0">地图已内嵌瓦片，<b>打印 / 存 PDF 会一并保留</b>；圈层按主圈绘制。</p>' : ''}
 
 
-<p style="color:#666;font-size:13px;margin:10px 0 0">看不惯行业黑话的话，<b>文末《附：白话版》</b>有 24 条术语对照表；内文重要行也已就地注成「原说法 —— 大白话」。</p>
+<p style="color:var(--ink2);font-size:13px;margin:10px 0 0">看不惯行业黑话的话，<a class="ref" href="#sec-glossary">文末《附：白话版》</a>有 ${GLOSSARY.length} 条术语对照表；内文重要行也已就地注成「原说法 —— 大白话」。</p>
 
-<h2>1. 数据质量</h2><table>
+<h2 id="sec-1">1. 数据质量</h2><table class="kv">
 <tr><td>原始 POI</td><td>${num(d.raw)}</td></tr>
 <tr><td>去重后有效</td><td>${num(d.effective)}</td></tr>
 <tr><td>剔除 / 合并</td><td>${num(d.dropped)} / ${num(d.merged)}</td></tr>
@@ -1663,9 +1846,9 @@ ${(() => {
   return '<tr><td>数据源模式</td><td>未标注（旧版 probe 输出），按单源看待</td></tr>'
 })()}
 ${data.data_quality ? `<tr><td>采集可信度</td><td>${data.data_quality.verdict === 'ok' ? '✅ 正常' : data.data_quality.verdict === 'partial' ? '⚠️ 打折' : '⛔ 可疑'}（${esc(data.data_quality.verdict)}）${data.data_quality.warnings?.length ? `：${esc(data.data_quality.warnings.join('；'))}` : ''}</td></tr>` : ''}</table>
+<h2 id="sec-2">2. 竞品分布</h2>
+<p class="ttline"><span class="tt" tabindex="0">本节口径<span class="tt-body">逐家名单见上方「地图与竞品排名」；此处给竞争<b>集中度</b>与距离带。</span></span></p>
 ${segRows}
-<h2>2. 竞品分布</h2>
-<p style="color:#888;font-size:13px">逐家名单见上方「地图与竞品排名」；此处给竞争<b>集中度</b>与距离带。</p>
 ${(() => {
   const top = ((data.rings?.[0]?.top) ?? [])
   if (top.length === 0) return ''
@@ -1689,13 +1872,13 @@ ${(() => {
     restN > 0 ? [`榜单之外 ${restN} 家瓜分`, `${restShare}%`] : null,
     ['集中度判读', `<b>${verdict}</b>`],
   ].filter(Boolean)
-  return `<table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-<p style="color:#777;font-size:12px;margin:6px 0 0">势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。<br>列表可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。</p>`
+  return `<h3 id="sec-conc">竞争集中度</h3><table class="kv">${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+<p style="color:var(--ink2);font-size:12px;margin:6px 0 0">势力份额＝圈内网格中该店为最近店的比例，不是营业额份额。占比高只说明「离得近」，不代表「卖得多」。<br>列表可能含紧邻圈外、但抢走了圈边网格的店，所以家数会略多于「圈内竞品」那个数。</p>`
 })()}
-${outer.distance_bands?.length ? `<h3>${secOuter} ${esc(outer.label ?? '外圈')}（不报份额，只报距离带）</h3><table><tr><th>距离带</th><th>家数</th></tr>${outer.distance_bands.map((b) => `<tr><td>${esc(b.label)}</td><td>${b.count}</td></tr>`).join('')}</table>` : ''}
+${outer.distance_bands?.length ? `<h3>${esc(outer.label ?? '外圈')}（不报份额，只报距离带${outer.source === 'cloud' ? ' · 云端真实路网' : (outer.source === 'valhalla' || outer.source === 'osrm') ? ' · 本地路网' : ' · 直线估算【估算】'}）</h3><table><tr><th>距离带</th><th>家数</th></tr>${outer.distance_bands.map((b) => `<tr><td>${esc(b.label)}</td><td>${b.count}</td></tr>`).join('')}</table>` : ''}
 ${compHtml}
 ${tierHtml}
-<h2>3. 交通可达</h2><table>
+<h2 id="sec-3">3. 交通可达</h2><table class="kv">
 <tr><td>最近地铁站（≤${transit.metro_threshold_m ?? 800}m）</td><td>${esc(m ? `${m.name} ${m.distance_m} m` : '2km 内无')}</td></tr>
 <tr><td>最近停车场（≤${transit.parking_threshold_m ?? 300}m）</td><td>${transit.nearest_parking_m >= 0 ? `${transit.nearest_parking_m} m` : '未取到'}</td></tr>
 <tr><td>${transit.parking_threshold_m ?? 300}m 内停车场</td><td>${num(transit.parking_near, '0')} 个</td></tr></table>
@@ -1709,38 +1892,15 @@ ${spaceHtml}
 ${auditHtml}
 ${bmHtml}
 ${traceHtml}
-<blockquote>${(inner.source === 'valhalla' || inner.source === 'osrm') ? '等时圈为本地路网计算，已去除沿主干道走廊的细长尖刺' : '等时圈为直线估算【估算】，遇江面/快速路会高估可达范围'}；外圈因范围过大不报份额。<br>
+<blockquote>${(inner.source === 'valhalla' || inner.source === 'osrm' || inner.source === 'cloud') ? `等时圈为${inner.source === 'cloud' ? '云端真实路网' : '本地路网'}计算，已去除沿主干道走廊的细长尖刺` : '等时圈为直线估算【估算】，遇江面/快速路会高估可达范围'}${outer.distance_bands?.length ? '；外圈因范围过大不报份额' : ''}。<br>
 
-<p style="color:#666;font-size:13px">表里的术语：<b>成本因子</b>＝保守/乐观档对成本的缩放倍数（基准档就是 1，不放不缩）；<b>为何锚点用基准档</b>＝三档各算一遍，但谈判只能拿基准档出价；保守档是风险提醒，不是出价依据。</p>
+<p style="color:var(--ink2);font-size:13px">表里的术语：<b>成本因子</b>＝保守/乐观档对成本的缩放倍数（基准档就是 1，不放不缩）；<b>为何锚点用基准档</b>＝三档各算一遍，但谈判只能拿基准档出价；保守档是风险提醒，不是出价依据。</p>
 
-<h2>附：看不懂的话先看这里（白话版）</h2>
-<p style="color:#666;font-size:13px;margin:6px 0 10px">这节不用记，遇到不懂的词回来查一眼就行。</p>
+<h2 id="sec-glossary">附：看不懂的话先看这里（白话版）</h2>
+<p style="color:var(--ink2);font-size:13px;margin:6px 0 10px">这节不用记——<b>点左边任意一个词</b>，会跳到正文讲它的那一段；看完点左下角「↑ 回到术语表」再回来查下一个。</p>
 <table>
-<tr><th style="width:26%">报告里的说法</th><th>大白话</th></tr>
-<tr><td><b>截流 / 截流定级</b></td><td>你的店能"拦下"多少本来要路过的人。<b>重度截流</b>＝这条街上抢客的店太多，客人还没走到你门口就被别人截走了</td></tr>
-<tr><td><b>截流两轴</b></td><td>第一轴看<b>这个铺位本身</b>（位置显不显眼、好不好进、在几楼）；第二轴看<b>周围对手</b>（多少家在抢同一批人）。一个管"人流进不进得来"，一个管"进来后会不会被抢走"，两回事</td></tr>
-<tr><td><b>势力份额 / Voronoi 归属</b></td><td>把这块地切成小格子，每格算给离它最近的那家店。某店分到的格子越多＝它的"地盘"越大。<b>这不是营业额，也不是市占率</b>，只说明"谁离得近"</td></tr>
-<tr><td><b>Top3 集中度</b></td><td>前 3 名加起来占多少地盘。占比高＝头部几家把客抓得牢，新店难插进去；占比低＝碎片化，靠差异化就能站住</td></tr>
-<tr><td><b>同段 / 异段</b></td><td>「段」是按"菜系 × 价位"分的类。同段＝跟你同类同价，是真正抢客的人；异段＝不同类或不同价，多数是互补不是对手</td></tr>
-<tr><td><b>直接 / 替代 / 间接竞品</b></td><td>直接＝同类同价，客人只能二选一；替代＝同类不同价，平时不抢、办宴席时会流动；间接＝不同品类，抢的是同一笔"吃饭预算"</td></tr>
-<tr><td><b>翻台率</b></td><td>一个座位一天被坐了几轮。1.998 次 ≈ 每座一天接待两拨客人。<b>座位翻台 ≠ 桌翻台</b>：一桌 4 人，空 1 个座就拉低座位翻台</td></tr>
-<tr><td><b>坪效</b></td><td>每平方米每个月能做多少营业额。用来看"这块地方有没有被浪费"</td></tr>
-<tr><td><b>保本日营业额</b></td><td>一天至少卖多少钱才不亏。低于这个数就是在赔钱</td></tr>
-<tr><td><b>极限租金</b></td><td><b>保本那档</b>＝租金再高一分钱就开始亏；<b>目标回本那档</b>＝租金到这个数，就没法在目标月数内回本</td></tr>
-<tr><td><b>谈判锚点</b></td><td>谈租金的参考上限，<b>不是"砍到这个价就签"</b>——高于它，按常规经营预期就回不了本（压力下限另列，不是出价依据）</td></tr>
-<tr><td><b>租售比</b></td><td>月租金 ÷ 月营业额。租金占营业额几成。餐饮大店经验：10% 以内健康，15% 以上警戒</td></tr>
-<tr><td><b>现金口径 / 会计口径</b></td><td>现金口径＝只算钱进出，回本快，看"多久能周转开"；会计口径＝把装修设备的折旧摊进去，回本慢，看"这笔投资账面划不划算"。两个都要看</td></tr>
-<tr><td><b>摊销</b></td><td>装修和设备的一次性投入，按月摊到成本里。450 万 ÷ 60 个月＝每月 7.5 万</td></tr>
-<tr><td><b>容量利用率</b></td><td>店里能坐的位子实际坐满了多少。66.6% ≈ 每 3 个位子有 1 个空着</td></tr>
-<tr><td><b>职住比</b></td><td>写字楼数量 ÷ 住宅数量。&gt;1 上班的人多（工作日午市好做），&lt;1 住家的人多（晚市和周末好做）</td></tr>
-<tr><td><b>等时圈 / 圈层</b></td><td>从点位出发走 N 分钟能到的范围，按真实路网算，不是画个圆</td></tr>
-<tr><td><b>单方造价</b></td><td>每平方米投了多少钱（装修＋设备＋其他初始投入）</td></tr>
-<tr><td><b>保本客单量</b></td><td>一天至少接待多少单才不亏</td></tr>
-<tr><td><b>敏感度「会翻转」</b></td><td>这个参数只要估错 20%，结论就从"能做"变"不能做"——所以它必须实测，不能拍脑袋估</td></tr>
-<tr><td><b>截流系数</b></td><td>算营业额时乘的一个折扣：路过的人里有多少比例真会进你的店</td></tr>
-<tr><td><b>硬伤 / 待核实</b></td><td>硬伤＝明确不满足的硬条件；待核实＝还没拿到数据、需要现场确认的项——<b>是待办清单，不是否决</b></td></tr>
-<tr><td><b>规模档推定，无人均实证</b></td><td>这家店人均多少我们没拿到真实数据，是按店名和规模"猜"的档位，别太当真</td></tr>
-<tr><td><b>ROI</b></td><td>年化投资回报率：一年赚的钱 ÷ 投进去的钱</td></tr>
+<tr><th style="width:26%">报告里的说法（点一下跳过去）</th><th>大白话</th></tr>
+${glossaryHtmlRows}
 </table>
 
 数据来源：高德/腾讯 POI、本地路网引擎、用户录入调研表。—— 竞品和配套是从地图公司的商家库抓的，距离和走路时间是用本地导航引擎按真实道路算的，财务参数是你自己填的。建议拿这份跟现场实测对一遍再拍板。</blockquote>
@@ -1751,7 +1911,22 @@ tr.poirow.on{background:#fff3e0;font-weight:600}
 .staticmap svg .poi{transition:r .12s, stroke .12s}
 @media print{ tr.poirow.on{background:#fff3e0 !important} }
 </style>
+<a id="glback" href="#sec-glossary">↑ 回到术语表</a>
 <script>
+/* 元信息 tooltip：视口下方空间不足时向上展开，避免浮层跑出屏幕 */
+;(function(){
+  var tips = document.querySelectorAll('.tt')
+  Array.prototype.forEach.call(tips, function(el){
+    function flip(){
+      var body = el.querySelector('.tt-body')
+      if(!body) return
+      var r = el.getBoundingClientRect()
+      body.classList.toggle('up', (window.innerHeight - r.bottom) < 240)
+    }
+    el.addEventListener('mouseenter', flip)
+    el.addEventListener('focus', flip)
+  })
+})()
 /* 地图缩放：只响应按钮；SVG 已设 pointer-events:none，拖拽与滚轮改图一律无效 */
 var __mapScale = 1
 function __mapZoom(factor){
@@ -1817,7 +1992,7 @@ function __saveHtml(){
       t.setAttribute('y', String(cy - 8));
       t.setAttribute('font-size','13');
       t.setAttribute('font-weight','600');
-      t.setAttribute('fill','#b71c1c');
+      t.setAttribute('fill','#c62828');
       t.setAttribute('stroke','#fff');
       t.setAttribute('stroke-width','4');
       t.setAttribute('paint-order','stroke');
@@ -1829,7 +2004,7 @@ function __saveHtml(){
       line.setAttribute('y1', String(cy));
       line.setAttribute('x2', String(cx + 10));
       line.setAttribute('y2', String(cy - 12));
-      line.setAttribute('stroke','#b71c1c');
+      line.setAttribute('stroke','#c62828');
       line.setAttribute('stroke-width','1.2');
       layer.appendChild(line);
     });
@@ -1867,6 +2042,29 @@ function __saveHtml(){
   });
   // 打印前固定当前选择，确保进入 PDF
   window.addEventListener('beforeprint', function(){ /* 状态已在 DOM 中，无需额外处理 */ });
+})();
+/* 术语表跳转：锚点在本单没渲染时自动退到兜底锚点；跳过去后左下角给一个返回入口 */
+;(function(){
+  var links = document.querySelectorAll('a.gl');
+  var fromGlossary = false;
+  Array.prototype.forEach.call(links, function(a){
+    var id = (a.getAttribute('href') || '').slice(1);
+    if(id && !document.getElementById(id)){
+      var fb = a.getAttribute('data-fb');
+      if(fb) a.setAttribute('href', '#' + fb);
+    }
+    a.addEventListener('click', function(){ fromGlossary = true; });
+  });
+  var back = document.getElementById('glback');
+  if(!back) return;
+  function sync(){
+    var h = location.hash;
+    var show = !!fromGlossary && !!h && h !== '#sec-glossary';
+    if(!show) fromGlossary = false;
+    back.style.display = show ? 'block' : 'none';
+  }
+  window.addEventListener('hashchange', sync);
+  sync();
 })();
 </script>
 </body></html>`
@@ -1912,8 +2110,8 @@ export function buildCompare(results, profile) {
   const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>多方案对比</title>
 <style>body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;max-width:1100px;margin:28px auto;padding:0 20px}
 h1{font-size:22px}table{border-collapse:collapse;width:100%;font-size:14px;margin-top:12px}
-td,th{border:1px solid #eee;padding:8px 10px;text-align:left}th{background:#fafafa}
-tr:first-child td{font-weight:600}.rank{color:#b00000;font-weight:700}</style></head><body>
+td,th{border:1px solid #e8eaed;padding:7px 12px;text-align:left;vertical-align:top;line-height:1.55}th{background:#f8f9fa;font-weight:600}
+tr:first-child td{font-weight:600}.rank{color:#1f2328;font-weight:700}</style></head><body>
 <h1>多方案对比 · ${esc(profile?.name ?? '')}</h1>
 <table><tr><th>排名</th><th>地址</th><th>同段竞品</th><th>最近(m)</th><th>内圈家数</th><th>内圈Top1</th><th>地铁(m)</th><th>停车(m)</th><th>竞品峰值距离带</th></tr>
 ${ranked.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${esc(r.address)}</td><td>${r.same}</td><td>${r.nearest}</td><td>${r.innerCount}</td><td>${r.top1}%（${esc(r.top1name)}）</td><td>${r.metro}</td><td>${r.parking}</td><td>${esc(r.peakLabel)}（${r.peakCount} 家）</td></tr>`).join('')}

@@ -1,0 +1,57 @@
+{
+  "name": "24小时茶楼（早茶点心）",
+  "archetype": "tea_house",
+  "category_pattern": "餐饮",
+  "exclude_pattern": "茶艺|茶馆|茶室|茶空间|茶舍|茶庄|茶行|茶叶|白茶|普洱|棋牌|棋社|冷饮|奶茶|咖啡|蛋糕|烘焙|面包|西饼|饼屋|饼店|甜品|糖水|烟酒|酒行",
+  "exclude_category_pattern": "糕饼店|冷饮店|咖啡馆|甜品|面包|西饼|茶饮",
+  "segments": [
+    {
+      "key": "dim_sum_teahouse",
+      "match": "茶楼|茶居|早茶|茗点|粤点|点心|茶餐厅|广式茶",
+      "label": "粤式茶楼·早茶点心"
+    },
+    {
+      "key": "yuecai_restaurant",
+      "match": "酒家|酒楼|海鲜|粤菜|烧腊|顺德|渔村|饭店|中餐厅|菜馆|餐厅",
+      "label": "粤菜酒楼·正餐"
+    },
+    {
+      "key": "other_dining",
+      "match": ".",
+      "label": "其他餐饮（弱竞争）"
+    }
+  ],
+  "self_segment": "dim_sum_teahouse",
+  "keywords": [
+    "茶楼",
+    "早茶",
+    "茗点",
+    "点心"
+  ],
+  "scan_radius": 1000,
+  "rings": [
+    {
+      "label": "步行10分圈",
+      "mode": "walk",
+      "minutes": 10,
+      "max_m": 1000
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 300
+  },
+  "hardware": {
+    "area_sqm": 960,
+    "needs_exhaust": true,
+    "needs_gas": true,
+    "needs_drainage": true,
+    "ceiling_m": 3.2,
+    "power_kw": 300
+  },
+  "params": "tea_house",
+  "_说明": "960 ㎡ 24 小时茶楼（只做早茶点心，无正餐）。采集档案：决定扫什么关键词、扫多大半径、竞品怎么分段；与 params/tea_house.json（业态口径）及 params/GZ-SYL-001.json（本店参数）配对。",
+  "_关键词依据": "「茶楼/茶居/早茶/茗点/粤点/点心」才是广式点心茶楼；实测本片区按「茶楼」搜出的多是茶艺馆（茶空间/白茶/棋牌），这类不是竞品，已用 exclude_pattern 剔除。",
+  "_分段依据": "第一段=直接竞品（同为广式点心茶楼）；第二段=粤菜酒楼（也做早茶，但以正餐为主）；第三段承接中餐厅/快餐厅等其他餐饮，标为弱竞争，避免把「未分段」混进同段。",
+  "_不走 cost_bands": "高德 biz_ext.cost 对本片区覆盖率为 0，按人均硬分层会拼出 tea_house_mid 这类技术键名，故不配置。"
+}

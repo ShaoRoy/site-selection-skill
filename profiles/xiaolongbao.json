@@ -1,0 +1,75 @@
+{
+  "name": "小笼包（20-25㎡ 档口/社区小店）",
+  "category_pattern": "小笼包|汤包|生煎|包子|灌汤包|小吃|快餐",
+  "exclude_pattern": "灌汤水饺|蒸饺|面包房|蛋糕",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "xiaolongbao",
+      "match": "小笼包|汤包|生煎|灌汤包",
+      "label": "小笼包/汤包/生煎"
+    },
+    {
+      "key": "baozi_general",
+      "match": "包子铺|包子店|馒头|包点",
+      "label": "泛包点铺"
+    },
+    {
+      "key": "shanghai_snack",
+      "match": "上海小吃|城隍庙|南翔",
+      "label": "沪式小吃"
+    }
+  ],
+  "self_segment": "xiaolongbao",
+  "keywords": [
+    "小笼包",
+    "汤包",
+    "生煎",
+    "灌汤包",
+    "包子"
+  ],
+  "scan_radius": 1000,
+  "rings": [
+    {
+      "label": "步行10分圈",
+      "mode": "walk",
+      "minutes": 10,
+      "max_m": 1000
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 500
+  },
+  "hardware": {
+    "area_sqm": 25,
+    "needs_exhaust": true,
+    "needs_gas": false,
+    "needs_water": true,
+    "power_kw": 20
+  },
+  "archetype": "xiaolongbao",
+  "_说明": "小笼包 · 北京。采集档案：决定扫什么关键词、扫多大半径、竞品怎么分段。与 params/xiaolongbao.json（财务参数）配对使用。",
+  "_来源": "关键词依据用户提供《北京三品类业态数据底表.xlsx》03_品牌矩阵（北京在营品牌）与 docx 5.2「中间价格带由沪式汤包与生煎填充」",
+  "_brand_keywords": [
+    "鼎泰丰",
+    "庆丰",
+    "西四包子",
+    "二友居",
+    "老盛兴",
+    "第一楼",
+    "城隍庙",
+    "十九弄"
+  ],
+  "_落位提示": [
+    "石景山古城",
+    "海淀闵庄",
+    "通州物资学院"
+  ],
+  "_门槛联动": [
+    "小笼包(24小时营业)",
+    "小笼包(商场店)"
+  ],
+  "params": "xiaolongbao",
+  "_no_cost_band_reason": "本品类不做人均规模分层：docx 未给大小店分档，且高德 biz_ext.cost 覆盖率为 0，硬分层会拼出 <key>_mid 这类技术键名印到报告上"
+}

@@ -17,7 +17,7 @@ python scripts/grid-scan.py --city 广州 --district 天河 --rescore          #
 node tools/test-grid.mjs                                                  # 30/30
 node tools/check-text.mjs                                                 # 发布文本控制字符 = 0
 
-# 源码包内跑全量：按 .github/workflows/ci.yml 的 19 个 run 步骤逐条跑
+# 源码包内跑全量：按 .github/workflows/ci.yml 的 20 个 run 步骤逐条跑
 # （工作区可用 node tools/test-full.mjs 自动照跑；该脚本不随包分发）
 ```
 
@@ -30,10 +30,11 @@ node tools/check-text.mjs                                                 # 发�
 | `test-survey-csv.mjs` | 12 | 调研表解析（千分位 / 引号 / 空尾列 / 年份开头） |
 | `test-worldpop.py` | 18（+2 跳过） | WGS84 ↔ 栅格行列换算；缺 GDAL 的两项显式跳过，不计入 |
 | `test-tools-smoke.mjs` | 14 | 渲染链（报告生成 / HTML 自包含 / 缺数据报错），仅源码包可执行 |
+| `test-isochrone.mjs` | 16 | 等时圈：GCJ-02 ↔ WGS84 往返、境外不转换、径向插值三种边界、环闭合 |
 | `test-parity.mjs` | 136 | TS ↔ Python 逐字段比对，口径不许分叉 |
-| **合计** | **287** | 2 条因缺 GDAL 跳过，不算通过 |
+| **合计** | **303** | 2 条因缺 GDAL 跳过，不算通过 |
 
-**基线：287/287 通过 + typecheck 0 error + Python selftest 48/48 + grid-scan self-test 17/17。**
+**基线：303/303 通过 + typecheck 0 error + Python selftest 48/48 + grid-scan self-test 17/17。**
 
 ## 二、失败模式台账（踩过的坑，按症状索引）
 

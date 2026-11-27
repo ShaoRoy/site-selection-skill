@@ -12,16 +12,10 @@
   "scan_radius": 1000,
   "rings": [
     {
-      "label": "内圈·步行3分",
+      "label": "步行10分圈",
       "mode": "walk",
-      "minutes": 3,
-      "max_m": 300
-    },
-    {
-      "label": "外圈·步行8分",
-      "mode": "walk",
-      "minutes": 8,
-      "max_m": 800
+      "minutes": 10,
+      "max_m": 1000
     }
   ],
   "transit": {

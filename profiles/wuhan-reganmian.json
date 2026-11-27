@@ -1,0 +1,66 @@
+{
+  "name": "武汉热干面（20-25㎡ 档口/复合小店）",
+  "category_pattern": "热干面|湖北小吃|面馆|粉面|小吃|快餐",
+  "exclude_pattern": "兰州拉面|牛肉面|刀削面|重庆小面|陕西面|日式拉面|米线|螺蛳粉",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "reganmian",
+      "match": "热干面|湖北小吃|武汉|豆皮|面窝|藕汤",
+      "label": "热干面/湖北小吃"
+    },
+    {
+      "key": "noodle_fast",
+      "match": "面馆|拉面|刀削|小面|米线|粉面",
+      "label": "泛面食快餐"
+    }
+  ],
+  "self_segment": "reganmian",
+  "keywords": [
+    "热干面",
+    "武汉热干面",
+    "湖北小吃",
+    "豆皮",
+    "面窝",
+    "藕汤"
+  ],
+  "scan_radius": 1000,
+  "rings": [
+    {
+      "label": "步行10分圈",
+      "mode": "walk",
+      "minutes": 10,
+      "max_m": 1000
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 500
+  },
+  "hardware": {
+    "area_sqm": 25,
+    "needs_exhaust": true,
+    "needs_gas": false,
+    "needs_water": true,
+    "power_kw": 20
+  },
+  "archetype": "wuhan-reganmian",
+  "_说明": "武汉热干面 · 北京。采集档案：决定扫什么关键词、扫多大半径、竞品怎么分段。与 params/wuhan_reganmian.json（财务参数）配对使用。",
+  "_来源": "关键词依据用户提供《北京三品类业态数据底表.xlsx》03_品牌矩阵（北京在营品牌）与 docx 4.3「热干面+湖北小吃」复合店型特征",
+  "_brand_keywords": [
+    "熊太婆",
+    "热大叔",
+    "过早",
+    "楚大圣"
+  ],
+  "_落位提示": [
+    "中关村",
+    "上地",
+    "望京",
+    "中国传媒大学",
+    "亚运村"
+  ],
+  "_门槛联动": "武汉热干面",
+  "params": "wuhan_reganmian",
+  "_no_cost_band_reason": "本品类不做人均规模分层：docx 未给大小店分档，且高德 biz_ext.cost 覆盖率为 0，硬分层会拼出 <key>_mid 这类技术键名印到报告上"
+}

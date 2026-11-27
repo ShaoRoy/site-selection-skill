@@ -31,7 +31,7 @@ const args = process.argv.slice(2)
 const noBaseMap = args.includes('--no-basemap')
 const topOnly = args.includes('--top-only')
 const offlineOnly = args.includes('--offline')
-/** 默认不画车行圈虚线（商圈锁后边界意义不大，只保留右侧距离带表）；加 --show-outer 可恢复 */
+/** 默认不画外圈虚线（商圈锁后边界意义不大，只保留右侧距离带表）；加 --show-outer 可恢复 */
 const showOuter = args.includes('--show-outer')
 const target = args.find((a) => !a.startsWith('--'))
   // 用 pathToFileURL + resolve：相对路径按 cwd 解析，不再假设是绝对路径
@@ -44,6 +44,8 @@ if (!Array.isArray(pois) || pois.length === 0) throw new Error('数据里没有 
 
 const outer = rings[rings.length - 1]
 const inner = rings[0]
+// 只有真正存在第二圈时才有「外圈」；单圈时 outer === inner，不能当外圈用
+const hasOuter = rings.length > 1 && Boolean(outer.distance_bands?.length)
 const outerRadius = Number(outer.radius ?? outer.radius_m)
 const innerRadius = Number(inner.radius ?? inner.radius_m)
 
@@ -64,7 +66,7 @@ const tagOf = (name) => {
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
-// 初始 zoom：让车行圈正好装进视口
+// 初始 zoom：让最外圈正好装进视口（单圈时即内圈）
 const VIEW_W = 1000
 const VIEW_H = 720
 const cosLat = Math.cos((center.lat * Math.PI) / 180)
@@ -134,7 +136,7 @@ const payload = {
   useLocal: !noBaseMap,
   useOnline: !noBaseMap && !offlineOnly,
   tileBase,
-  showOuter,
+  showOuter: showOuter && hasOuter,
 }
 const payloadJs = JSON.stringify(payload).replace(/</g, '\\u003c')
 
@@ -171,7 +173,7 @@ const html = `<!doctype html>
 <div class="legend">
  <span><b class="star"></b>候选点位</span>
  <span><b style="border-top:3px solid #ef6c00"></b>步行圈 ${Math.round(innerRadius)}m（橙实线）</span>
- ${showOuter ? `<span><b style="border-top:3px dashed #d40000"></b>车行圈 ${Math.round(outerRadius)}m（红虚线）</span>` : '<span style="color:#888">车行圈边界不显示，看右侧距离带</span>'}
+ ${showOuter ? `<span><b style="border-top:3px dashed #d40000"></b>外圈 ${Math.round(outerRadius)}m（红虚线）</span>` : ''}
  <span><b class="dot" style="background:#e6194b"></b>W = 步行圈份额名次</span>
  <span style="color:#888">外圈只报数量与距离带，不报份额</span>
  <span style="color:#888">滚轮缩放 · 拖动平移 · ⌖ 回到候选点</span>
@@ -192,14 +194,14 @@ const html = `<!doctype html>
   <table><tbody>${rowsOf(inner.top, 'W') || '<tr><td>无</td></tr>'}</tbody></table>
   <h3 style="font-size:15px;margin:18px 0 4px">交通可达</h3>
   <table><tbody>${transitRows}</tbody></table>
-  <h3 style="font-size:15px;margin:18px 0 4px">车行圈竞品分布（${esc(outer.label)}）</h3>
+  ${hasOuter ? `<h3 style="font-size:15px;margin:18px 0 4px">外圈竞品分布（${esc(outer.label)}）</h3>
   <p class="sub">⛔ 不报份额：${outer.area_km2 ?? '—'} km² 内含江面与非商圈，份额会误导 → 改看距离带</p>
-  <table><tbody>${bandsRows || '<tr><td>无</td></tr>'}</tbody></table>
+  <table><tbody>${bandsRows || '<tr><td>无</td></tr>'}</tbody></table>` : ''}
   <h3 style="font-size:15px;margin:18px 0 4px">距候选点最近的 5 家</h3>
   <p class="sub">只按直线距离排序，与份额、规模无关（看"门口有谁"）</p>
   <table><tbody>${nearestRows || '<tr><td>无</td></tr>'}</tbody></table>
   <p class="note">等时圈为本地路网计算（Valhalla/OSRM），已去除沿高速/主干道走廊的细长尖刺（中位半径 ×1.6 截断）。<br>
-  份额 = 网格最近站归属，**仅步行圈统计**；车行圈范围过大（含江面/非商圈），不报份额。<br>
+  份额 = 网格最近站归属，**仅主圈（步行圈）统计**；${hasOuter ? '外圈范围过大（含江面/非商圈），不报份额。' : '本档案只跑单圈，不做外圈口径。'}<br>
   底图 © 高德地图。</p>
  </div>
 </div>
@@ -301,7 +303,7 @@ function render() {
     }
     var ty2 = candY - rr - 8;
     var t = el('text', { x: candX + 8, y: ty2 < 18 ? candY + rr + 18 : ty2, 'font-size': 14, 'font-weight': 700, fill: isInner ? '#bf5600' : '#b00000', 'paint-order': 'stroke', stroke: '#fff', 'stroke-width': 4 });
-    t.textContent = r.label + '（' + Math.round(r.radius) + 'm · ' + r.inside + ' 家）' + (r.source === 'valhalla' || r.source === 'osrm' ? '' : '【估算】');
+    t.textContent = r.label + '（' + Math.round(r.radius) + 'm · ' + r.inside + ' 家）' + (r.source === 'valhalla' || r.source === 'osrm' || r.source === 'cloud' ? '' : '【估算】');
     gRing.appendChild(t);
   }
 

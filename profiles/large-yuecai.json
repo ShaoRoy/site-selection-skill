@@ -41,19 +41,13 @@
     "酒楼",
     "宴会"
   ],
-  "scan_radius": 3000,
+  "scan_radius": 1000,
   "rings": [
     {
-      "label": "内圈·步行10分",
+      "label": "步行10分圈",
       "mode": "walk",
       "minutes": 10,
       "max_m": 1000
-    },
-    {
-      "label": "外圈·车行5分",
-      "mode": "car",
-      "minutes": 5,
-      "max_m": 1500
     }
   ],
   "transit": {

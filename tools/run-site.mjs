@@ -6,7 +6,7 @@
  *   node .\tools\run-site.mjs --profile=large-yuecai --address="..." --survey=survey\GZ-001.csv
  *   node .\tools\run-site.mjs --profile=large-yuecai --batch="地址A;地址B;地址C"
  *
- * 链路：校验档案 → 采集/去重/分段/双圈/交通 → 否决判定 → 财务测算 → 地图 → 报告
+ * 链路：校验档案 → 采集/去重/分段/圈层/交通 → 否决判定 → 财务测算 → 地图 → 报告
  * 产出：out\<slug>\{probe.json, survey.json, segments-review.csv, map.html, report.html, report.md, compare.html}
  */
 

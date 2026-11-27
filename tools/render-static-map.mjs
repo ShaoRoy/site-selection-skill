@@ -137,7 +137,7 @@ const py = (lat) => latToY(lat, ZOOM) - top
 // 圈层多边形
 const ringColors = ['#e65100', '#1565c0', '#6a1b9a']
 const ringTags = []
-// 只画主圈（步行圈）：外圈车行范围太大，画面过花
+// 只画主圈（步行圈）：第二圈范围太大，画面过花
 const ringsToDraw = (() => {
   const all = probe.rings ?? []
   if (arg('rings', 'inner') === 'all') return all
@@ -216,7 +216,7 @@ const svg =
   legend +
   scaleBar +
   `<text x="${VW - 12}" y="${VH - 12}" font-size="10" fill="#555" text-anchor="end">` +
-  `GCJ-02｜zoom ${ZOOM}｜底图 © 高德｜圈层${ringsToDraw[0]?.source === 'valhalla' ? '本地 Valhalla 路网' : '直线估算【估算】'}</text>` +
+  `GCJ-02｜zoom ${ZOOM}｜底图 © 高德｜圈层${ringsToDraw[0]?.source === 'valhalla' ? '本地 Valhalla 路网' : ringsToDraw[0]?.source === 'osrm' ? '本地 OSRM 路网' : ringsToDraw[0]?.source === 'cloud' ? '云端真实路网' : '直线估算【估算】'}</text>` +
   `</svg>`
 
 writeFileSync(outPath, svg, 'utf8')

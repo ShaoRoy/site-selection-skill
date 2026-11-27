@@ -709,7 +709,7 @@ def dedupe(pois, keyword="", whitelist=None):
 
 
 # ───────────────────────── 5. 空间分析 ─────────────────────────
-TRAVEL = {"walk": (80.0, 1.35), "bike": (250.0, 1.3), "car": (537.0, 1.45)}  # 速度 m/min，绕行系数
+TRAVEL = {"walk": (80.0, 1.35), "bike": (250.0, 1.3)}  # 速度 m/min，绕行系数
 INTERCEPT = {"heavy_distance_m": 300, "light_distance_m": 800,
              "heavy_top1_share_pct": 30, "light_top1_share_pct": 15,
              "heavy_top3_share_pct": 60, "light_top3_share_pct": 40}

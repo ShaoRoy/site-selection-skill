@@ -40,7 +40,7 @@ python scripts/grid-registry.py --self-test # 期望 12/12
 
 ## 四、Pull Request
 
-提交前请本地跑通 CI 的同一套检查（共 19 个 `run` 步骤）：
+提交前请本地跑通 CI 的同一套检查（共 20 个 `run` 步骤）：
 
 ```bash
 python -m py_compile scripts/*.py

@@ -40,15 +40,16 @@
 | 4 | `site_core.py selftest` | **48/48 通过** | 0 |
 | 5 | 网格夹具 + `grid-scan --rescore` | **正常**，0 次接口调用，参数来源逐项打印 | 0 |
 | 6 | `test-grid.mjs` | **30/30 通过** | 0 |
-| 7 | `test-tools-smoke.mjs` | **13/13 通过** | 0 |
-| 8 | `test-parity.mjs` | **136/136 PASS**（TS ↔ Python 口径一致） | 0 |
-| 9 | 空仓自举（解压到空目录按序跑） | 夹具 → rescore → test-grid **30/30** | 0 |
+| 7 | `test-tools-smoke.mjs` | **14/14 通过** | 0 |
+| 8 | `test-isochrone.mjs` | **16/16 通过**（坐标往返 / 插值 / 环闭合） | 0 |
+| 9 | `test-parity.mjs` | **136/136 PASS**（TS ↔ Python 口径一致） | 0 |
+| 10 | 空仓自举（解压到空目录按序跑） | 夹具 → rescore → test-grid **30/30** | 0 |
 
 ### 计数口径说明（避免数字打架）
 
 | 口径 | 条数 | 含义 |
 |---|---|---|
-| 全部门禁断言 | **287** | 8 组测试之和（`references/06` 为唯一基准）；`pnpm test` 只跑其中 3 段 |
+| 全部门禁断言 | **303** | 9 组测试之和（`references/06` 为唯一基准）；`pnpm test` 只跑其中 3 段 |
 | TS ↔ Python 契约 | **136** | 两条引擎逐字段比对；v2.10.34 之前只有 78 且未覆盖 `sensitivity` |
 | Python 侧自检 | **48** | `site_core.py selftest` |
 | 网格评分纯函数 | **17** | `grid-scan.py --self-test` |
@@ -56,7 +57,7 @@
 | 网格注册表 | **12** | `grid-registry.py --self-test` |
 | 调研表解析 | **12** | `test-survey-csv.mjs` |
 | 渲染链冒烟 | **14** | `test-tools-smoke.mjs` |
-| **合计** | **287** | 上列各组之和（48 + 17 + 30 + 12 + 12 + 18 + 14 + 136） |
+| **合计** | **303** | 上列各组之和（48 + 17 + 30 + 12 + 12 + 18 + 14 + 16 + 136） |
 | 渲染链 | **13** | `test-tools-smoke.mjs` |
 
 ---

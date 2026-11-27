@@ -5,7 +5,7 @@ display_name_en: Site Selection Feasibility Expert
 description: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_zh: "适配三级漏斗选址 SOP：高德竞品扫描 + 腾讯交叉校验双源 GIS，驱动商圈初筛、现场复核、财务锁盘；含截流两轴定级、极限租金反推、租期现金流、空间容量对账、假设台账与敏感度。"
 description_en: "Three-stage site selection SOP with dual-source GIS: trade-area screening, on-site due diligence, financial lock-in; includes interception grading, rent-ceiling back-calculation, lease cash flow, space-capacity reconciliation, assumption ledger and sensitivity analysis."
-version: 2.10.52
+version: 2.10.53
 author: "ShaoRoy"
 examples_zh:
   - "帮我评估广州市荔湾区扬韬广场 1200㎡ 的铺位，月租 18 万，投 340 万，做粤菜正餐"
@@ -127,37 +127,41 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 | 文件名 | `probe.html`（渲染链固定命名） |
 | 归档 | 需要留档时另存为 `<点位>-<YYYYMMDD-HHMM>.html`，**不覆写历史报告** |
 
-### 一份合格报告必须有的 24 个章节
+### 一份合格报告必须有的章节
 
 `report.mjs` 的标准输出（缺一即不合格）：
 
 > 本节列的是 **03 源码包**（含 `tools/report.mjs`）的 HTML 输出标准。01 技能包不含 Node 渲染链，交付 Markdown 报告；其中「空间侧敏感度」章节仅 03 源码包提供，01 包不出此项属包形态差异，不是缺功能。
 
+**编号规则**：只有 h2 章节编号（1–7），h3 小节一律不编号——条件节（竞争集中度、截流定级）缺席时不会出现 2.1 → 2.3 跳号。
+
 ```
 选址评估报告：<地址>
-地图与竞品排名                    ← 内联 SVG + 缩放 + 排名联动
+地图与竞品排名                    ← 内联 SVG + 缩放 + 排名联动（Markdown 版只留榜单）
 1. 数据质量
-   竞争分段（品类 × 规模）
 2. 竞品分布
-   2.1 截流定级与势力归属
-   2.2 竞品三级分层
+   竞争分段（品类 × 规模）
+   竞争集中度                    ← 有 Top 榜时出现
+   截流定级与势力归属            ← 有截流数据时出现
+   竞品三级分层
 3. 交通可达
 4. 需求侧代理指标
-   4.1 人口核对（独立数据源交叉验证）
-   4.2 客群结构推断（估算 · 仅供参考）
+   人口核对（独立数据源交叉验证）
+   客群结构推断（估算 · 仅供参考）
 5. 场地核查（提醒，非否决）
 6. 财务测算
-   三档情景参数
-   极限租金反推
-   回本周期判读
-   建议租金
+   三档情景参数（报告据此可复算每一档）
+   极限租金反推（标档位与目标回本）
+   回本周期参考标尺（估算 · 仅供参考）
+   参考测算值（估算 · 仅供参考）
+7. 哪些数是估算（明细与口径）
    租期现金流
    空间容量（面积 ↔ 营收对账）
-   内部比值校验
-   待确认的假设
+   内部比值校验（不抓外部数据，靠参数互锁）
+   待确认的假设（不是你亲口给的数）
    敏感度：各参数 ±20% 对谈判锚点的影响
    空间侧敏感度：各系数 ±20% 对座位与产能的影响
-行业基准对标（内置基准库，可按城市/业态替换）
+   行业基准对标（内置基准库，可按城市/业态替换）
 附录：计算口径（每个数字怎么来的）
 附：看不懂的话先看这里（白话版）
 ```
@@ -322,7 +326,7 @@ node tools/run-site.mjs --profile=<业态档案> --address="<地址>" --survey="
 | `references/03-data-and-governance.md` | 采数据时：高德/腾讯接口、L3 数据治理、坐标系、空间分析、否决规则包、工具链顺序、翻译层、业态档案 |
 | `references/04-output-templates.md` | 写报告时：九段骨架的填充细则（按第 1 筛 / 第 1.5+2 筛 / 第 3 筛三个场景） |
 | `references/05-ops-and-troubleshooting.md` | 跑不通时：Docker/Valhalla、WorldPop 人口栅格、降级策略 |
-| `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 287 条、失败模式台账（按症状索引）、最近版本变更摘要 |
+| `references/06-regression-and-failure-modes.md` | 改完东西后：自动化基线 303 条、失败模式台账（按症状索引）、最近版本变更摘要 |
 | `references/07-preferences.md` | **动手前先读**：三条已定口径 + 数据纪律 + 口径细节 + 工程约定。与 SKILL.md 冲突时以它为准 |
 | `references/08-business-guide.md` | **用户问「怎么用」时**：怎么提需求（三句话 + 分档）· 报告怎么读（先看三处 / 四个误读）· 哪些指标能调（A 自填 / B 业态默认 / C 扫描旋钮）。纯业务视角、不含命令，适合直接转给决策人 |
 

@@ -9,7 +9,7 @@
  *
  * 场景预设：
  *   mid   中型餐饮（80–200㎡）：关键词「餐厅」，半径 1000m，步行 10 分钟圈
- *   large 大型餐饮（1000–2000㎡）：关键词「酒楼」，半径 3000m，车行 15 分钟圈
+ *   large 大型餐饮（1000–2000㎡）：关键词「酒楼」，半径 3000m，步行 10 分钟圈
  *   retail 便利店：关键词「便利店」，半径 800m，步行 10 分钟圈
  *
  * Key 读取顺序：环境变量 → %USERPROFILE%\.dsh\secrets\{amap,tencent}.key（不会打印到输出）
@@ -20,27 +20,27 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { detectEngine, isochroneFrom, pointInRing } from './isochrone.mjs'
+import { detectEngine, isochroneFrom, pointInRing, cloudStatus, readCloudQuota } from './isochrone.mjs'
 import { clampToRadius } from './isochrone.mjs'
 
 // 注意：category_pattern 匹配的是**平台类目字段**（高德 type / 腾讯 category），不是店名。
 // 品牌词（茶颜悦色/海底捞/广州酒家）必须放 keyword 检索，不能放白名单。
-// 商圈口径（用户行业经验）：步行 10 分钟 ≈ 一个商圈的极限；车行 5 分钟同理；车行 10 分钟会跨 2–3 个商圈
+// 商圈口径（用户行业经验）：步行 10 分钟 ≈ 一个商圈的极限，再远就是另一个商圈——餐饮只跑步行圈
 /** 势力份额榜长度：报告里 W1–W10 + W11–W20 两段展示 */
 const TOP_N = 20
 
 const SCENES = {
-  mid: { label: '中型餐饮（80–200㎡）', keyword: '餐厅', sweep: ['餐厅', '茶餐厅', '粤菜'], radius: 1000, pattern: '中餐厅|餐厅|快餐厅', exclude: '快餐|小吃|外卖', mode: 'walk', minutes: 10, rings: [{ label: '内圈·步行8分', mode: 'walk', minutes: 8, max_m: 800 }, { label: '外圈·车行5分', mode: 'car', minutes: 5, max_m: 1500 }] },
-  large: { label: '大型餐饮（1000–2000㎡）', keyword: '酒楼', sweep: ['粤菜', '海鲜', '宴会', '酒楼', '火锅'], radius: 3000, pattern: '中餐厅|海鲜|粤菜|宴会|火锅', exclude: '快餐|小吃', mode: 'car', minutes: 5, rings: [{ label: '内圈·步行10分', mode: 'walk', minutes: 10, max_m: 1000 }, { label: '外圈·车行5分', mode: 'car', minutes: 5, max_m: 1500 }] },
-  retail: { label: '便利店', keyword: '便利店', radius: 800, pattern: '便利店', exclude: '超市|百货|2元|折扣', mode: 'walk', minutes: 10, rings: [{ label: '内圈·步行5分', mode: 'walk', minutes: 5, max_m: 500 }, { label: '外圈·步行10分', mode: 'walk', minutes: 10, max_m: 1000 }] },
-  tea: { label: '茶饮', keyword: '茶饮', radius: 800, pattern: '冷饮|甜品|咖啡|茶饮|饮品', exclude: '便利店|超市', mode: 'walk', minutes: 10, rings: [{ label: '内圈·步行5分', mode: 'walk', minutes: 5, max_m: 500 }, { label: '外圈·步行10分', mode: 'walk', minutes: 10, max_m: 1000 }] },
+  mid: { label: '中型餐饮（80–200㎡）', keyword: '餐厅', sweep: ['餐厅', '茶餐厅', '粤菜'], radius: 1000, pattern: '中餐厅|餐厅|快餐厅', exclude: '快餐|小吃|外卖', mode: 'walk', minutes: 10, rings: [{ label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 }] },
+  large: { label: '大型餐饮（1000–2000㎡）', keyword: '酒楼', sweep: ['粤菜', '海鲜', '宴会', '酒楼', '火锅'], radius: 1000, pattern: '中餐厅|海鲜|粤菜|宴会|火锅', exclude: '快餐|小吃', mode: 'walk', minutes: 10, rings: [{ label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 }] },
+  retail: { label: '便利店', keyword: '便利店', radius: 1000, pattern: '便利店', exclude: '超市|百货|2元|折扣', mode: 'walk', minutes: 10, rings: [{ label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 }] },
+  tea: { label: '茶饮', keyword: '茶饮', radius: 1000, pattern: '冷饮|甜品|咖啡|茶饮|饮品', exclude: '便利店|超市', mode: 'walk', minutes: 10, rings: [{ label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 }] },
 }
 
 /** 商圈锁：等时圈与固定半径取交集，防止开到别的商圈去 */
 const LOCK_RADIUS = Number(process.env.LOCK_RADIUS ?? 0)
 
 /** 各出行方式速度（米/分）与绕行系数，与 geo_analyze 内部保持一致 */
-const MODE_SPEED = { walk: 80, bike: 250, car: 500 }
+const MODE_SPEED = { walk: 80, bike: 250 }
 const DETOUR = 1.35
 
 /** 分段 key → 人话（yuecai_large → 粤菜·高端） */
@@ -493,9 +493,16 @@ const useEngine = !process.argv.includes('--no-valhalla') && !process.argv.inclu
 const engine = useEngine ? await detectEngine() : null
 if (engine) {
   console.log(`\n等时圈引擎：${engine.label}`)
+  if (engine.kind === 'cloud') {
+    console.warn('   ⚠️ 本地 Valhalla/OSRM 不可达，已降级到云端真实路网。')
+    console.warn(`      按 OD 对计费：单圈上限 ${process.env.ISO_CLOUD_MAX_PAIRS ?? 400} 对，`
+      + `今日已用 ${engine.usedBefore}/${engine.dailyMax} 对；报告会标注本次消耗。`)
+    console.warn('      不想用云端配额：ISO_CLOUD=off（会退回直线估算并标【估算】）。')
+  }
 } else {
+  const cloud = useEngine ? cloudStatus() : { reason: '命令带了 --no-valhalla/--no-osrm' }
   const why = useEngine
-    ? 'Valhalla(8002) 与 OSRM(5000) 都不可达'
+    ? `Valhalla(8002) 与 OSRM(5000) 都不可达；云端不可用：${cloud.reason}`
     : '命令带了 --no-valhalla/--no-osrm'
   console.warn(`\n⚠️ 等时圈引擎未启用：${why}`)
   console.warn('   本次等时圈为【直线估算】——遇江面、快速路、封闭小区会高估可达范围，圈内竞品数偏多。')
@@ -523,14 +530,21 @@ for (const ring of rings) {
   // 有本地 Valhalla 就换成真路网等时圈多边形，并用"点在多边形内"重算圈内数量
   let iso = null
   let source = 'estimate'
-  const PROFILE_FOR_MODE = { walk: 'walking', bike: 'cycling', car: 'driving' }
+  const PROFILE_FOR_MODE = { walk: 'walking', bike: 'cycling' }
   if (engine && engine.kind === 'osrm' && engine.profile !== PROFILE_FOR_MODE[ring.mode]) {
     console.warn(`  ⚠️ OSRM 数据是 ${engine.profile}，与「${ring.mode}」不匹配 → 该圈回退直线估算（要步行圈需用 foot.lua 另起实例）`)
   } else if (engine) {
-    // 尖刺处理：先径向中值滤波（默认窗口 5），再按 ISO_TRIM 削超长尾巴（默认关闭）
-    const trimFactor = Number(process.env.ISO_TRIM ?? 0)
-    iso = await isochroneFrom(engine, center.lat, center.lng, ring.mode, ring.minutes, trimFactor)
-    if (iso) source = engine.kind
+    // 圈层可显式声明 cloud:false：云端模式下跳过该圈、保留直线估算与距离带，不花 OD 对。
+    // 用途：决策价值低的辅助圈层不值得占云端配额。
+    if (engine.kind === 'cloud' && ring.cloud === false) {
+      const pairs = 24 * Math.max(2, Math.min(8, Number(process.env.ISO_CLOUD_RINGS ?? 4)))
+      console.log(`  · ${ring.label}：档案配置 cloud:false → 跳过云端（省 ${pairs} 对），保留直线估算`)
+    } else {
+      // 尖刺处理：先径向中值滤波（默认窗口 5），再按 ISO_TRIM 削超长尾巴（默认关闭）
+      const trimFactor = Number(process.env.ISO_TRIM ?? 0)
+      iso = await isochroneFrom(engine, center.lat, center.lng, ring.mode, ring.minutes, trimFactor)
+      if (iso) source = engine.kind
+    }
   }
 
   // 商圈锁：等时圈 ∩ 固定半径，防止把另一个商圈的竞品算进来
@@ -552,12 +566,14 @@ for (const ring of rings) {
   // 这种圈会把所有竞品判成「圈外」，内圈数变成 0，报告结论整个失真。
   let isoTrusted = Boolean(iso)
   let isoRejectReason = ''
+  let isoRejectFrom = ''
   if (iso) {
     const halfLat = (Math.max(...iso.map((p) => p[1])) - Math.min(...iso.map((p) => p[1]))) * mLatIso / 2
     const halfLng = (Math.max(...iso.map((p) => p[0])) - Math.min(...iso.map((p) => p[0]))) * mLngIso / 2
     const effRadius = Math.max(halfLat, halfLng)
-    // 该时长下合理的等效半径下限：步速 80m/min、车速 400m/min，打 0.35 折已是极保守
-    const speed = ring.mode === 'walk' ? 80 : ring.mode === 'bike' ? 200 : 400
+    // 该时长下合理的等效半径下限：步速 80m/min、骑行 200m/min，打 0.35 折已是极保守。
+    // 真缺数据的假圈等效半径约 90m（186×142m），该门槛能拦住。
+    const speed = ring.mode === 'bike' ? 200 : 80
     const floor = speed * ring.minutes * 0.35
     if (effRadius < floor) {
       isoTrusted = false
@@ -565,6 +581,8 @@ for (const ring of rings) {
       console.warn(`  ⚠️ ${ring.label}：${isoRejectReason} → 路网数据可能没覆盖该城市，本圈退回直线圆估算`)
       console.warn('     （Valhalla 缺该城市 OSM 数据时会返回固定小多边形，圈内竞品会被误判为 0 家）')
       iso = null
+      source = 'estimate' // 来源必须跟着回退，否则报告会谎报「云端/本地路网」
+      isoRejectFrom = engine?.kind ?? 'unknown'
     }
   }
 
@@ -627,8 +645,16 @@ for (const ring of rings) {
 
   ringResults.push({
     label: ring.label,
-    radius: result.isochrone.straight_radius_m,
-    area_km2: Number((result.coverage.total_area_sqm / 1000000).toFixed(2)),
+    // 有路网圈就按多边形报等效半径与面积；否则退回直线圆口径。混用会让地图说明与图上的圈对不上。
+    radius: iso ? Math.round(Math.max(...iso.map(([x, y]) => Math.hypot(
+      (x - center.lng) * mLngIso, (y - center.lat) * mLatIso,
+    )))) : result.isochrone.straight_radius_m,
+    area_km2: iso ? Number((Math.abs(iso.reduce((acc, [x, y], i) => {
+      if (i === iso.length - 1) return acc
+      const [x2, y2] = iso[i + 1]
+      return acc + ((x - center.lng) * mLngIso) * ((y2 - center.lat) * mLatIso)
+        - ((x2 - center.lng) * mLngIso) * ((y - center.lat) * mLatIso)
+    }, 0) / 2) / 1e6).toFixed(2)) : Number((result.coverage.total_area_sqm / 1000000).toFixed(2)),
     inside: insideCount,
     inside_circle: inside.length,
     source,
@@ -719,6 +745,19 @@ if (dq.verdict !== 'ok') {
   console.log(`\n${dq.verdict === 'suspicious' ? '⛔' : '⚠️'} 数据质量：${dq.verdict}`)
   for (const w of dq.warnings) console.log(`   - ${w}`)
   console.log(`   ${dq.note}`)
+}
+
+// 云端降级的口径必须写进报告：消耗了多少对、当日累计多少，读者要能核对
+if (engine?.kind === 'cloud') {
+  const used = readCloudQuota(engine.provider).pairs
+  isochroneNotice = {
+    engine: 'cloud',
+    provider: engine.provider,
+    calls: engine.calls ?? 0,
+    quota_used: used,
+    daily_max: engine.dailyMax,
+    impact: '云端按 OD 对计费，圈层由路径规划耗时插值重建，不是原生多边形',
+  }
 }
 
 // ── 6. 落盘机器可读结果（供 render-map.mjs 出图，免二次调用）

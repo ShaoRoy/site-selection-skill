@@ -1,0 +1,69 @@
+{
+  "name": "馄饨（20-25㎡ 社区外带档口）",
+  "category_pattern": "馄饨|云吞|抄手|饺子|小吃|快餐",
+  "exclude_pattern": "馄饨酒馆|饺子馆|手工水饺|酒吧",
+  "exclude_category_pattern": "",
+  "segments": [
+    {
+      "key": "huntun",
+      "match": "馄饨|云吞|抄手",
+      "label": "馄饨/云吞/抄手"
+    },
+    {
+      "key": "dumpling_takeaway",
+      "match": "云饺|生鲜外带|现包",
+      "label": "生鲜外带饺子云吞"
+    },
+    {
+      "key": "laozihao",
+      "match": "老字号|侯|老北京小吃",
+      "label": "老字号小吃"
+    }
+  ],
+  "self_segment": "huntun",
+  "keywords": [
+    "馄饨",
+    "云吞",
+    "抄手",
+    "生煎馄饨"
+  ],
+  "scan_radius": 1000,
+  "rings": [
+    {
+      "label": "步行10分圈",
+      "mode": "walk",
+      "minutes": 10,
+      "max_m": 1000
+    }
+  ],
+  "transit": {
+    "metro_threshold_m": 800,
+    "parking_threshold_m": 500
+  },
+  "hardware": {
+    "area_sqm": 25,
+    "needs_exhaust": true,
+    "needs_gas": false,
+    "needs_water": true,
+    "power_kw": 20
+  },
+  "archetype": "huntun",
+  "_说明": "馄饨店 · 北京。采集档案：决定扫什么关键词、扫多大半径、竞品怎么分段。与 params/huntun.json（财务参数）配对使用。",
+  "_来源": "关键词依据用户提供《北京三品类业态数据底表.xlsx》03_品牌矩阵（北京在营品牌）与 docx 6.2「老字号守存量，连锁抢密度」",
+  "_brand_keywords": [
+    "吉祥馄饨",
+    "袁记云饺",
+    "熊大爷",
+    "馄饨侯",
+    "千里香",
+    "满宝"
+  ],
+  "_落位提示": [
+    "大型居住区出入口",
+    "地铁站周边",
+    "社区菜场旁"
+  ],
+  "_门槛联动": "馄饨店",
+  "params": "huntun",
+  "_no_cost_band_reason": "本品类不做人均规模分层：docx 未给大小店分档，且高德 biz_ext.cost 覆盖率为 0，硬分层会拼出 <key>_mid 这类技术键名印到报告上"
+}

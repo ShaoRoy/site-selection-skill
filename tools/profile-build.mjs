@@ -26,72 +26,66 @@ const ARCHETYPES = {
     category_pattern: '早餐|包子|馒头|粥|豆浆|面点|油条',
     exclude_pattern: '便利店|超市|酒楼|宴会|火锅',
     rings: [
-      { label: '内圈·步行3分', mode: 'walk', minutes: 3, max_m: 300 },
-      { label: '外圈·步行8分', mode: 'walk', minutes: 8, max_m: 800 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 800,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 400, parking_threshold_m: 80 },
-    why: '早餐是"路过型"消费，客人不会为吃早饭专门走路超过 8 分钟，停车位几乎无意义。',
+    why: '早餐是"路过型"消费，但仍按 10 分钟步行圈统一口径看店门覆盖范围；停车位几乎无意义。',
   },
   tea: {
     label: '茶饮（20–60㎡）',
     category_pattern: '冷饮|甜品|咖啡|茶饮|饮品',
     exclude_pattern: '便利店|超市|酒楼',
     rings: [
-      { label: '内圈·步行3分', mode: 'walk', minutes: 3, max_m: 300 },
-      { label: '外圈·步行8分', mode: 'walk', minutes: 8, max_m: 800 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 800,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 500, parking_threshold_m: 100 },
-    why: '茶饮靠"顺路 + 外卖"，步行 8 分钟内是核心；地铁口比停车位更重要。',
+    why: '茶饮靠"顺路 + 外卖"，统一 10 分钟步行圈；地铁口比停车位更重要。',
   },
   quick: {
     label: '快餐·简餐（60–150㎡）',
     category_pattern: '中餐厅|快餐厅|小吃',
     exclude_pattern: '酒楼|宴会|超市',
     rings: [
-      { label: '内圈·步行5分', mode: 'walk', minutes: 5, max_m: 500 },
-      { label: '外圈·步行12分', mode: 'walk', minutes: 12, max_m: 1200 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 1200,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 600, parking_threshold_m: 150 },
-    why: '工作餐场景，客人能接受走 10 分钟左右；停车可有可无。',
+    why: '工作餐场景，10 分钟步行圈正好覆盖周边写字楼与社区；停车可有可无。',
   },
   dinner: {
     label: '中型正餐（80–200㎡）',
     category_pattern: '中餐厅|餐厅|快餐厅',
     exclude_pattern: '快餐|小吃|外卖',
     rings: [
-      { label: '内圈·步行8分', mode: 'walk', minutes: 8, max_m: 800 },
-      { label: '外圈·车行5分', mode: 'car', minutes: 5, max_m: 1500 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 1500,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 700, parking_threshold_m: 200 },
-    why: '家庭/朋友聚餐，步行 8 分钟 + 短途打车都算合理；开始需要停车。',
+    why: '家庭/朋友聚餐，10 分钟步行圈 ≈ 一个商圈的极限；再远已是另一批客人，开始需要停车。',
   },
   large: {
     label: '大型正餐（1000–2000㎡）',
     category_pattern: '中餐厅|粤菜|海鲜|宴会|酒楼|火锅',
     exclude_pattern: '快餐|小吃',
     rings: [
-      { label: '内圈·步行10分', mode: 'walk', minutes: 10, max_m: 1000 },
-      { label: '外圈·车行5分', mode: 'car', minutes: 5, max_m: 1500 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 3000,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 800, parking_threshold_m: 300 },
-    why: '宴请型消费，客人开车来、必须好停车；车行 5 分钟已是商圈极限，再远就是别的商圈。',
+    why: '宴请型消费，必须好停车；10 分钟步行圈已是商圈极限，再远就是别的商圈。',
   },
   retail: {
     label: '便利店（40–120㎡）',
     category_pattern: '便利店',
     exclude_pattern: '超市|百货|2元|折扣',
     rings: [
-      { label: '内圈·步行5分', mode: 'walk', minutes: 5, max_m: 500 },
-      { label: '外圈·步行10分', mode: 'walk', minutes: 10, max_m: 1000 },
+      { label: '步行10分圈', mode: 'walk', minutes: 10, max_m: 1000 },
     ],
-    scan_radius: 800,
+    scan_radius: 1000,
     transit: { metro_threshold_m: 500, parking_threshold_m: 0 },
-    why: '即时消费，步行 5 分钟是命门；停车基本不影响。',
+    why: '即时消费，10 分钟步行圈是店门覆盖边界；停车基本不影响。',
   },
 }
 
@@ -208,7 +202,7 @@ function validate(profile, sourceName) {
     }
   }
   for (const [i, ring] of (profile.rings ?? []).entries()) {
-    if (!['walk', 'bike', 'car'].includes(ring.mode)) errors.push(`rings[${i}].mode 必须是 walk/bike/car`)
+    if (!['walk', 'bike'].includes(ring.mode)) errors.push(`rings[${i}].mode 必须是 walk/bike（车行圈已废弃，餐饮只用步行圈）`)
     if (!(ring.minutes > 0)) errors.push(`rings[${i}].minutes 必须 > 0`)
     if (!(ring.max_m > 0)) warns.push(`rings[${i}].max_m 缺失：不会做商圈锁，等时圈可能跨商圈`)
   }

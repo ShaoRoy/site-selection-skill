@@ -159,6 +159,9 @@ jobs:
       - name: 渲染链冒烟（14 项，不联网）
         run: node tools/test-tools-smoke.mjs
 
+      - name: 等时圈坐标与插值（16 项，不联网）
+        run: node tools/test-isochrone.mjs
+
       - name: 本地数据位结构校验（不联网）
         run: node tools/local-data.mjs --check
 

@@ -4180,7 +4180,6 @@ export function guardCoordinates(entries: readonly unknown[], inputCrs: string):
 const TRAVEL_MODES: Readonly<Record<string, { speed: number; label: string }>> = {
   walk: { speed: 80, label: '步行' },
   bike: { speed: 250, label: '骑行' },
-  car: { speed: 500, label: '驾车（含拥堵）' },
 }
 
 /** 直线距离换算为路网距离的经验绕行系数。 */
@@ -4569,7 +4568,7 @@ export const geoAnalyzeTool = defineTool({
       description: '竞品点数组：{ name, lat, lng } 或 { name, location: {lat,lng} }',
       items: { type: 'object', additionalProperties: true },
     },
-    mode: { type: 'string', description: 'walk（默认）| bike | car' },
+    mode: { type: 'string', description: 'walk（默认）| bike' },
     minutes: { type: 'number', description: '等时圈时长（分钟），默认 10' },
     grid_step_m: { type: 'number', description: 'Voronoi 网格边长（米），默认 100' },
   },
