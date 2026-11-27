@@ -763,7 +763,7 @@ site-selection-skill/
 03 源码包的标准交付物是**自包含单文件 HTML**（见 SKILL.md「报告交付」）；同目录还会生成一份同名 `.md` 作纯文本备查，内容与 HTML 同源。01 技能包交付 Markdown。主要包含：
 
 <p align="center">
-<img width="840" alt="选址智能分析报告示例" src="https://github.com/user-attachments/assets/64caf3b5-9d64-4bc3-acba-c47f6e9c060f" />
+<img width="840" alt="选址智能分析报告示例" src="https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-3.jpg" />
 </p>
 
 | 段 | 内容 |
