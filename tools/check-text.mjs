@@ -38,7 +38,7 @@ const SKIP_DIR_PATTERNS = [/^release$/, /^_backup-/, /^_archive-/]
 // U+0000–0008 / 000B / 000C / 000E–001F / 007F
 const FATAL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
 const BADGE_HOST = 'img.shields.io'
-const EXPECTED_BADGES = 12
+const EXPECTED_BADGES = 11
 
 /**
  * 已知历史存档豁免（docs/ 下实测存在的 6 处表格列数不齐）。
