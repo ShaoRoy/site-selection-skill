@@ -725,7 +725,7 @@ site-selection-skill/
 03 源码包的标准交付物是**自包含单文件 HTML**（见 SKILL.md「报告交付」）；同目录还会生成一份同名 `.md` 作纯文本备查，内容与 HTML 同源。01 技能包交付 Markdown。主要包含：
 
 <p align="center">
-<img width="100%" alt="选址智能分析报告示例" src="https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-6.jpg" />
+<img width="100%" alt="选址智能分析报告示例" src="https://raw.githubusercontent.com/ShaoRoy/site-selection-skill/main/assets/report-sample-7.jpg" />
 </p>
 
 | 段 | 内容 |
@@ -742,13 +742,6 @@ site-selection-skill/
 
 > **只想看怎么读报告**：跳到 [`references/08-business-guide.md`](references/08-business-guide.md) 第三节，
 > 那里按「先看三处 / 其余备查 / 四个常见误读」组织，不含任何命令。
-
-**术语有白话注解**：报告里行业口径较多（截流、势力份额、翻台、坪效、极限租金…），
-对不熟悉这行的人不易读。所以：
-
-- 「结论」段内有一张 **24 条术语白话速查表**（`### 看不懂的话先看这里`）
-- 关键表格行就地注成 `原说明 —— 大白话`，例如
-  `第二轴·竞争截流压力 | **重度截流**（heavy）—— 抢客的店太多，客人还没走到你门口就被别人截走了`
 
 ## 免责声明
 
