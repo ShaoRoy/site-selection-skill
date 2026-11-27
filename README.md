@@ -58,7 +58,7 @@ python scripts/site_core.py selftest      # 48/48，零网络、零 Key
 | | 租期现金流 / 空间容量 | 年递增、翻新、座位、翻台、坪效对账 |
 | **数据与校验** | 高德开放平台 POI | 周边业态、竞品、交通配套采集（**全量主力**）；个人 Key，须选「Web 服务」类型 |
 | | 高德步行路径规划 | 动线阻断初判（点位 → 地铁口 / 竞品 / 小区大门），供第 1 / 1.5 筛使用 |
-| | 腾讯位置服务 POI | 竞品交叉校验（第 2 筛，抽样）；四个 POI 接口各 200/日 |
+| | 腾讯位置服务 POI | 竞品交叉校验（第 2 筛，抽样） |
 | | 腾讯步行路径规划 | 动线阻断精算，`steps[].type` 给结构化过街设施，供第 2 筛使用 |
 | | 行业基准库（可按城市/业态替换） | 用于财务结论的现实性对标；内置 `data/benchmarks.json` |
 | | 证据链报告 | 公式 + 代入值 + 结果同页；缺省值与估算值进《待确认的假设》台账 |
@@ -105,7 +105,7 @@ python scripts/site_core.py selftest      # 48/48，零网络、零 Key
 #### 覆盖范围：支持国内所有城市、所有业态
 
 引擎不绑定城市或业态：城市系数、业态参数、竞品关键词都能按当地情况替换。
-内置基准以**餐饮**为主（正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食、夜宵小龙虾等），开箱即用；换城市或换业态时按需调参即可。
+内置基准以**餐饮**为主（正餐酒楼、茶楼早茶、火锅、烧烤、日料、西餐、茶饮咖啡、烘焙甜品、快餐档口、面食粉面、卤味熟食、夜宵小龙虾等）。
 
 ```bash
 python scripts/site_core.py formats   # 查系统当前认的全部业态与基准映射
@@ -124,7 +124,6 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 #### 适用范围
 
-- **全国通用**：支持国内所有城市、所有业态，不绑定任何单一城市。内置基准只是缺省代入值；城市或业态不在库里时，程序会**明确告知**并给出补录路径，不静默套用别的城市或业态（见[跨城市 / 跨地区适配](#跨城市--跨地区适配)）。
 - **全流程覆盖**：商圈初选（第 1 筛）→ 单点评估（第 1.5 筛）→ 双源校验（第 2 筛）→ 财务锁盘（第 3 筛）。
 
 ### 行业基准说明
@@ -143,9 +142,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 ### 数据源分工：按筛次，不按偏好
 
-**为什么不是「哪家好用就用哪家」**：腾讯四个 POI 接口（`place/search`、`place/detail`、
-`place/here`、`place/explore`）**各 200 次/日，合计 800/日**——只够少数点位做深度校验。
-高德那边没有这个限制，所以全量采集必须走高德。
+**为什么不是「哪家好用就用哪家」**：腾讯 POI 接口只够少数点位做深度校验，高德没有这个限制，所以全量采集必须走高德。
 
 | 筛次 | POI 采集 | 步行距离 |
 |---|---|---|
@@ -173,40 +170,10 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 > 真撞到 QPS 也不用人工干预——脚本内置节流（高德 0.6 s / 腾讯 1.2 s）和退避重试（2/4/6/8 s），会自己顶住。
 
-调用一次第 2 筛的真实开销：POI 双源约 3 次腾讯请求 + 若干次高德请求，步行比较约 5 对。
 
-### 配额与实测规模
+### 接口口径差异
 
-> 数据点：2026-11-05 控制台核对 + 接口实测。
-
-| 接口 | 日额度 | 并发 | 实测有效规模 |
-|---|---|---|---|
-| 腾讯距离矩阵 `matrix?mode=walking` | 6000/日 | 5 对/秒 | **1×5 对/请求**（1×6 就 120） |
-| 腾讯步行路线 `direction/v1/walking` | 6000/日 | 5 次/秒 | 1 对/请求 |
-| 腾讯 `place/search` | **200/日** | 5 次/秒 | 1 关键词/请求（每点位约 3 次） |
-| 腾讯 `place/detail` / `here` / `explore` | **各 200/日** | 5 次/秒 | 同上 |
-
-三条必须知道：
-
-1. **限额单位是 OD 对数，不是请求次数**——1×6 只是一次请求，照样超限。
-   官方文档写的「一对多 1×200」是**企业认证后**额度，个人 Key 实测只有 5 对/批。
-2. **三处 duration 单位各不相同**：腾讯 direction = 分钟、腾讯 matrix = **秒**、高德 direction = **秒**。
-   混用就是 60 倍误差；脚本内置 `plausible_walk()`（步行速度 2~7 km/h 自检）会当场报警。
-3. **一次第 2 筛只比单源多花 3 次腾讯请求**（500m 半径、44 家实测），占日额度 1.5%。
-
-**日额度能吃多少**：见下表；超过就分批，不要硬撞限额。
-
-| 源 | 免费额度 | 一次评估实际消耗 | 能吃多少 |
-|---|---|---|---|
-| 腾讯位置服务 | 四个 POI 接口各 **200/日**；步行路线、距离矩阵各 **6000/日** | 第 2 筛约 3 次 POI + 5 对步行 | **约 66 个双源点位/日** |
-| 高德开放平台 | 个人 Key 的免费日配额远高于上面的调用量级 | 一次商圈扫描通常几十到几百次请求 | 单店 / 小连锁日常评估**用不完** |
-| 云端等时圈（可选，降级第 3 级） | 腾讯步行矩阵 6000 对/日；高德路径规划同量级 | 24 方向 × 4 环 = **96 对/圈**，一个点位两圈约 192 对 | 腾讯约 **20–40 个点位/日**；与 POI 共用额度时更低 |
-
-> 云端等时圈只在本地 Valhalla/OSRM 不可达时启用；`ISO_CLOUD=off` 可关闭。
-> 每次降级消耗的 OD 对数会写进报告《数据质量》段，不做静默扣配额。
-
-> 也就是说：**做一套完整的门店评估，不需要付任何地图 API 费用**。
-> 只有在「一天要跑几十个点位以上」或需要平台级客流数据时，才需要谈付费或企业资质。
+> **duration 单位不统一**：腾讯 direction = 分钟，腾讯 matrix 与高德 direction = 秒；混用就是 60 倍误差。脚本内置 `plausible_walk()`（步行速度 2~7 km/h 自检）会当场报警。
 
 ### 数据缓存与落地规则
 
@@ -369,8 +336,6 @@ git clone https://github.com/ShaoRoy/site-selection-skill.git
 # 直接用 Release 里的 site-selection-workbuddy-v2.10.54.zip，不要自己打包
 ```
 
-> ⚠️ **不要用 GitHub 网页的「Download ZIP」直接上传**——它会套一层
-> `site-selection-skill-main/`，「导入技能」会报「所选文件夹中未找到 SKILL.md」。
 
 ### 凭证配置：高德 / 腾讯各一把 Key
 
@@ -379,13 +344,11 @@ git clone https://github.com/ShaoRoy/site-selection-skill.git
 | 数据源 | 官方入口 | 凭证怎么给 | 常见坑 |
 |---|---|---|---|
 | **高德** POI / 地理编码 / 步行路径 | 开放平台 [lbs.amap.com](https://lbs.amap.com/)　·　Key 管理 [console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) | 环境变量 `AMAP_API_KEY`（变量声明见 `manifest.json` → `dependencies.envOptional`） | 创建 Key 时**服务平台必须选「Web 服务」**；选成「Web端(JS API)」调用会直接鉴权失败 |
-| **腾讯位置服务** POI / 步行路线 / 距离矩阵 | 官网 [lbs.qq.com](https://lbs.qq.com/)　·　Key 管理 [lbs.qq.com/dev/console/key/manage](https://lbs.qq.com/dev/console/key/manage) | 环境变量 `TENCENT_MAP_KEY`（同上，见 `manifest.json`） | 建 Key 后要勾选 **WebServiceAPI**；四个 POI 接口各 200/日，别拿腾讯做全量采集 |
+| **腾讯位置服务** POI / 步行路线 / 距离矩阵 | 官网 [lbs.qq.com](https://lbs.qq.com/)　·　Key 管理 [lbs.qq.com/dev/console/key/manage](https://lbs.qq.com/dev/console/key/manage) | 环境变量 `TENCENT_MAP_KEY`（同上，见 `manifest.json`） | 建 Key 后要勾选 **WebServiceAPI**；别拿腾讯做全量采集 |
 | **行业基准库** | 无外部调用 | 内置 `data/benchmarks.json` | 均为**估算值不是实测**，报告会标注；城市/业态可按当地数据替换 |
 
 Key 只在采集类脚本里用到，在运行环境里设置 `AMAP_API_KEY` / `TENCENT_MAP_KEY` 即可；**Key 只留在你自己的机器上**，不要写进仓库、报告或对话。
 高德报 `INVALID_USER_KEY` 就是类型选错了，回控制台换「Web 服务」类型的 Key（不要用 Android / iOS / Web端(JS API)）。
-
-> 只做财务测算、不采集数据时，**一个 Key 都不需要**——`site_core.py` 的全部计算都能用手输参数跑通。
 
 ### 多宿主接入与验证
 
@@ -423,7 +386,7 @@ python scripts/site_core.py finance --format large_yuecai --area 1200 --catchmen
   --params params.json --space space.json --out finance.json
 ```
 
-三个要点：① 采集类脚本需要宿主能把 `AMAP_API_KEY` / `TENCENT_MAP_KEY` 注入进程环境；② 只做财务测算时零 Key；③ 宿主若支持 Agent Skills 目录规范（`.claude/skills/` 或等价目录），优先走目录安装，比纯 CLI 少一层提示词搬运。
+三个要点：① 采集类脚本需要宿主能把 `AMAP_API_KEY` / `TENCENT_MAP_KEY` 注入进程环境；② 宿主若支持 Agent Skills 目录规范（`.claude/skills/` 或等价目录），优先走目录安装，比纯 CLI 少一层提示词搬运。
 
 #### DSH 原生插件挂载（可选）
 
@@ -465,7 +428,7 @@ Agent 应该会：读 `SKILL.md` → 调 `scripts/site_core.py` 算财务口径 
 
 #### 最简三步
 
-1. **确认自检通过**：上一节的 `selftest` 全绿即可；只做财务测算时**一个 Key 都不需要**——`site_core.py` 的全部计算都能用手输参数跑通。
+1. **确认自检通过**：上一节的 `selftest` 全绿即可。
 2. **说三句话**：在哪、做什么、钱怎么算。缺项会被标成「待确认」，不挡你。
 3. **拿报告、再复算**：报告附公式与代入值；想自己验，按下面「复现」的命令跑一遍。
 
@@ -510,7 +473,6 @@ python scripts/site_core.py finance \
 | 报错 | 原因 | 解法 |
 |---|---|---|
 | 所选文件夹中未找到 SKILL.md | 包多套了一层文件夹 | 用**不带外层文件夹**的包 |
-| 没有 skill | SKILL.md frontmatter 缺 `name` / `description` | 当前版本两者齐备，无需处理 |
 
 #### 常见坑
 
@@ -521,7 +483,7 @@ python scripts/site_core.py finance \
 | Agent 不触发 Skill | 检查是否真的解压到了 `~/.dsh/skills/restaurant-location-analysis/`（目录名必须是 `restaurant-location-analysis`，与 `manifest.json` 的 `name` 一致；不要用仓库名 `site-selection-skill`） |
 | `openpyxl` 导入失败 | `pip install openpyxl`；只有 `import-benchmarks.py` 需要 |
 | 路径含中文 / 空格 | 部分脚本对路径敏感，建议装在纯英文路径 |
-| 高德额度耗尽 | 个人开发者默认日额度 5000 次，网格扫描前先 `--dry-run` 看预计调用量 |
+| 高德额度耗尽 | 网格扫描前先 `--dry-run` 看预计调用量 |
 
 
 ## 命令行参考：脚本与参数
@@ -626,7 +588,7 @@ python scripts/export-geojson.py --probe probe.json --out gis --crs wgs84
 
 ### 自动化断言（303 条）
 
-这个项目的结论是数字，测试是这些数字的复核机制。全部断言在每次 push 时自动执行，不靠人工触发：
+全部断言在每次 push 时自动执行，不靠人工触发：
 
 | 层 | 内容 | 条数 |
 |---|---|---|
