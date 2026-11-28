@@ -4,7 +4,7 @@
 
 <p align="center"><a href="#安装">安装</a> · <a href="#凭证配置高德--腾讯各一把-key">凭证配置</a> · <a href="#跑通第一条任务从请求到报告">跑通第一条</a> · <a href="#核心能力总览商圈网格扫描--竞品格局分析--财务双口径测算">核心能力</a> · <a href="#双源数据源技术架构高德--腾讯">数据源</a> · <a href="#命令行参考脚本与参数">命令行参考</a> · <a href="#常见问题">常见问题</a> · <a href="https://github.com/ShaoRoy/site-selection-skill/discussions">讨论区</a> · <a href="https://github.com/ShaoRoy/site-selection-skill/issues/new/choose">提交问题</a></p>
 
-> 参数驱动的实体门店选址分析框架 · v2.10.54
+> 参数驱动的实体门店选址分析框架 · v2.10.55
 >
 > 把连锁选址经验拆成可复现的计算模块：输入铺位地址、业态与租金预算，输出带公式、代入值与数据源标注的选址报告。高德 + 腾讯双源 POI 交叉校验，计算内核纯 Python，可作为 Agent 技能或命令行工具独立运行。
 
@@ -268,8 +268,8 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 | 你的需要 | 选哪个包 | 包内差异 |
 |---|---|---|
-| 导入现成技能（WorkBuddy / Claude / DSH / 其他支持 `SKILL.md` 的宿主） | [`site-selection-workbuddy-v2.10.54.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（01，35 条目） | 引擎 + 方法论 + 文档；报告由宿主按 `SKILL.md` 结构组织 |
-| 改代码 / 出 HTML 报告 / 挂 DSH 原生插件 / 跑测试 | [`site-selection-dsh-v2.10.54.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（03，98 条目） | 额外含 `tools/report.mjs`、`tools/run-site.mjs`、`dsh/`、`install.ps1`、CI 配置 |
+| 导入现成技能（WorkBuddy / Claude / DSH / 其他支持 `SKILL.md` 的宿主） | [`site-selection-workbuddy-v2.10.55.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（01，35 条目） | 引擎 + 方法论 + 文档；报告由宿主按 `SKILL.md` 结构组织 |
+| 改代码 / 出 HTML 报告 / 挂 DSH 原生插件 / 跑测试 | [`site-selection-dsh-v2.10.55.zip`](https://github.com/ShaoRoy/site-selection-skill/releases/latest)（03，98 条目） | 额外含 `tools/report.mjs`、`tools/run-site.mjs`、`dsh/`、`install.ps1`、CI 配置 |
 
 > ⚠️ 别用 GitHub 网页的「Code → Download ZIP」：会多套一层 `site-selection-skill-main/`，导入时报「未找到 SKILL.md」。
 
@@ -289,7 +289,7 @@ python scripts/site_core.py formats   # 查系统当前认的全部业态与基�
 
 #### 方式 A：一键脚本（推荐，Windows）
 
-> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.54.zip`）里；
+> `install.ps1` 在**源码包**（`site-selection-dsh-v2.10.55.zip`）里；
 > 本技能包不含它，如果你只拿了技能包，用下面的「方式 B：手动安装」。
 
 ```powershell
@@ -333,7 +333,7 @@ python3 scripts/site_core.py selftest
 
 ```bash
 git clone https://github.com/ShaoRoy/site-selection-skill.git
-# 直接用 Release 里的 site-selection-workbuddy-v2.10.54.zip，不要自己打包
+# 直接用 Release 里的 site-selection-workbuddy-v2.10.55.zip，不要自己打包
 ```
 
 

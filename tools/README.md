@@ -113,16 +113,37 @@ CSV **必须存为 UTF-8**。
 
 ---
 
-## 包内能跑哪些测试
+## 测试与门禁命令分级
 
-| 测试 | 包内可跑 | 说明 |
+| 命令 | 覆盖 | 用途 |
 |---|---|---|
-| `test-tools-smoke.mjs` | ✅ 13 条 | 只依赖 node 内建 + 本包文件 |
-| `test-grid.mjs` | ✅ 30 条 | 需先跑一次 `grid-scan --rescore` 生成 `out/` 数据 |
-| 其余 7 个 `test-*.mjs` | ❌ | 依赖 `../src/site-tools.ts` 与宿主 `node_modules`，只在完整开发工作区可跑（引擎本身的类型检查可用 `npm run typecheck` 在包内完成） |
+| `npm run dev-check` | typecheck + 4 个测试（文本 / 等时圈 16 / 冒烟 14 / 契约 136） | 改代码时的快速自检 |
+| `npm run check` | 等同 `dev-check`（向后兼容别名） | 同上 |
+| `npm run check:release` | dev-check + 调研表 12 + 财务 + 网格 30 + WorldPop 18 + 示例数据守卫 + 跨包锁步 | 发版前必跑 |
 
-**完整 250 条断言需要开发工作区**（含 `scratch-plugin/` 与 `node_modules`）。
-发布包内置的引擎在 `dsh/site-tools.ts`，是 DSH 插件形态，不是可直接 import 的独立模块。
+发版另需过一道总检查（在工作区根目录，不在包内）：
+
+```bash
+python _patches/preflight-release.py
+```
+
+五道关：README 同步 / 版本口径 / 跨包锁步 / 发布验收 / 看板哈希自洽，任一失败即阻止发版。
+
+### 各测试在包内能否跑
+
+| 测试 | 包内可跑 | 断言数 | 说明 |
+|---|---|---|---|
+| `check-text.mjs` | 是 | — | 控制字符 / 徽章 / Markdown 结构 |
+| `test-isochrone.mjs` | 是 | 16 | 坐标往返与径向插值 |
+| `test-tools-smoke.mjs` | 是 | 14 | 渲染链冒烟，用系统临时目录 |
+| `test-survey-csv.mjs` | 是 | 12 | 解析回归（千分位误判缺陷） |
+| `test-finance.mjs` | 是 | — | 经 `dsh/site-tools.ts` 回退运行 |
+| `test-grid.mjs` | 是 | 30 | 需先跑一次 `grid-scan --rescore` |
+| `test-worldpop.py` | 是 | 18 + 2 SKIP | GDAL 相关两项显式跳过 |
+| `check-survey-data.mjs` | 是 | — | 示例调研表登记守卫 |
+| `test-parity.mjs` | 视环境 | 136 | 需 `src/` 或 `dsh/` 的 TS 引擎；干净包内会明确报错而非静默跳过 |
+
+`test-parity` 与 `test-finance` 依赖 TS 引擎：完整工作区用 `src/site-tools.ts`，发布包回退 `dsh/site-tools.ts`。
 
 想快速验证包没坏：
 
